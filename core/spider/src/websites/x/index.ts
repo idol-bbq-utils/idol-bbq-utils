@@ -1,12 +1,8 @@
-import { ElementHandle, Page } from 'puppeteer'
-import { TweetTabs } from './types'
+import { Page } from 'puppeteer'
+import { ITweetArticle, TweetTabsEnum } from './types/types'
+import { tweetArticleParser } from './utils/article'
 
-async function tweetArticleParser(tweet: ElementHandle<HTMLElement>) {
-  const html = await tweet.evaluate((e) => e.innerHTML)
-  return html
-}
-
-export async function grabTweets(page: Page, url: string) {
+export async function grabTweets(page: Page, url: string): Promise<Array<ITweetArticle>> {
   // Navigate the page to a URL
   await page.goto(url)
 
@@ -15,16 +11,16 @@ export async function grabTweets(page: Page, url: string) {
   // Click on the tweets tab
   const tablist = await page.$('div[role="tablist"]')
   const tabs = await tablist?.$$('div[role="presentation"]')
-  const tab = await tabs?.[TweetTabs.TWEETS].$('a')
+  const tab = await tabs?.[TweetTabsEnum.TWEETS].$('a')
   await tab?.click()
 
   const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
   // wait for article to load
   await article_wrapper?.waitForSelector('article')
   const raw_articles = await article_wrapper?.$$('article')
-  //   const articles = await Promise.all(raw_articles?.map(tweetArticleParser) ?? [])
-  const articles = raw_articles && (await tweetArticleParser(raw_articles?.[0]))
-  console.log(articles)
+  const articles = await Promise.all(raw_articles?.map(tweetArticleParser) ?? [])
+
+  return articles.filter((a) => a !== undefined)
 }
 
 export async function grabFans(page: Page, url: string) {
