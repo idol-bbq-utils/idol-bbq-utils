@@ -3,3 +3,5 @@ enum TweetTabs {
   REPLIES = 1,
   MEDIA = 2,
 }
+
+export { TweetTabs }
