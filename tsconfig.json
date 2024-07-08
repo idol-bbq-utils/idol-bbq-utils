@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "module": "esnext",
+    "module": "nodenext",
     "strict": true,
     "importHelpers": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -12,7 +12,6 @@
     "useUnknownInCatchVariables": false,
     "sourceMap": true,
     "baseUrl": ".",
-    "lib": ["esnext", "dom", "dom.iterable", "scripthost"],
     "paths": {
       "tslib": ["node_modules/tslib/tslib.d.ts"]
     }
