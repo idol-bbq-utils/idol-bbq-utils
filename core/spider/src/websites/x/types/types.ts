@@ -27,8 +27,8 @@ interface ITweetArticle {
   timestamp: number
   text: string
   tweet_link: string
-  type: Omit<ArticleTypeEnum, 'tweet_link'>
-  ref?: ITweetArticle
+  type: ArticleTypeEnum
+  ref?: Omit<ITweetArticle, 'tweet_link'>
   has_media?: boolean
 }
 
