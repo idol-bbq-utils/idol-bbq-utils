@@ -2,6 +2,9 @@ import { Page } from 'puppeteer'
 import { ITweetArticle, TweetTabsEnum } from '../../types/types'
 import { tweetArticleParser } from './parser/article'
 
+/**
+ * The URL like https://x.com/username
+ */
 export async function grabTweets(page: Page, url: string): Promise<Array<ITweetArticle>> {
   // Navigate the page to a URL
   await page.goto(url)

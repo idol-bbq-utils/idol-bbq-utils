@@ -58,7 +58,7 @@ export async function tweetArticleParser(article: ElementHandle<HTMLElement>): P
       ...origin_meta,
       text: origin_elements.join(''),
       type: article_type,
-      // this is tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
+      // this is a little tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
       has_media: !!next_has_media && !next_has_meta,
       ref: {
         ...ref_meta,
@@ -73,7 +73,6 @@ async function tweetMetaParser(
   info_area: ElementHandle<HTMLElement> | null,
 ): Promise<Pick<ITweetArticle, 'username' | 'id' | 'tweet_link' | 'timestamp'>> {
   if (!info_area) {
-    log.error('tweetMetaParser: info_area is null')
     return {
       username: '',
       id: '',
