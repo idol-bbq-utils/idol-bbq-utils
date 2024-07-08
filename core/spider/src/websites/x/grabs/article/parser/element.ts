@@ -12,8 +12,7 @@ async function articleElementParser(element: ElementHandle<Element>) {
       const tag_a = await element.$('a')
       return await tag_a?.evaluate((e) => e.textContent)
     case ArticleElementTypeEnum.LINK:
-      // TODO
-      return ''
+      return await element.evaluate((e) => e.textContent)
   }
 }
 

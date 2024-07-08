@@ -8,10 +8,10 @@ enum ArticleTypeEnum {
   /**
    *
    */
-  TWEET,
-  FORWARD,
-  REPLY,
-  REF,
+  TWEET = 'tweet',
+  FORWARD = 'forward',
+  REPLY = 'reply',
+  REF = 'ref',
 }
 
 enum ArticleElementTypeEnum {
@@ -27,8 +27,9 @@ interface ITweetArticle {
   timestamp: number
   text: string
   tweet_link: string
-  pics?: string[]
+  type: Omit<ArticleTypeEnum, 'tweet_link'>
   ref?: ITweetArticle
+  has_media?: boolean
 }
 
 export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum }
