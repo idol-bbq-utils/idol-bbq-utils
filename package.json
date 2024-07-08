@@ -1,0 +1,22 @@
+{
+  "name": "idol-bbq-utils",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "bootstrap": "pnpm install",
+    "dev:spider": "lerna run --scope=@idol-bbq-utils/spider dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "lerna": "^8.1.6",
+    "prettier": "^3.3.2",
+    "tsc-alias": "^1.8.10",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "tslib": "^2.6.3"
+  }
+}

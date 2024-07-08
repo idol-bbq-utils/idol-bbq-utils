@@ -1,0 +1,34 @@
+{
+  "name": "@idol-bbq-utils/spider",
+  "version": "0.0.0",
+  "description": "For grabbing content from websites.",
+  "author": "ChocoLZS <chocoielzs@gmail.com>",
+  "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
+  },
+  "scripts": {
+    "build": "tsc && tsc-alias",
+    "dev": "pnpm build && node lib/test.js"
+  },
+  "bugs": {
+    "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+  },
+  "dependencies": {
+    "puppeteer": "^22.12.1",
+    "winston": "^3.13.0"
+  }
+}

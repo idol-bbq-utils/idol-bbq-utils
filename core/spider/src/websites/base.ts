@@ -1,0 +1,4 @@
+class BaseSpider {
+  // TODO
+  constructor() {}
+}
