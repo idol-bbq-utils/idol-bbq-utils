@@ -51,12 +51,12 @@ importers:
       cron:
         specifier: ^3.1.7
         version: 3.1.7
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.4.5
       puppeteer:
         specifier: ^22.12.1
         version: 22.12.1(typescript@5.5.3)
-      winston:
-        specifier: ^3.13.0
-        version: 3.13.0
       yaml:
         specifier: ^2.4.5
         version: 2.4.5
@@ -1591,7 +1591,6 @@ packages:
   /dotenv@16.4.5:
     resolution: {integrity: sha512-ZmdL2rui+eB2YwhsWzjInR8LldtZHGDoQ1ugH85ppHKwpUHL7j7rN0Ti9NCnGiQbhaZ11FpR+7ao1dNsmduNUg==}
     engines: {node: '>=12'}
-    dev: true
 
   /duplexer@0.1.2:
     resolution: {integrity: sha512-jtD6YG370ZCIi/9GTaJKQxWTZD045+4R4hTk/x1UyoqadyJ9x9CgSi1RlVDQF8U2sxLLSnFkCaMihqljHIWgMg==}

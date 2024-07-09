@@ -4,3 +4,5 @@ interface IYamlConfig {
   bots: Array<IBot>
   configs?: IWebsiteConfig
 }
+
+export { IYamlConfig }
