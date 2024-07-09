@@ -12,6 +12,7 @@
     "useUnknownInCatchVariables": false,
     "sourceMap": true,
     "baseUrl": ".",
+    "outDir": "lib",
     "paths": {
       "tslib": ["node_modules/tslib/tslib.d.ts"]
     }

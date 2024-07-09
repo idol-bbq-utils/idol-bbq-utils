@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src",
+    "declaration": true, // Generate .d.ts declaration files
+    "declarationDir": "lib",
+    "sourceMap": false,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "rootDirs": ["src"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "exclude": ["lib"],
+  "include": ["src"]
+}

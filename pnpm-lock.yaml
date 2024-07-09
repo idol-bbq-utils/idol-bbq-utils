@@ -34,6 +34,21 @@ importers:
         specifier: ^3.13.0
         version: 3.13.0
 
+  core/tweet-forwarder:
+    dependencies:
+      '@idol-bbq-utils/spider':
+        specifier: workspace:^
+        version: link:../spider
+      cron:
+        specifier: ^3.1.7
+        version: 3.1.7
+      puppeteer:
+        specifier: ^22.12.1
+        version: 22.12.1(typescript@5.5.3)
+      winston:
+        specifier: ^3.13.0
+        version: 3.13.0
+
 packages:
 
   /@babel/code-frame@7.24.7:
@@ -726,6 +741,10 @@ packages:
       minimatch: 9.0.5
     dev: true
 
+  /@types/luxon@3.4.2:
+    resolution: {integrity: sha512-TifLZlFudklWlMBfhubvgqTXRzLDI5pCbGa4P8a3wPyUQSW+1xQ5eDsreP9DWHX3tjq1ke96uYG/nwundroWcA==}
+    dev: false
+
   /@types/minimatch@3.0.5:
     resolution: {integrity: sha512-Klz949h02Gz2uZCMGwDUSDS1YBlTdDDgbWHi+81l29tQALUtvz4rAYi5uoVhE5Lagoq6DeqAUlbrHvW/mXDgdQ==}
     dev: true
@@ -1411,6 +1430,13 @@ packages:
       js-yaml: 4.1.0
       parse-json: 5.2.0
       typescript: 5.5.3
+    dev: false
+
+  /cron@3.1.7:
+    resolution: {integrity: sha512-tlBg7ARsAMQLzgwqVxy8AZl/qlTc5nibqYwtNGoCrd+cV+ugI+tvZC1oT/8dFH8W455YrywGykx/KMmAqOr7Jw==}
+    dependencies:
+      '@types/luxon': 3.4.2
+      luxon: 3.4.4
     dev: false
 
   /cross-spawn@7.0.3:
@@ -2636,6 +2662,11 @@ packages:
 
   /lru-cache@7.18.3:
     resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
+    engines: {node: '>=12'}
+    dev: false
+
+  /luxon@3.4.4:
+    resolution: {integrity: sha512-zobTr7akeGHnv7eBOXcRgMeCP6+uyYsczwmeRCauvpvaAltgNyTbLH/+VaEAPUeWBT+1GuNmz4wC/6jtQzbbVA==}
     engines: {node: '>=12'}
     dev: false
 
