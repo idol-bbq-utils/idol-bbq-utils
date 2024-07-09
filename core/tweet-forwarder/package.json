@@ -32,6 +32,7 @@
     "@idol-bbq-utils/spider": "workspace:^",
     "cron": "^3.1.7",
     "puppeteer": "^22.12.1",
-    "winston": "^3.13.0"
+    "winston": "^3.13.0",
+    "yaml": "^2.4.5"
   }
 }
