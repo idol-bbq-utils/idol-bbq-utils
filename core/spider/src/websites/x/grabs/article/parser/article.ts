@@ -1,7 +1,6 @@
 import { ElementHandle } from 'puppeteer'
 import { ArticleTypeEnum, ITweetArticle } from '@/websites/x/types/types'
 import { articleElementParser } from './element'
-import { log } from '@/config'
 
 const QUERY_TEXT_PATTERN = 'div[data-testid="tweetText"]'
 const QUERY_META_PATTERN = 'div[data-testid="User-Name"]'

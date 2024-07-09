@@ -28,6 +28,7 @@
     "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
   },
   "dependencies": {
+    "@idol-bbq-utils/log": "workspace:^",
     "@idol-bbq-utils/spider": "workspace:^",
     "cron": "^3.1.7",
     "puppeteer": "^22.12.1",

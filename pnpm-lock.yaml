@@ -25,6 +25,12 @@ importers:
         specifier: ^5.5.3
         version: 5.5.3
 
+  core/log:
+    dependencies:
+      winston:
+        specifier: ^3.13.0
+        version: 3.13.0
+
   core/spider:
     dependencies:
       puppeteer:
@@ -36,6 +42,9 @@ importers:
 
   core/tweet-forwarder:
     dependencies:
+      '@idol-bbq-utils/log':
+        specifier: workspace:^
+        version: link:../log
       '@idol-bbq-utils/spider':
         specifier: workspace:^
         version: link:../spider
