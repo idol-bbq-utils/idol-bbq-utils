@@ -12,7 +12,7 @@ model x_tweets {
   id             Int        @id @unique(map: "sqlite_autoindex_x_tweets_1") @default(autoincrement())
   u_id           String
   username       String
-  timestamp      BigInt
+  timestamp      Int
   text           String
   type           String
   tweet_link     String?    @default("")

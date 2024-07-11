@@ -24,8 +24,10 @@ async function saveTweet(tweet: ITweetArticle) {
 async function checkExist(tweet: ITweetArticle) {
     return await prisma.x_tweets.findUnique({
         where: {
-            u_id: tweet.u_id,
-            timestamp: tweet.timestamp,
+            u_id_timestamp: {
+                u_id: tweet.u_id,
+                timestamp: tweet.timestamp,
+            },
         },
     })
 }
