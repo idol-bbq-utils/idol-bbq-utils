@@ -1,4 +1,4 @@
-import { IForwardTo, IWebsite, IWebsiteConfig } from '@/types/bot'
+import { ForwardPlatformEnum, IForwardTo, IWebsite, IWebsiteConfig } from '@/types/bot'
 import { CronJob } from 'cron'
 import { fwd_app } from '@/config'
 import { Browser, Page } from 'puppeteer'
@@ -9,13 +9,15 @@ import { log } from '../config'
 import { XCollector } from '@/middleware/collector/x'
 import { BaseCollector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
+import { BaseForwarder } from '@/middleware/forwarder/base'
+import { BiliForwarder } from '@/middleware/forwarder/bilibili'
 
 export class FWDBot {
     public name: string
     private websites: Array<IWebsite>
     private config: IWebsiteConfig
     private collector: BaseCollector<ITweetArticle>
-    private forwarder: TgForwarder
+    private forwarders: Array<BaseForwarder> = []
     private jobs: Map<string, CronJob>
     constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IWebsiteConfig = {}) {
         this.name = name
@@ -24,7 +26,14 @@ export class FWDBot {
             ...fwd_app.config,
             ...config,
         }
-        this.forwarder = new TgForwarder(forward_to[0].token, forward_to[0].chat_id ?? '')
+        for (const forward of forward_to) {
+            if (forward.type === ForwardPlatformEnum.Telegram) {
+                this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
+            }
+            if (forward.type === ForwardPlatformEnum.Bilibili) {
+                this.forwarders.push(new BiliForwarder(forward.token))
+            }
+        }
         this.jobs = new Map()
         this.collector = new XCollector()
     }
@@ -55,7 +64,7 @@ export class FWDBot {
                         tweets = tweets.concat(res)
                     }
                     const ids = await this.collector.collect(tweets, 'tweet')
-                    this.collector.forward(ids, [this.forwarder])
+                    this.collector.forward(ids, this.forwarders)
                     // saving and notify bot
                 },
             })

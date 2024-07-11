@@ -27,10 +27,10 @@ interface ITweetArticle {
     timestamp: number
     text: string
     type: ArticleTypeEnum
-    tweet_link?: string
-    ref?: ITweetArticle
-    has_media?: boolean
-    forward_by?: string
+    tweet_link?: string | null
+    ref?: ITweetArticle | null
+    has_media?: boolean | null
+    forward_by?: string | null
 }
 
 export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum }

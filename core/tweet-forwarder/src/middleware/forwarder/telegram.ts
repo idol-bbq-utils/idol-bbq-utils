@@ -2,13 +2,10 @@ import { Telegraf } from 'telegraf'
 import { BaseForwarder } from './base'
 
 class TgForwarder extends BaseForwarder {
-    private token: string
     private chat_id: string
-
     private bot: Telegraf
     constructor(token: string, chat_id: string) {
-        super()
-        this.token = token
+        super(token)
         this.chat_id = chat_id
         this.bot = new Telegraf(token)
     }

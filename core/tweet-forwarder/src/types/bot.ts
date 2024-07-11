@@ -28,5 +28,5 @@ interface IBot {
     forward_to: Array<IForwardTo>
     configs: IWebsiteConfig
 }
-
+export { ForwardPlatformEnum }
 export type { IBot, IWebsite, IWebsiteConfig, IForwardTo }

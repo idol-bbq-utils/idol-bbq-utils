@@ -1,5 +1,8 @@
 abstract class BaseForwarder {
-    constructor() {}
+    protected token: string
+    constructor(token: string) {
+        this.token = token
+    }
     public abstract send(text: string): Promise<any>
 }
 

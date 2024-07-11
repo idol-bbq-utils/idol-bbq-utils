@@ -31,6 +31,7 @@
     "@idol-bbq-utils/log": "workspace:^",
     "@idol-bbq-utils/spider": "workspace:^",
     "@prisma/client": "^5.16.2",
+    "axios": "^1.7.2",
     "cron": "^3.1.7",
     "dotenv": "^16.4.5",
     "puppeteer": "^22.12.1",
