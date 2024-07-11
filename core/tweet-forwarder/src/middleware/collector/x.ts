@@ -4,6 +4,7 @@ import { createHash } from 'crypto'
 import { X } from '@/db'
 import { BaseForwarder } from '../forwarder/base'
 import { getTweets } from '@/db/x'
+import { log } from '@/config'
 
 type TaskType = 'tweet' | 'fans'
 
@@ -50,7 +51,9 @@ class XCollector extends BaseCollector<ITweetArticle> {
             // TODO Text convertor
             // TODO Translate plugin
             for (const forwarder of forwrad_to) {
-                forwarder.send(format_article)
+                forwarder.send(format_article).catch((e) => {
+                    log.error('forward failed', e)
+                })
             }
         }
         return this

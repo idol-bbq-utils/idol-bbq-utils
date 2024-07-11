@@ -11,7 +11,7 @@ import { BaseCollector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { BiliForwarder } from '@/middleware/forwarder/bilibili'
-import { shuffle } from 'lodash'
+import { orderBy, shuffle, sortBy } from 'lodash'
 
 async function delay(time: number) {
     return new Promise((resolve) => {
@@ -82,10 +82,15 @@ export class FWDBot {
                     const _paths = shuffle(website.paths)
                     for (const path of _paths) {
                         log.info(`[${this.name}] grab tweets for ${website.domain}/${path}`)
-                        const res = await X.TweetGrabber.Article.grabTweets(page, `${website.domain}/${path}`)
-                        this.collector.collect(res, 'tweet').then((ids) => {
-                            this.collector.forward(ids, this.forwarders)
-                        })
+                        try {
+                            const res = await X.TweetGrabber.Article.grabTweets(page, `${website.domain}/${path}`)
+                            this.collector.collect(orderBy(res, ['timestamp'], 'asc'), 'tweet').then((ids) => {
+                                this.collector.forward(ids, this.forwarders)
+                            })
+                        } catch (e) {
+                            log.error(`[${this.name}] grab tweets failed for ${website.domain}/${path}: ${e}`)
+                        }
+
                         if (website.config?.interval_time) {
                             const time = Math.floor(
                                 Math.random() * (website.config.interval_time.max - website.config.interval_time.min) +
