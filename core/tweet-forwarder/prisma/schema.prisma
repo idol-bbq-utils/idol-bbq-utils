@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model x_tweets {
+  id             Int        @id @unique(map: "sqlite_autoindex_x_tweets_1") @default(autoincrement())
+  u_id           String
+  username       String
+  timestamp      BigInt
+  text           String
+  type           String
+  tweet_link     String?    @default("")
+  has_media      Boolean?
+  forward_by     String?    @default("")
+  ref            Int?
+  x_tweets       x_tweets?  @relation("x_tweetsTox_tweets", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_x_tweets x_tweets[] @relation("x_tweetsTox_tweets")
+}

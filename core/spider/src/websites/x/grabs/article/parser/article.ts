@@ -18,14 +18,21 @@ export async function tweetArticleParser(article: ElementHandle<HTMLElement>): P
     ])
     const meta = await tweetMetaParser(raw_meta)
     const elements = await Promise.all(texts.map(articleElementParser))
+    let forward_by = undefined
+    if (article_type === ArticleTypeEnum.FORWARD) {
+      const forwarder = await article.$('span[data-testid="socialContext"] span:not(:has(span)')
+      forward_by = (await forwarder?.evaluate((e) => e.textContent)) || undefined
+    }
+
     return {
       username: meta.username,
-      id: meta.id,
+      u_id: meta.u_id,
       text: elements.join(''),
       tweet_link: meta.tweet_link,
       timestamp: meta.timestamp,
       type: article_type,
       has_media: !!img || !!video,
+      forward_by,
     }
   }
 
@@ -70,11 +77,11 @@ export async function tweetArticleParser(article: ElementHandle<HTMLElement>): P
 
 async function tweetMetaParser(
   info_area: ElementHandle<HTMLElement> | null,
-): Promise<Pick<ITweetArticle, 'username' | 'id' | 'tweet_link' | 'timestamp'>> {
+): Promise<Pick<ITweetArticle, 'username' | 'u_id' | 'tweet_link' | 'timestamp'>> {
   if (!info_area) {
     return {
       username: '',
-      id: '',
+      u_id: '',
       tweet_link: '',
       timestamp: 0,
     }
@@ -92,7 +99,7 @@ async function tweetMetaParser(
   const id = await (await info_area?.$('div:first-child > span:not(:has(span)'))?.evaluate((e) => e.textContent)
   return {
     username: username || '',
-    id: id || '',
+    u_id: id || '',
     tweet_link: tweet_link || '',
     timestamp,
   }

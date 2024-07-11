@@ -8,7 +8,7 @@ interface IWebsite {
   domain: string
   paths: Array<string>
   cookie_file?: string
-  configs?: IWebsiteConfig
+  config?: IWebsiteConfig
 }
 
 enum ForwardPlatformEnum {
@@ -22,10 +22,10 @@ interface IForwardTo {
 }
 
 interface IBot {
-  bot_name: string
+  name: string
   websites: Array<IWebsite>
   forward_to: Array<IForwardTo>
   configs: IWebsiteConfig
 }
 
-export type { IBot, IWebsiteConfig }
+export type { IBot, IWebsite, IWebsiteConfig, IForwardTo }

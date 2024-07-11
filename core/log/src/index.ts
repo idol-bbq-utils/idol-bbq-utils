@@ -1,4 +1,4 @@
-import winston from 'winston'
+import winston, { Logger } from 'winston'
 import { format } from 'winston'
 
 const { combine, colorize, timestamp, json, printf } = format
@@ -22,5 +22,5 @@ const createLogger = (config: winston.LoggerOptions) =>
     ...config,
   })
 
-export { default_log, createLogger }
+export { default_log, createLogger, Logger }
 export default default_log

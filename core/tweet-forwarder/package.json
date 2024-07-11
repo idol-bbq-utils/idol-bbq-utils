@@ -30,9 +30,14 @@
   "dependencies": {
     "@idol-bbq-utils/log": "workspace:^",
     "@idol-bbq-utils/spider": "workspace:^",
+    "@prisma/client": "^5.16.2",
     "cron": "^3.1.7",
     "dotenv": "^16.4.5",
     "puppeteer": "^22.12.1",
+    "telegraf": "^4.16.3",
     "yaml": "^2.4.5"
+  },
+  "devDependencies": {
+    "prisma": "^5.16.2"
   }
 }
