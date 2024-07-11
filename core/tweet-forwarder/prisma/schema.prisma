@@ -21,4 +21,6 @@ model x_tweets {
   ref            Int?
   x_tweets       x_tweets?  @relation("x_tweetsTox_tweets", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_x_tweets x_tweets[] @relation("x_tweetsTox_tweets")
+
+  @@unique([u_id, timestamp(sort: Desc)], map: "article")
 }
