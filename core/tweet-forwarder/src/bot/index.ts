@@ -11,7 +11,15 @@ import { BaseCollector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { BiliForwarder } from '@/middleware/forwarder/bilibili'
+import { shuffle } from 'lodash'
 
+async function delay(time: number) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(true)
+        }, time)
+    })
+}
 export class FWDBot {
     public name: string
     private websites: Array<IWebsite>
@@ -53,18 +61,41 @@ export class FWDBot {
                     this.config.user_agent ||
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
             )
+            website.config = {
+                ...this.config,
+                ...website.config,
+            }
             // do cron here
             const job = CronJob.from({
-                cronTime: website.config?.cron || this.config.cron || '* * * * *',
+                cronTime: website.config?.cron || '* * * * *',
                 onTick: async () => {
-                    // for now x only
-                    let tweets = [] as ITweetArticle[]
-                    for (const path of website.paths) {
-                        const res = await X.TweetGrabber.Article.grabTweets(page, `${website.domain}/${path}`)
-                        tweets = tweets.concat(res)
+                    if (website.config?.interval_time) {
+                        const time = Math.floor(
+                            Math.random() * (website.config.interval_time.max - website.config.interval_time.min) +
+                                website.config.interval_time.min,
+                        )
+                        log.info(`[${this.name}] cron triggered but wait for ${time}ms`)
+                        await delay(time)
                     }
-                    const ids = await this.collector.collect(tweets, 'tweet')
-                    this.collector.forward(ids, this.forwarders)
+                    log.info(`[${this.name}] start job for ${website.domain}`)
+                    // for now x only
+                    const _paths = shuffle(website.paths)
+                    for (const path of _paths) {
+                        log.info(`[${this.name}] grab tweets for ${website.domain}/${path}`)
+                        const res = await X.TweetGrabber.Article.grabTweets(page, `${website.domain}/${path}`)
+                        this.collector.collect(res, 'tweet').then((ids) => {
+                            this.collector.forward(ids, this.forwarders)
+                        })
+                        if (website.config?.interval_time) {
+                            const time = Math.floor(
+                                Math.random() * (website.config.interval_time.max - website.config.interval_time.min) +
+                                    website.config.interval_time.min,
+                            )
+                            log.info(`[${this.name}] wait for next loop ${time}ms`)
+                            await delay(time)
+                        }
+                    }
+                    log.info(`[${this.name}] job done for ${website.domain}`)
                     // saving and notify bot
                 },
             })

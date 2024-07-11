@@ -2,6 +2,10 @@ interface IWebsiteConfig {
     user_agent?: string
     // TODO: random_user_agent?: boolean
     cron?: string
+    interval_time?: {
+        max: number
+        min: number
+    }
 }
 
 interface IWebsite {

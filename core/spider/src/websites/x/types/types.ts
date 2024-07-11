@@ -10,7 +10,6 @@ enum ArticleTypeEnum {
      */
     TWEET = 'tweet',
     FORWARD = 'forward',
-    REPLY = 'reply',
     REF = 'ref',
 }
 

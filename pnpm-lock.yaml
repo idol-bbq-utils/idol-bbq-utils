@@ -60,6 +60,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
       puppeteer:
         specifier: ^22.12.1
         version: 22.12.1(typescript@5.5.3)
@@ -70,6 +73,9 @@ importers:
         specifier: ^2.4.5
         version: 2.4.5
     devDependencies:
+      '@types/lodash':
+        specifier: ^4.17.6
+        version: 4.17.6
       prisma:
         specifier: ^5.16.2
         version: 5.16.2
@@ -808,6 +814,10 @@ packages:
     dependencies:
       '@tufjs/canonical-json': 2.0.0
       minimatch: 9.0.5
+    dev: true
+
+  /@types/lodash@4.17.6:
+    resolution: {integrity: sha512-OpXEVoCKSS3lQqjx9GGGOapBeuW5eUboYHRlHP9urXPX25IKZ6AnP5ZRxtVf63iieUbsHxLn8NQ5Nlftc6yzAA==}
     dev: true
 
   /@types/luxon@3.4.2:
@@ -2716,7 +2726,6 @@ packages:
 
   /lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
-    dev: true
 
   /log-symbols@4.1.0:
     resolution: {integrity: sha512-8XPvpAA8uyhfteu8pIvQxpJZ7SYYdpUivZpGy6sFsBuKRY/7rQGavedeB8aK+Zkyq6upMFVL/9AW6vOYzfRyLg==}
