@@ -14,7 +14,7 @@ async function saveTweet(tweet: ITweetArticle) {
         } else {
             res = await save(tweet)
         }
-        return res
+        return res?.id
     } catch (e) {
         log.error('saveTweet failed', e)
         return undefined
@@ -72,4 +72,22 @@ async function save(tweet: ITweetArticle, ref?: number) {
     return item
 }
 
-export { saveTweet }
+async function getTweets(ids: number[]) {
+    return await prisma.x_tweets.findMany({
+        where: {
+            id: {
+                in: ids,
+            },
+        },
+    })
+}
+
+async function getTweetById(id: number) {
+    return await prisma.x_tweets.findUnique({
+        where: {
+            id,
+        },
+    })
+}
+
+export { saveTweet, getTweets, getTweetById }

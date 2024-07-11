@@ -6,24 +6,25 @@ import fs from 'fs'
 import { X } from '@idol-bbq-utils/spider'
 import { ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
 import { log } from '../config'
-import { XCollector } from '@/collector/x'
+import { XCollector } from '@/middleware/collector/x'
+import { BaseCollector } from '@/middleware/collector/base'
+import { TgForwarder } from '@/middleware/forwarder/telegram'
 
 export class FWDBot {
     public name: string
     private websites: Array<IWebsite>
-    private forward_to: Array<IForwardTo>
     private config: IWebsiteConfig
-    private collector: XCollector
-
+    private collector: BaseCollector<ITweetArticle>
+    private forwarder: TgForwarder
     private jobs: Map<string, CronJob>
     constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IWebsiteConfig = {}) {
         this.name = name
         this.websites = websites
-        this.forward_to = forward_to
         this.config = {
             ...fwd_app.config,
             ...config,
         }
+        this.forwarder = new TgForwarder(forward_to[0].token, forward_to[0].chat_id ?? '')
         this.jobs = new Map()
         this.collector = new XCollector()
     }
@@ -53,7 +54,8 @@ export class FWDBot {
                         const res = await X.TweetGrabber.Article.grabTweets(page, `${website.domain}/${path}`)
                         tweets = tweets.concat(res)
                     }
-                    this.collector.collect(tweets, 'tweet').then((c) => {})
+                    const ids = await this.collector.collect(tweets, 'tweet')
+                    this.collector.forward(ids, [this.forwarder])
                     // saving and notify bot
                 },
             })
