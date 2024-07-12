@@ -1,13 +1,21 @@
 import { ArticleTypeEnum, ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
-import { TypedCollector } from './base'
-import { X } from '@/db'
+import { Collector, TypedCollector } from './base'
+import { X } from '@idol-bbq-utils/spider'
+import { X as X_DB } from '@/db'
 import { BaseForwarder } from '../forwarder/base'
 import { getTweets, ITweetDB } from '@/db/x'
 import { log } from '@/config'
 import dayjs from 'dayjs'
+import { Page } from 'puppeteer'
+import { shuffle } from 'lodash'
+import { delay } from '@/utils/time'
 
 type TaskType = 'tweet' | 'fans'
-
+type TaskResult<T extends TaskType> = T extends 'tweet'
+    ? Awaited<ReturnType<typeof X_DB.saveTweet>>
+    : T extends 'fans'
+      ? Awaited<ReturnType<typeof X_DB.saveFans>>
+      : never
 interface ISavedArticle extends ITweetDB {
     forward_by?: {
         username: string
@@ -32,13 +40,76 @@ function formatArticle(article: ISavedArticle) {
 
     return [metaline, text].join('\n\n')
 }
-class XCollector extends TypedCollector<ITweetArticle, ISavedArticle> {
-    constructor() {
-        super()
+class XCollector extends Collector {
+    public name = 'collector x'
+    public async collectAndForward(
+        page: Page,
+        domain: string,
+        paths: string[],
+        forward_to: Array<BaseForwarder>,
+        config: {
+            type?: TaskType
+            interval_time?: {
+                min: number
+                max: number
+            }
+        },
+    ): Promise<this> {
+        const { type = 'tweet' } = config
+        const _paths = shuffle(paths)
+        if (type === 'tweet') {
+            for (const path of _paths) {
+                log.info(`[${this.name}] grab tweets for ${domain}/${path}`)
+                try {
+                    const items = (await this.collect(page, `${domain}/${path}`, type)).filter(
+                        (item) => item !== undefined,
+                    )
+                    log.info(`[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
+                    this.forward(items, forward_to)
+                } catch (e) {
+                    log.error(`[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
+                }
+
+                if (config.interval_time) {
+                    const time = Math.floor(
+                        Math.random() * (config.interval_time.max - config.interval_time.min) +
+                            config.interval_time.min,
+                    )
+                    log.info(`[${this.name}] wait for next loop ${time}ms`)
+                    await delay(time)
+                }
+            }
+        }
+
+        if (type === 'fans') {
+            log.info(`[${this.name}] grab fans for ${domain}`)
+            try {
+                const profile = await this.collect(page, domain, type)
+                // log.info(`[${this.name}] forward ${items.length} fans from ${domain}`)
+                // this.forward(items, forward_to)
+            } catch (e) {
+                log.error(`[${this.name}] grab fans failed for ${domain}: ${e}`)
+            }
+        }
+
+        return this
     }
-    public async collect(items: ITweetArticle[], type: TaskType) {
-        const tweets = (await Promise.all(items.map(X.saveTweet))).filter((item) => item !== undefined)
-        return tweets
+
+    public async collect<T extends TaskType>(page: Page, url: string, type?: T): Promise<Array<TaskResult<T>>> {
+        if (type === 'tweet') {
+            const res = await X.TweetGrabber.UserPage.grabTweets(page, url)
+            log.info(`[${this.name}] grab ${res.length} tweets from ${url}`)
+            const tweets = await Promise.all(res.map(X_DB.saveTweet))
+            return tweets as Array<TaskResult<T>>
+        }
+
+        if (type === 'fans') {
+            const fans = await X.TweetGrabber.UserPage.grabFanNumer(page, url)
+            log.info(`[${this.name}] grab ${fans.username}'s fans from ${url}`)
+            const saved_profile = await X_DB.saveFans(fans.username, fans.u_id, fans.follows, fans.timestamp)
+            return [saved_profile] as Array<TaskResult<T>>
+        }
+        return []
     }
     public async forward(items: Array<ISavedArticle>, forwrad_to: Array<BaseForwarder>) {
         const tweets = items

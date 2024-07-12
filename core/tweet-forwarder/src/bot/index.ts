@@ -7,25 +7,21 @@ import { X } from '@idol-bbq-utils/spider'
 import { ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
 import { log } from '../config'
 import { XCollector } from '@/middleware/collector/x'
-import { BaseCollector } from '@/middleware/collector/base'
+import { Collector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { BiliForwarder } from '@/middleware/forwarder/bilibili'
 import { orderBy, shuffle } from 'lodash'
+import { collectorFetcher } from '@/middleware/collector'
 
-async function delay(time: number) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(true)
-        }, time)
-    })
-}
 export class FWDBot {
     public name: string
     private websites: Array<IWebsite>
     private config: IWebsiteConfig
-    private collector: BaseCollector
+
     private forwarders: Array<BaseForwarder> = []
+    private collectors: Map<string, Collector> = new Map()
+
     private jobs: Map<string, CronJob>
     constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IWebsiteConfig = {}) {
         this.name = name
@@ -34,19 +30,22 @@ export class FWDBot {
             ...fwd_app.config,
             ...config,
         }
-        if (forward_to) {
-            for (const forward of forward_to) {
-                if (forward.type === ForwardPlatformEnum.Telegram) {
-                    this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
-                }
-                if (forward.type === ForwardPlatformEnum.Bilibili) {
-                    this.forwarders.push(new BiliForwarder(forward.token))
-                }
+        for (const forward of forward_to ?? []) {
+            if (forward.type === ForwardPlatformEnum.Telegram) {
+                this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
             }
+            if (forward.type === ForwardPlatformEnum.Bilibili) {
+                this.forwarders.push(new BiliForwarder(forward.token))
+            }
+        }
+        for (const website of this.websites) {
+            const url = new URL(website.domain)
+            const CollectorBuilder = collectorFetcher(website.domain)
+            this.collectors.set(url.hostname, new CollectorBuilder())
         }
 
         this.jobs = new Map()
-        this.collector = new XCollector()
+        this.collectors
     }
 
     public async init(browser: Browser) {
@@ -54,6 +53,8 @@ export class FWDBot {
         for (const website of this.websites) {
             const page = await browser.newPage()
             const cookie = website.cookie_file && fs.readFileSync(website.cookie_file, 'utf8')
+            const url = new URL(website.domain)
+            const collector = this.collectors.get(url.hostname)
             if (cookie) {
                 log.info(`[${this.name}] set cookie for ${website.domain}`)
                 const cookies = JSON.parse(cookie)
@@ -81,30 +82,12 @@ export class FWDBot {
                         await delay(time)
                     }
                     log.info(`[${this.name}] start job for ${website.domain}`)
-                    // for now x only
-                    const _paths = shuffle(website.paths)
-                    for (const path of _paths) {
-                        log.info(`[${this.name}] grab tweets for ${website.domain}/${path}`)
-                        try {
-                            const res = await X.TweetGrabber.Article.grabTweets(page, `${website.domain}/${path}`)
-                            log.info(`[${this.name}] grab ${res.length} tweets from ${website.domain}/${path}`)
-                            this.collector.collect(orderBy(res, ['timestamp'], 'asc'), 'tweet').then((items) => {
-                                log.info(`[${this.name}] forward ${items.length} tweets from ${website.domain}/${path}`)
-                                this.collector.forward(items, this.forwarders)
-                            })
-                        } catch (e) {
-                            log.error(`[${this.name}] grab tweets failed for ${website.domain}/${path}: ${e}`)
-                        }
 
-                        if (website.config?.interval_time) {
-                            const time = Math.floor(
-                                Math.random() * (website.config.interval_time.max - website.config.interval_time.min) +
-                                    website.config.interval_time.min,
-                            )
-                            log.info(`[${this.name}] wait for next loop ${time}ms`)
-                            await delay(time)
-                        }
-                    }
+                    await collector?.collectAndForward(page, website.domain, website.paths, this.forwarders, {
+                        type: website.task_type,
+                        interval_time: website.config?.interval_time,
+                    })
+
                     log.info(`[${this.name}] job done for ${website.domain}`)
                     // saving and notify bot
                 },

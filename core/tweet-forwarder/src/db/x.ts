@@ -124,4 +124,27 @@ async function getTweets(ids: number[]) {
     })
 }
 
-export { saveTweet, getTweets }
+async function saveFans(username: string, u_id: string, follows: number, timestamp: number) {
+    return await prisma.x_fans.create({
+        data: {
+            username,
+            u_id,
+            fans: follows,
+            timestamp: timestamp,
+        },
+    })
+}
+
+async function getPreviousNFans(u_id: string, count: number = 5) {
+    return await prisma.x_fans.findMany({
+        where: {
+            u_id: u_id,
+        },
+        orderBy: {
+            timestamp: 'desc',
+        },
+        take: count,
+    })
+}
+
+export { saveTweet, saveFans, getTweets, getPreviousNFans }
