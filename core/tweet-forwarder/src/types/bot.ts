@@ -13,6 +13,7 @@ interface IWebsite {
     paths: Array<string>
     cookie_file?: string
     task_type?: string
+    task_title?: string
     config?: IWebsiteConfig
 }
 

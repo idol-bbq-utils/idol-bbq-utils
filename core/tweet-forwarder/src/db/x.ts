@@ -124,19 +124,19 @@ async function getTweets(ids: number[]) {
     })
 }
 
-async function saveFans(username: string, u_id: string, follows: number, timestamp: number) {
-    return await prisma.x_fans.create({
+async function saveFollows(username: string, u_id: string, follows: number, timestamp: number) {
+    return await prisma.x_follows.create({
         data: {
             username,
             u_id,
-            fans: follows,
+            follows,
             timestamp: timestamp,
         },
     })
 }
 
-async function getPreviousNFans(u_id: string, count: number = 5) {
-    return await prisma.x_fans.findMany({
+async function getPreviousNFollows(u_id: string, count: number = 5) {
+    return await prisma.x_follows.findMany({
         where: {
             u_id: u_id,
         },
@@ -147,4 +147,4 @@ async function getPreviousNFans(u_id: string, count: number = 5) {
     })
 }
 
-export { saveTweet, saveFans, getTweets, getPreviousNFans }
+export { saveTweet, saveFollows, getTweets, getPreviousNFollows }

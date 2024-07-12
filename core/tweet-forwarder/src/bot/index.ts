@@ -13,6 +13,7 @@ import { BaseForwarder } from '@/middleware/forwarder/base'
 import { BiliForwarder } from '@/middleware/forwarder/bilibili'
 import { orderBy, shuffle } from 'lodash'
 import { collectorFetcher } from '@/middleware/collector'
+import { delay } from '@/utils/time'
 
 export class FWDBot {
     public name: string
@@ -85,6 +86,7 @@ export class FWDBot {
 
                     await collector?.collectAndForward(page, website.domain, website.paths, this.forwarders, {
                         type: website.task_type,
+                        title: website.task_title,
                         interval_time: website.config?.interval_time,
                     })
 
@@ -92,6 +94,7 @@ export class FWDBot {
                     // saving and notify bot
                 },
             })
+            log.info(`[${this.name}] job created for ${website.domain}, with type ${website.task_type}`)
             this.jobs.set(website.domain, job)
         }
         return this

@@ -25,7 +25,7 @@ export async function grabTweets(page: Page, url: string): Promise<Array<ITweetA
     return articles.filter((a) => a !== undefined)
 }
 
-export async function grabFanNumer(page: Page, url: string): Promise<ITweetProfile> {
+export async function grabFollowsNumer(page: Page, url: string): Promise<ITweetProfile> {
     await page.goto(url)
     await page.setViewport({ width: 1080, height: 1024 })
     // Click on the tweets tab

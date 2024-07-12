@@ -34,12 +34,12 @@ model x_tweet {
   @@unique([u_id, timestamp(sort: Desc)], map: "article")
 }
 
-model x_fans {
-  id        Int    @id @unique(map: "sqlite_autoindex_x_fans_1") @default(autoincrement())
+model x_follows {
+  id        Int    @id @unique(map: "sqlite_autoindex_x_follows_1") @default(autoincrement())
   username  String
   u_id      String
   timestamp Int
-  fans      Int?
+  follows   Int?
 
-  @@index([u_id(sort: Desc)], map: "fans_for_user")
+  @@index([u_id(sort: Desc)], map: "follows_for_user")
 }

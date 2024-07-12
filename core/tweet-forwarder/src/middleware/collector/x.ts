@@ -7,14 +7,14 @@ import { getTweets, ITweetDB } from '@/db/x'
 import { log } from '@/config'
 import dayjs from 'dayjs'
 import { Page } from 'puppeteer'
-import { shuffle } from 'lodash'
+import { orderBy, shuffle } from 'lodash'
 import { delay } from '@/utils/time'
 
-type TaskType = 'tweet' | 'fans'
+type TaskType = 'tweet' | 'follows'
 type TaskResult<T extends TaskType> = T extends 'tweet'
     ? Awaited<ReturnType<typeof X_DB.saveTweet>>
-    : T extends 'fans'
-      ? Awaited<ReturnType<typeof X_DB.saveFans>>
+    : T extends 'follows'
+      ? Awaited<ReturnType<typeof X_DB.saveFollows>>
       : never
 interface ISavedArticle extends ITweetDB {
     forward_by?: {
@@ -25,11 +25,15 @@ interface ISavedArticle extends ITweetDB {
 
 const TAB = ' '.repeat(4)
 
+function formatTime(time: number | string) {
+    return dayjs(time).format('YYYY-MM-DD HH:mmZ')
+}
+
 function formatArticle(article: ISavedArticle) {
     let metaline = [
         article.username,
         article.u_id,
-        dayjs(article.timestamp * 1000).format(),
+        formatTime(article.timestamp * 1000),
         `${article.type === ArticleTypeEnum.REF ? '引用' : '发布'}推文：`,
     ].join(TAB)
     if (article.forward_by) {
@@ -49,6 +53,7 @@ class XCollector extends Collector {
         forward_to: Array<BaseForwarder>,
         config: {
             type?: TaskType
+            title?: string
             interval_time?: {
                 min: number
                 max: number
@@ -81,14 +86,70 @@ class XCollector extends Collector {
             }
         }
 
-        if (type === 'fans') {
-            log.info(`[${this.name}] grab fans for ${domain}`)
-            try {
-                const profile = await this.collect(page, domain, type)
-                // log.info(`[${this.name}] forward ${items.length} fans from ${domain}`)
-                // this.forward(items, forward_to)
-            } catch (e) {
-                log.error(`[${this.name}] grab fans failed for ${domain}: ${e}`)
+        if (type === 'follows') {
+            log.info(`[${this.name}] grab follows for ${domain}`)
+            let collection = []
+            for (const path of _paths) {
+                try {
+                    const profile = await this.collect(page, `${domain}/${path}`, type)
+                    const recent_profiles = await X_DB.getPreviousNFollows(profile[0].u_id, 5)
+                    collection.push({
+                        profile: profile[0],
+                        recent_profiles,
+                    })
+                } catch (e) {
+                    log.error(`[${this.name}] grab follows failed for ${domain}: ${e}`)
+                }
+            }
+            collection = orderBy(collection, ['profile.follows'], ['desc'])
+            let prepare_to_forward = []
+            for (let item of collection) {
+                const username = item.profile.username
+                const timestamp = item.profile.timestamp
+                let pre_profile
+                for (let recent of item.recent_profiles) {
+                    if (recent.timestamp < timestamp) {
+                        pre_profile = recent
+                        break
+                    }
+                }
+                prepare_to_forward.push({
+                    username,
+                    cur_timestamp: timestamp,
+                    pre_timestamp: pre_profile?.timestamp,
+                    cur_follows: item.profile.follows,
+                    pre_follows: pre_profile?.follows,
+                })
+            }
+
+            // convert to string
+            let text_to_send =
+                `${
+                    prepare_to_forward[0].pre_timestamp
+                        ? formatTime(prepare_to_forward[0].pre_timestamp * 1000) + '\n' + '⬇️' + '\n'
+                        : ''
+                }${formatTime(prepare_to_forward[0].cur_timestamp * 1000)}\n\n` +
+                prepare_to_forward
+                    .map((item) => {
+                        let text = `${item.username.padEnd(12)}`
+                        if (item.pre_follows) {
+                            text += `${item.pre_follows.toString().padStart(2)}  --->  `
+                        }
+                        if (item.cur_follows) {
+                            text += `${item.cur_follows.toString().padEnd(2)}`
+                        }
+                        const offset = (item.cur_follows || 0) - (item.pre_follows || 0)
+                        text += `${TAB}${offset >= 0 ? '+' : '-'}${offset.toString()}`
+                        return text
+                    })
+                    .join('\n')
+            if (config.title) {
+                text_to_send = `${config.title}\n${text_to_send}`
+            }
+            for (const forwarder of forward_to) {
+                forwarder.send(text_to_send).catch((e) => {
+                    log.error('forward failed', e)
+                })
             }
         }
 
@@ -103,10 +164,15 @@ class XCollector extends Collector {
             return tweets as Array<TaskResult<T>>
         }
 
-        if (type === 'fans') {
-            const fans = await X.TweetGrabber.UserPage.grabFanNumer(page, url)
-            log.info(`[${this.name}] grab ${fans.username}'s fans from ${url}`)
-            const saved_profile = await X_DB.saveFans(fans.username, fans.u_id, fans.follows, fans.timestamp)
+        if (type === 'follows') {
+            const follows = await X.TweetGrabber.UserPage.grabFollowsNumer(page, url)
+            log.info(`[${this.name}] grab ${follows.username}'s follows from ${url}`)
+            const saved_profile = await X_DB.saveFollows(
+                follows.username,
+                follows.u_id,
+                follows.follows,
+                follows.timestamp,
+            )
             return [saved_profile] as Array<TaskResult<T>>
         }
         return []
