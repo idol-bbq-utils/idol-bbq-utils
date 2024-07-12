@@ -1,6 +1,8 @@
 import { ArticleTypeEnum, ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
-import { prisma } from './client'
+import { prisma, Prisma } from './client'
 import { log } from '@/config'
+
+export type ITweetDB = Prisma.x_tweetGetPayload<{}>
 
 async function saveTweet(tweet: ITweetArticle) {
     try {
@@ -8,13 +10,30 @@ async function saveTweet(tweet: ITweetArticle) {
         if (tweet.type === ArticleTypeEnum.REF && tweet.ref) {
             const ref_article = tweet.ref
             // make sure the ref is saved first
-            const ref_id = await checkExistAndSave(ref_article)
+            const ref = await checkExistAndSave(ref_article)
             // save the tweet
-            res = await save(tweet, ref_id)
-        } else {
-            res = await save(tweet)
+            res = await save(tweet, ref.id)
+            return res
         }
-        return res?.id
+        if (tweet.type === ArticleTypeEnum.FORWARD && tweet.forward_by) {
+            // we save treat the forwarded tweet as the normal tweet
+            tweet['type'] = ArticleTypeEnum.TWEET
+            const ref = await checkExistAndSave(tweet)
+
+            const res = await saveForward(tweet.forward_by, ref.id)
+            if (!res) {
+                return
+            }
+            return {
+                ...ref,
+                forward_by: {
+                    username: res.username,
+                    ref: res.ref,
+                },
+            }
+        }
+        res = await save(tweet)
+        return res
     } catch (e) {
         log.error('saveTweet failed', e)
         return undefined
@@ -22,7 +41,7 @@ async function saveTweet(tweet: ITweetArticle) {
 }
 
 async function checkExist(tweet: ITweetArticle) {
-    return await prisma.x_tweets.findUnique({
+    return await prisma.x_tweet.findUnique({
         where: {
             u_id_timestamp: {
                 u_id: tweet.u_id,
@@ -35,9 +54,9 @@ async function checkExist(tweet: ITweetArticle) {
 async function checkExistAndSave(tweet: ITweetArticle, ref?: number) {
     let exist_one = await checkExist(tweet)
     if (exist_one) {
-        return exist_one.id
+        return exist_one
     }
-    const item = await prisma.x_tweets.create({
+    const item = await prisma.x_tweet.create({
         data: {
             u_id: tweet.u_id,
             username: tweet.username,
@@ -46,11 +65,10 @@ async function checkExistAndSave(tweet: ITweetArticle, ref?: number) {
             type: tweet.type,
             tweet_link: tweet.tweet_link,
             has_media: !!tweet.has_media,
-            forward_by: tweet.forward_by,
             ref: ref,
         },
     })
-    return item.id
+    return item
 }
 
 async function save(tweet: ITweetArticle, ref?: number) {
@@ -58,7 +76,7 @@ async function save(tweet: ITweetArticle, ref?: number) {
     if (exist_one) {
         return
     }
-    const item = await prisma.x_tweets.create({
+    const item = await prisma.x_tweet.create({
         data: {
             u_id: tweet.u_id,
             username: tweet.username,
@@ -67,15 +85,37 @@ async function save(tweet: ITweetArticle, ref?: number) {
             type: tweet.type,
             tweet_link: tweet.tweet_link,
             has_media: tweet.has_media,
-            forward_by: tweet.forward_by,
             ref: ref,
         },
     })
     return item
 }
 
+async function saveForward(username: string, ref: number) {
+    const exist_one = await prisma.x_forward.findUnique({
+        where: {
+            ref_username: {
+                ref,
+                username,
+            },
+        },
+    })
+    if (exist_one) {
+        return
+    }
+
+    const item = await prisma.x_forward.create({
+        data: {
+            ref,
+            username,
+        },
+    })
+
+    return item
+}
+
 async function getTweets(ids: number[]) {
-    return await prisma.x_tweets.findMany({
+    return await prisma.x_tweet.findMany({
         where: {
             id: {
                 in: ids,
@@ -84,12 +124,4 @@ async function getTweets(ids: number[]) {
     })
 }
 
-async function getTweetById(id: number) {
-    return await prisma.x_tweets.findUnique({
-        where: {
-            id,
-        },
-    })
-}
-
-export { saveTweet, getTweets, getTweetById }
+export { saveTweet, getTweets }

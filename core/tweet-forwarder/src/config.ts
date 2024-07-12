@@ -1,10 +1,9 @@
 import { IYamlConfig } from './types/config'
 import fs from 'fs'
 import YAML from 'yaml'
-import puppeteer, { Browser } from 'puppeteer'
 import { IBot, IWebsiteConfig } from './types/bot'
 import { createLogger, Logger, winston } from '@idol-bbq-utils/log'
-import path from 'path'
+
 class FWDApp {
     public bots: IBot[]
     public config: IWebsiteConfig
@@ -20,6 +19,7 @@ const fwd_app = new FWDApp()
 
 const log: Logger = createLogger({
     defaultMeta: { service: 'tweet-forwarder' },
+    level: 'debug',
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({

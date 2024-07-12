@@ -102,7 +102,7 @@ async function tweetMetaParser(
         username: username || '',
         u_id: id || '',
         tweet_link: tweet_link || '',
-        timestamp,
+        timestamp: Math.floor(timestamp / 1000),
     }
 }
 

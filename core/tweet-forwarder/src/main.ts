@@ -1,6 +1,4 @@
-import { X } from '@idol-bbq-utils/spider'
-import puppeteer, { CookieParam } from 'puppeteer'
-import { createLogger } from '@idol-bbq-utils/log'
+import puppeteer from 'puppeteer'
 
 import { fwd_app } from './config'
 import { FWDBot } from './bot'

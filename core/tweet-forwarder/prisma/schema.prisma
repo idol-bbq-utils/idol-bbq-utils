@@ -8,19 +8,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model x_tweets {
-  id             Int        @id @unique(map: "sqlite_autoindex_x_tweets_1") @default(autoincrement())
-  u_id           String
-  username       String
-  timestamp      Int
-  text           String
-  type           String
-  tweet_link     String?    @default("")
-  has_media      Boolean?
-  forward_by     String?    @default("")
-  ref            Int?
-  x_tweets       x_tweets?  @relation("x_tweetsTox_tweets", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_x_tweets x_tweets[] @relation("x_tweetsTox_tweets")
+model x_forward {
+  id       Int     @id @unique(map: "sqlite_autoindex_x_forward_1") @default(autoincrement())
+  ref      Int
+  username String
+  x_tweets x_tweet @relation(fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([ref, username], map: "forward_by")
+}
+
+model x_tweet {
+  id            Int         @id @unique(map: "sqlite_autoindex_x_tweet_1") @default(autoincrement())
+  u_id          String
+  username      String
+  timestamp     Int
+  text          String
+  type          String
+  tweet_link    String?     @default("")
+  has_media     Boolean?
+  ref           Int?
+  x_forward     x_forward[]
+  x_tweet       x_tweet?    @relation("x_tweetTox_tweet", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_x_tweet x_tweet[]   @relation("x_tweetTox_tweet")
 
   @@unique([u_id, timestamp(sort: Desc)], map: "article")
 }
