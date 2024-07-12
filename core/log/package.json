@@ -28,6 +28,7 @@
     "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
   },
   "dependencies": {
+    "dayjs": "^1.11.11",
     "winston": "^3.13.0"
   }
 }

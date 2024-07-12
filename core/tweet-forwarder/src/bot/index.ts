@@ -1,7 +1,7 @@
 import { ForwardPlatformEnum, IForwardTo, IWebsite, IWebsiteConfig } from '@/types/bot'
 import { CronJob } from 'cron'
 import { fwd_app } from '@/config'
-import { Browser, Page } from 'puppeteer'
+import { Browser } from 'puppeteer'
 import fs from 'fs'
 import { X } from '@idol-bbq-utils/spider'
 import { ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
@@ -11,7 +11,7 @@ import { BaseCollector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { BiliForwarder } from '@/middleware/forwarder/bilibili'
-import { orderBy, shuffle, sortBy } from 'lodash'
+import { orderBy, shuffle } from 'lodash'
 
 async function delay(time: number) {
     return new Promise((resolve) => {
@@ -24,7 +24,7 @@ export class FWDBot {
     public name: string
     private websites: Array<IWebsite>
     private config: IWebsiteConfig
-    private collector: BaseCollector<ITweetArticle>
+    private collector: BaseCollector
     private forwarders: Array<BaseForwarder> = []
     private jobs: Map<string, CronJob>
     constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IWebsiteConfig = {}) {
@@ -34,14 +34,17 @@ export class FWDBot {
             ...fwd_app.config,
             ...config,
         }
-        for (const forward of forward_to) {
-            if (forward.type === ForwardPlatformEnum.Telegram) {
-                this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
-            }
-            if (forward.type === ForwardPlatformEnum.Bilibili) {
-                this.forwarders.push(new BiliForwarder(forward.token))
+        if (forward_to) {
+            for (const forward of forward_to) {
+                if (forward.type === ForwardPlatformEnum.Telegram) {
+                    this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
+                }
+                if (forward.type === ForwardPlatformEnum.Bilibili) {
+                    this.forwarders.push(new BiliForwarder(forward.token))
+                }
             }
         }
+
         this.jobs = new Map()
         this.collector = new XCollector()
     }
@@ -84,8 +87,10 @@ export class FWDBot {
                         log.info(`[${this.name}] grab tweets for ${website.domain}/${path}`)
                         try {
                             const res = await X.TweetGrabber.Article.grabTweets(page, `${website.domain}/${path}`)
-                            this.collector.collect(orderBy(res, ['timestamp'], 'asc'), 'tweet').then((ids) => {
-                                this.collector.forward(ids, this.forwarders)
+                            log.info(`[${this.name}] grab ${res.length} tweets from ${website.domain}/${path}`)
+                            this.collector.collect(orderBy(res, ['timestamp'], 'asc'), 'tweet').then((items) => {
+                                log.info(`[${this.name}] forward ${items.length} tweets from ${website.domain}/${path}`)
+                                this.collector.forward(items, this.forwarders)
                             })
                         } catch (e) {
                             log.error(`[${this.name}] grab tweets failed for ${website.domain}/${path}: ${e}`)

@@ -1,11 +1,12 @@
 import winston, { Logger } from 'winston'
 import { format } from 'winston'
+import dayjs from 'dayjs'
 
 const { combine, colorize, timestamp, json, printf } = format
 
 const default_format = printf(({ timestamp, level, message, ...meta }) => {
     const service = meta && (meta['service'] ? `[${meta['service']}]` : '')
-    return `${timestamp} ${service} [${level}]: ${JSON.stringify(message)}`
+    return `${dayjs(timestamp).format()} ${service} [${level}]: ${JSON.stringify(message)}`
 })
 
 const default_config = {

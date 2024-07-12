@@ -1,9 +1,17 @@
 import { BaseForwarder } from '../forwarder/base'
 
-abstract class BaseCollector<T> {
+abstract class BaseCollector {
     constructor() {}
-    public abstract collect(items: Array<T>, type: string): Promise<Array<number>>
-    public abstract forward(items: Array<number>, forwrad_to: Array<BaseForwarder>): Promise<this>
+    public abstract collect(...args: any[]): Promise<any>
+    public abstract forward(...args: any[]): Promise<this>
 }
 
-export { BaseCollector }
+abstract class TypedCollector<T, R> extends BaseCollector {
+    constructor() {
+        super()
+    }
+    public abstract collect(items: T[], type: string): Promise<R[]>
+    public abstract forward(items: R[], forward_to: BaseForwarder[]): Promise<this>
+}
+
+export { BaseCollector, TypedCollector }
