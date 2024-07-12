@@ -1,1 +1,1 @@
-export * as Article from './article'
+export * as UserPage from './user'

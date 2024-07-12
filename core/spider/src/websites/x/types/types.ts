@@ -32,5 +32,12 @@ interface ITweetArticle {
     forward_by?: string | null
 }
 
+interface ITweetProfile {
+    username: string
+    u_id: string
+    follows: number
+    timestamp: number
+}
+
 export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum }
-export type { ITweetArticle }
+export type { ITweetArticle, ITweetProfile }
