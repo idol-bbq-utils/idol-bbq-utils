@@ -254,10 +254,10 @@ class XCollector extends Collector {
                 forward_tweet = tweet
             }
             let format_article = formatArticle(forward_tweet)
-            const forward_article = ref_tweet ? formatArticle(ref_tweet) : undefined
+            const ref_article = ref_tweet ? formatArticle(ref_tweet) : undefined
 
-            if (forward_article) {
-                format_article = `${format_article}\n${'-'.repeat(12)}\n${forward_article}`
+            if (ref_article) {
+                format_article = `${format_article}\n\n${'-'.repeat(12)}\n\n${ref_article}`
             }
             // TODO Text convertor
             // TODO Translate plugin
@@ -267,7 +267,7 @@ class XCollector extends Collector {
                     let text = await config.translator.translate(tweet.text)
                     translated_article = await X_DB.saveTranslation(forward_tweet.id, text)
                 }
-                format_article += `\n\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n\n${translated_article.text}`
+                format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
             }
             for (const forwarder of forwrad_to) {
                 forwarder.send(format_article).catch((e) => {
@@ -297,12 +297,12 @@ class XCollector extends Collector {
                                 let text = await config.translator.translate(article.text)
                                 translated_article = await X_DB.saveTranslation(article.id, text)
                             }
-                            format_article += `\n\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n\n${translated_article.text}`
+                            format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
                         }
                         return format_article
                     }),
                 )
-            ).join(`\n${'-'.repeat(12)}\n`)
+            ).join(`\n\n${'-'.repeat(12)}\n\n`)
             for (const forwarder of forward_to) {
                 forwarder.send(format_thread).catch((e) => {
                     log.error('forward failed', e)
