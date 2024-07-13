@@ -23,7 +23,7 @@
     "scripts": {
         "build": "tsc && tsc-alias",
         "build:production": "tsc --build tsconfig.prod.json && tsc-alias",
-        "dev": "pnpm build && node lib/test.js"
+        "test": "pnpm build && node lib/test.js"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
