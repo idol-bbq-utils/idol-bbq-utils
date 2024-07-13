@@ -7,6 +7,7 @@ const QUERY_META_PATTERN = 'div[data-testid="User-Name"]'
 const QUERY_IMG_PATTERN = 'div[data-testid="tweetPhoto"]'
 const QUERY_VIDEO_PATTERN = 'div[data-testid="previewInterstitial"]'
 const QUERY_CARD_PATTERN = 'div[data-testid="card.wrapper"]'
+const QUERY_CARD_VOTE_PATTERN = 'div[data-testid="cardPoll"]'
 
 export async function tweetArticleParser(article: ElementHandle<HTMLElement>): Promise<ITweetArticle | undefined> {
     const article_type = await getArticleTypeEnum(article)

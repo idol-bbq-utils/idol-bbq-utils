@@ -3,15 +3,11 @@ import { CronJob } from 'cron'
 import { fwd_app } from '@/config'
 import { Browser } from 'puppeteer'
 import fs from 'fs'
-import { X } from '@idol-bbq-utils/spider'
-import { ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
 import { log } from '../config'
-import { XCollector } from '@/middleware/collector/x'
 import { Collector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { BiliForwarder } from '@/middleware/forwarder/bilibili'
-import { orderBy, shuffle } from 'lodash'
 import { collectorFetcher } from '@/middleware/collector'
 import { delay } from '@/utils/time'
 import { Gemini } from '@/middleware/translator/gemini'
@@ -63,13 +59,15 @@ export class FWDBot {
             const translator = website.config?.translator && new Gemini(website.config.translator.key)
             await translator?.init()
             // do cron here
+            log.debug(website)
             const job = CronJob.from({
                 cronTime: website.config?.cron || '* * * * *',
                 onTick: async () => {
-                    log.info(`[${this.name}] start job for ${website.domain}`)
+                    const task_id = Math.random().toString(36).substring(7)
+                    log.info(`[${task_id}] [${this.name}] start job for ${website.domain}`)
                     const page = await browser.newPage()
                     if (cookie) {
-                        log.info(`[${this.name}] set cookie for ${website.domain}`)
+                        log.info(`[${task_id}] [${this.name}] set cookie for ${website.domain}`)
                         const cookies = JSON.parse(cookie)
                         await page.setCookie(...cookies)
                     }
@@ -83,7 +81,7 @@ export class FWDBot {
                             Math.random() * (website.config.interval_time.max - website.config.interval_time.min) +
                                 website.config.interval_time.min,
                         )
-                        log.info(`[${this.name}] cron triggered but wait for ${time}ms`)
+                        log.info(`[${task_id}] [${this.name}] cron triggered but wait for ${time}ms`)
                         await delay(time)
                     }
 
@@ -92,9 +90,10 @@ export class FWDBot {
                         title: website.task_title,
                         interval_time: website.config?.interval_time,
                         translator,
+                        task_id,
                     })
                     await page.close()
-                    log.info(`[${this.name}] job done for ${website.domain}`)
+                    log.info(`[${task_id}] [${this.name}] job done for ${website.domain}`)
                     // saving and notify bot
                 },
             })

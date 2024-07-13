@@ -5,7 +5,23 @@ bots:
         paths: ['user1', 'user2', 'user3']             # (required) users to forward tweets from
         cookie_file: './assets/cookies.json'
         config:
-          cron: '*/20 4-23 * * *'
+          cron: '0-59/5 4-23 * * *'
+          translator:                         # (not required) translator
+            type: 'gemini'
+            key:  'api-key'
+      - domain: 'https://x.com'              # (required) website domain, notice the slash at the end
+        paths: ['user4', 'user5', 'user6']             # (required) users to forward tweets from
+        cookie_file: './assets/cookies.json'
+        config:
+          cron: '1-59/5 4-23 * * *'
+          translator:                         # (not required) translator
+            type: 'gemini'
+            key:  'api-key'
+      - domain: 'https://x.com'              # (required) website domain, notice the slash at the end
+        paths: ['user7', 'user8', 'user9']             # (required) users to forward tweets from
+        cookie_file: './assets/cookies.json'
+        config:
+          cron: '2-59/5 4-23 * * *'
           translator:                         # (not required) translator
             type: 'gemini'
             key:  'api-key'

@@ -63,17 +63,21 @@ class XCollector extends Collector {
                 max: number
             }
             translator?: Gemini
+            task_id?: string
         },
     ): Promise<this> {
-        const { type = 'tweet' } = config
+        const { type = 'tweet', task_id } = config
+        const prefix = task_id ? `[${task_id}] ` : ''
         const _paths = shuffle(paths)
         if (type === 'tweet') {
             for (const path of _paths) {
                 try {
-                    const replies = (await this.collect(page, `${domain}/${path}/with_replies`, 'reply')).filter(
-                        (item) => item !== undefined,
-                    )
-                    log.info(`[${this.name}] forward ${replies.length} replies from ${domain}/${path}`)
+                    const replies = (
+                        await this.collect(page, `${domain}/${path}/with_replies`, 'reply', {
+                            task_id: config.task_id,
+                        })
+                    ).filter((item) => item !== undefined)
+                    log.info(`${prefix}[${this.name}] forward ${replies.length} replies from ${domain}/${path}`)
                     this.forwardReply(
                         replies.map((thread) => orderBy(thread, ['timestamp'], 'desc')),
                         forward_to,
@@ -82,19 +86,22 @@ class XCollector extends Collector {
                         },
                     )
                 } catch (e) {
-                    log.error(`[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
+                    log.error(`${prefix}[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
                 }
 
                 try {
-                    const items = (await this.collect(page, `${domain}/${path}`, type)).filter(
-                        (item) => item !== undefined,
-                    )
-                    log.info(`[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
+                    const items = (
+                        await this.collect(page, `${domain}/${path}`, type, {
+                            task_id: config.task_id,
+                        })
+                    ).filter((item) => item !== undefined)
+                    log.info(`${prefix}[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
                     this.forward(items, forward_to, 'tweet', {
                         translator: config.translator,
+                        task_id: config.task_id,
                     })
                 } catch (e) {
-                    log.error(`[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
+                    log.error(`${prefix}[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
                 }
 
                 if (config.interval_time) {
@@ -102,7 +109,7 @@ class XCollector extends Collector {
                         Math.random() * (config.interval_time.max - config.interval_time.min) +
                             config.interval_time.min,
                     )
-                    log.info(`[${this.name}] wait for next loop ${time}ms`)
+                    log.info(`${prefix}[${this.name}] wait for next loop ${time}ms`)
                     await delay(time)
                 }
             }
@@ -111,20 +118,22 @@ class XCollector extends Collector {
         if (type === 'reply') {
             for (const path of _paths) {
                 try {
-                    const replies = (await this.collect(page, `${domain}/${path}/with_replies`, 'reply')).filter(
-                        (item) => item !== undefined,
-                    )
-                    log.info(`[${this.name}] forward ${replies.length} replies from ${domain}/${path}`)
+                    const replies = (
+                        await this.collect(page, `${domain}/${path}/with_replies`, 'reply', {
+                            task_id: config.task_id,
+                        })
+                    ).filter((item) => item !== undefined)
+                    log.info(`${prefix}[${this.name}] forward ${replies.length} replies from ${domain}/${path}`)
                     // forward replies
                 } catch (e) {
-                    log.error(`[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
+                    log.error(`${prefix}[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
                 }
                 if (config.interval_time) {
                     const time = Math.floor(
                         Math.random() * (config.interval_time.max - config.interval_time.min) +
                             config.interval_time.min,
                     )
-                    log.info(`[${this.name}] wait for next loop ${time}ms`)
+                    log.info(`${prefix}[${this.name}] wait for next loop ${time}ms`)
                     await delay(time)
                 }
             }
@@ -134,14 +143,16 @@ class XCollector extends Collector {
             let collection = []
             for (const path of _paths) {
                 try {
-                    const profile = await this.collect(page, `${domain}/${path}`, type)
+                    const profile = await this.collect(page, `${domain}/${path}`, type, {
+                        task_id: config.task_id,
+                    })
                     const recent_profiles = await X_DB.getPreviousNFollows(profile[0].u_id, 5)
                     collection.push({
                         profile: profile[0],
                         recent_profiles,
                     })
                 } catch (e) {
-                    log.error(`[${this.name}] grab follows failed for ${domain}: ${e}`)
+                    log.error(`${prefix}[${this.name}] grab follows failed for ${domain}: ${e}`)
                 }
             }
             collection = orderBy(collection, ['profile.follows'], ['desc'])
@@ -199,19 +210,27 @@ class XCollector extends Collector {
         return this
     }
 
-    public async collect<T extends TaskType>(page: Page, url: string, type?: T): Promise<Array<TaskResult<T>>> {
+    public async collect<T extends TaskType>(
+        page: Page,
+        url: string,
+        type?: T,
+        config?: {
+            task_id?: string
+        },
+    ): Promise<Array<TaskResult<T>>> {
+        const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
         if (type === 'tweet') {
-            log.info(`[${this.name}] grab tweets for ${url}`)
+            log.info(`${prefix}[${this.name}] grab tweets for ${url}`)
             const res = await X.TweetGrabber.UserPage.grabTweets(page, url)
-            log.info(`[${this.name}] grab ${res.length} tweets from ${url}`)
+            log.info(`${prefix}[${this.name}] grab ${res.length} tweets from ${url}`)
             const tweets = await Promise.all(res.map(X_DB.saveTweet))
             return tweets as Array<TaskResult<T>>
         }
 
         if (type === 'follows') {
-            log.info(`[${this.name}] grab follows for ${url}`)
+            log.info(`${prefix}[${this.name}] grab follows for ${url}`)
             const follows = await X.TweetGrabber.UserPage.grabFollowsNumer(page, url)
-            log.info(`[${this.name}] grab ${follows.username}'s follows from ${url}`)
+            log.info(`${prefix}[${this.name}] grab ${follows.username}'s follows from ${url}`)
             const saved_profile = await X_DB.saveFollows(
                 follows.username,
                 follows.u_id,
@@ -222,9 +241,9 @@ class XCollector extends Collector {
         }
 
         if (type === 'reply') {
-            log.info(`[${this.name}] grab replies for ${url}`)
+            log.info(`${prefix}[${this.name}] grab replies for ${url}`)
             const reply_threads = await X.TweetGrabber.UserPage.grabReply(page, url)
-            log.info(`[${this.name}] grab ${reply_threads.length} reply threads from ${url}`)
+            log.info(`${prefix}[${this.name}] grab ${reply_threads.length} reply threads from ${url}`)
             const res = []
             for (const reply_thread of reply_threads) {
                 const saved_thread = await X_DB.saveReply(reply_thread)
@@ -240,8 +259,10 @@ class XCollector extends Collector {
         type: TaskType = 'tweet',
         config?: {
             translator?: Gemini
+            task_id?: string
         },
     ) {
+        const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
         const tweets = items
         for (const tweet of tweets) {
             let forward_tweet = tweet
@@ -271,7 +292,7 @@ class XCollector extends Collector {
             }
             for (const forwarder of forwrad_to) {
                 forwarder.send(format_article).catch((e) => {
-                    log.error('forward failed', e)
+                    log.error(`${prefix}forward failed`, e)
                 })
             }
         }
@@ -283,8 +304,10 @@ class XCollector extends Collector {
         forward_to: Array<BaseForwarder>,
         config?: {
             translator?: Gemini
+            task_id?: string
         },
     ) {
+        const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
         for (const thread of threads) {
             let format_thread = (
                 await Promise.all(
@@ -292,7 +315,7 @@ class XCollector extends Collector {
                         let format_article = formatArticle(article)
                         if (config?.translator) {
                             let translated_article = await X_DB.getTranslation(article.id)
-                            log.info(translated_article)
+                            log.debug(`${prefix}`, translated_article)
                             if (!translated_article) {
                                 let text = await config.translator.translate(article.text)
                                 translated_article = await X_DB.saveTranslation(article.id, text)
@@ -305,7 +328,7 @@ class XCollector extends Collector {
             ).join(`\n\n${'-'.repeat(12)}\n\n`)
             for (const forwarder of forward_to) {
                 forwarder.send(format_thread).catch((e) => {
-                    log.error('forward failed', e)
+                    log.error(`${prefix}forward failed`, e)
                 })
             }
         }
