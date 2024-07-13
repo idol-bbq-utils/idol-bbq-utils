@@ -1,36 +1,53 @@
 enum TweetTabsEnum {
-  TWEETS = 0,
-  REPLIES = 1,
-  MEDIA = 2,
+    TWEETS = 0,
+    REPLIES = 1,
+    MEDIA = 2,
 }
 
 enum ArticleTypeEnum {
-  /**
-   *
-   */
-  TWEET = 'tweet',
-  FORWARD = 'forward',
-  REPLY = 'reply',
-  REF = 'ref',
+    /**
+     *
+     */
+    TWEET = 'tweet',
+    FORWARD = 'forward',
+    REF = 'ref',
+    REPLY = 'reply',
+}
+
+enum TimelineTypeEnum {
+    ARTICLE = 'article',
+    DIVIDER = 'divider',
+    SHOW_MORE = 'show_more',
+    HEADING = 'heading',
+    FOLLOW_RECOMMEND = 'follow_recommend',
+    DEFAULT = 'default',
 }
 
 enum ArticleElementTypeEnum {
-  TEXT,
-  EMOJI,
-  HASH_TAG,
-  LINK,
+    TEXT,
+    EMOJI,
+    HASH_TAG,
+    LINK,
 }
 
 interface ITweetArticle {
-  username: string
-  id: string
-  timestamp: number
-  text: string
-  tweet_link: string
-  type: Omit<ArticleTypeEnum, 'tweet_link'>
-  ref?: ITweetArticle
-  has_media?: boolean
+    username: string
+    u_id: string
+    timestamp: number
+    text: string
+    type: ArticleTypeEnum
+    tweet_link?: string | null
+    ref?: ITweetArticle | null
+    has_media?: boolean | null
+    forward_by?: string | null
 }
 
-export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum }
-export type { ITweetArticle }
+interface ITweetProfile {
+    username: string
+    u_id: string
+    follows: number
+    timestamp: number
+}
+
+export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum, TimelineTypeEnum }
+export type { ITweetArticle, ITweetProfile }

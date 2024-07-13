@@ -1,0 +1,19 @@
+bots:
+  - name: 'example-bot'
+    websites:                                 # (required) websites to forward tweets from
+      - domain: 'https://x.com'              # (required) website domain, notice there is no slash at the end
+        cookie_file: /path/to/cookies.json    # (not required) puppeteer supported cookies
+        paths: ['user1', 'user2']             # (required) users to forward tweets from
+        configs:                              # (not required)
+          - user_agent: 'example'             # (not required) puppeteer supported user agent
+            cron: "0 0 0 * * *"               # (not required) cron job
+    forward_to:                               # (not required) forward to multiple platforms, you can add more than one
+      - type: 'telegram'                      # (required) forward type
+        token: '123'                          # (required) telegram bot token
+        chat_id: '123'                        # (required) telegram chat id    
+      # - type: 'bilibili'                      # (required) forward type
+      #   token: /path/to/token                 # (required) biblibili token
+    configs:                                  # (not required) forwarder configurations
+      - user_agent: 'example'                 # (not required) puppeteer supported user agent
+        random_user_agent: false              # (not required) random user agent
+        cron: "0 0 0 * * *"                   # (not required) cron job

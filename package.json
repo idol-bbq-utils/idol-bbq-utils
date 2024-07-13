@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "bootstrap": "pnpm install",
-    "dev:spider": "lerna run --scope=@idol-bbq-utils/spider dev"
+    "build": "lerna run build",
+    "dev:spider": "lerna run --scope=@idol-bbq-utils/spider dev",
+    "dev:forwarder": "lerna run --scope=@idol-bbq-utils/tweet-forwarder dev"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model x_forward {
+  id       Int     @id @unique(map: "sqlite_autoindex_x_forward_1") @default(autoincrement())
+  ref      Int
+  username String
+  x_tweets x_tweet @relation(fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([ref, username], map: "forward_by")
+}
+
+model x_tweet {
+  id            Int            @id @unique(map: "sqlite_autoindex_x_tweet_1") @default(autoincrement())
+  u_id          String
+  username      String
+  timestamp     Int
+  text          String
+  type          String
+  tweet_link    String?        @default("")
+  has_media     Boolean?
+  ref           Int?
+  x_forward     x_forward[]
+  x_translation x_translation?
+  x_tweet       x_tweet?       @relation("x_tweetTox_tweet", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_x_tweet x_tweet[]      @relation("x_tweetTox_tweet")
+
+  @@unique([u_id, timestamp(sort: Desc)], map: "article")
+}
+
+model x_follows {
+  id        Int    @id @unique(map: "sqlite_autoindex_x_follows_1") @default(autoincrement())
+  username  String
+  u_id      String
+  timestamp Int
+  follows   Int?
+
+  @@index([u_id(sort: Desc)], map: "follows_for_user")
+}
+
+model x_translation {
+  id      Int     @id @unique(map: "sqlite_autoindex_x_translation_1") @default(autoincrement())
+  ref     Int     @unique(map: "x_translation_ref_index", sort: Desc)
+  text    String?
+  x_tweet x_tweet @relation(fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}

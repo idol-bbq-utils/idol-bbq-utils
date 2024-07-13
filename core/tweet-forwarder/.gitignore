@@ -1,0 +1,5 @@
+config.yaml
+assets
+
+# Prisma Client
+prisma/generated
