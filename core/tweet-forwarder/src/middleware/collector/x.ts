@@ -30,12 +30,12 @@ function formatTime(time: number | string) {
 }
 
 function formatArticle(article: ISavedArticle) {
-    let metaline = [
-        article.username,
-        article.u_id,
-        formatTime(article.timestamp * 1000),
-        `${article.type === ArticleTypeEnum.REF ? '引用' : '发布'}推文：`,
-    ].join(TAB)
+    let metaline = [article.username, article.u_id].join(TAB) + '\n'
+    metaline =
+        metaline +
+        [formatTime(article.timestamp * 1000), `${article.type === ArticleTypeEnum.REF ? '引用' : '发布'}推文：`].join(
+            TAB,
+        )
     if (article.forward_by) {
         metaline = `${article.forward_by.username}${TAB}转发推文:\n\n${metaline}`
     }

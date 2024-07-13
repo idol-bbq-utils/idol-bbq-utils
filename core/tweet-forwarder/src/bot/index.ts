@@ -23,7 +23,7 @@ export class FWDBot {
     private forwarders: Array<BaseForwarder> = []
     private collectors: Map<string, Collector> = new Map()
 
-    private jobs: Map<string, CronJob>
+    private jobs: Array<CronJob>
     constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IWebsiteConfig = {}) {
         this.name = name
         this.websites = websites
@@ -45,7 +45,7 @@ export class FWDBot {
             this.collectors.set(url.hostname, new CollectorBuilder())
         }
 
-        this.jobs = new Map()
+        this.jobs = []
         this.collectors
     }
 
@@ -94,8 +94,8 @@ export class FWDBot {
                     // saving and notify bot
                 },
             })
-            log.info(`[${this.name}] job created for ${website.domain}, with type ${website.task_type}`)
-            this.jobs.set(website.domain, job)
+            log.info(`[${this.name}] job created for ${website.domain}, with type ${website.task_type || 'default'}`)
+            this.jobs.push(job)
         }
         return this
     }
