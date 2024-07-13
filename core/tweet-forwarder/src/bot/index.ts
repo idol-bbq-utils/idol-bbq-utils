@@ -52,20 +52,9 @@ export class FWDBot {
     public async init(browser: Browser) {
         log.info(`[${this.name}] init`)
         for (const website of this.websites) {
-            const page = await browser.newPage()
             const cookie = website.cookie_file && fs.readFileSync(website.cookie_file, 'utf8')
             const url = new URL(website.domain)
             const collector = this.collectors.get(url.hostname)
-            if (cookie) {
-                log.info(`[${this.name}] set cookie for ${website.domain}`)
-                const cookies = JSON.parse(cookie)
-                await page.setCookie(...cookies)
-            }
-            await page.setUserAgent(
-                website.config?.user_agent ||
-                    this.config.user_agent ||
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
-            )
             website.config = {
                 ...this.config,
                 ...website.config,
@@ -74,6 +63,18 @@ export class FWDBot {
             const job = CronJob.from({
                 cronTime: website.config?.cron || '* * * * *',
                 onTick: async () => {
+                    log.info(`[${this.name}] start job for ${website.domain}`)
+                    const page = await browser.newPage()
+                    if (cookie) {
+                        log.info(`[${this.name}] set cookie for ${website.domain}`)
+                        const cookies = JSON.parse(cookie)
+                        await page.setCookie(...cookies)
+                    }
+                    await page.setUserAgent(
+                        website.config?.user_agent ||
+                            this.config.user_agent ||
+                            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
+                    )
                     if (website.config?.interval_time) {
                         const time = Math.floor(
                             Math.random() * (website.config.interval_time.max - website.config.interval_time.min) +
@@ -82,14 +83,13 @@ export class FWDBot {
                         log.info(`[${this.name}] cron triggered but wait for ${time}ms`)
                         await delay(time)
                     }
-                    log.info(`[${this.name}] start job for ${website.domain}`)
 
                     await collector?.collectAndForward(page, website.domain, website.paths, this.forwarders, {
                         type: website.task_type,
                         title: website.task_title,
                         interval_time: website.config?.interval_time,
                     })
-
+                    await page.close()
                     log.info(`[${this.name}] job done for ${website.domain}`)
                     // saving and notify bot
                 },

@@ -37,7 +37,7 @@ export async function grabReply(page: Page, url: string): Promise<Array<Array<IT
     const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
-    // await page.mouse.wheel({ deltaY: 600 })
+
     const timeline_items = await article_wrapper?.$$('div[data-testid="cellInnerDiv"]')
     const timeline_types = await Promise.all(timeline_items?.map(getTimelineType) ?? [])
     const res = await tweetReplyParser(timeline_items?.map((e, i) => ({ item: e, type: timeline_types[i] })) ?? [])

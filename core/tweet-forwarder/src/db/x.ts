@@ -147,4 +147,22 @@ async function getPreviousNFollows(u_id: string, count: number = 5) {
     })
 }
 
-export { saveTweet, saveFollows, getTweets, getPreviousNFollows }
+async function saveReply(replies: ITweetArticle[]) {
+    let index = replies.length - 1
+    // check the last one wether has been saved
+    let exist_one = await checkExist(replies[index])
+    if (exist_one) {
+        return
+    }
+
+    let previous
+    let res = []
+    for (index = 0; index < replies.length; index = index + 1) {
+        let cur_reply = replies[index]
+        previous = await checkExistAndSave(cur_reply, previous?.id ?? undefined)
+        res.push(previous)
+    }
+    return res
+}
+
+export { saveTweet, saveFollows, saveReply, getTweets, getPreviousNFollows }

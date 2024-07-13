@@ -10,12 +10,14 @@ import { Page } from 'puppeteer'
 import { orderBy, shuffle } from 'lodash'
 import { delay } from '@/utils/time'
 
-type TaskType = 'tweet' | 'follows'
+type TaskType = 'tweet' | 'reply' | 'follows'
 type TaskResult<T extends TaskType> = T extends 'tweet'
     ? Awaited<ReturnType<typeof X_DB.saveTweet>>
     : T extends 'follows'
       ? Awaited<ReturnType<typeof X_DB.saveFollows>>
-      : never
+      : T extends 'reply'
+        ? Awaited<ReturnType<typeof X_DB.saveReply>>
+        : never
 interface ISavedArticle extends ITweetDB {
     forward_by?: {
         username: string
@@ -33,9 +35,10 @@ function formatArticle(article: ISavedArticle) {
     let metaline = [article.username, article.u_id].join(TAB) + '\n'
     metaline =
         metaline +
-        [formatTime(article.timestamp * 1000), `${article.type === ArticleTypeEnum.REF ? '引用' : '发布'}推文：`].join(
-            TAB,
-        )
+        [
+            formatTime(article.timestamp * 1000),
+            `${article.type === ArticleTypeEnum.REF ? '引用' : article.type === ArticleTypeEnum.REPLY ? '回复' : '发布'}推文：`,
+        ].join(TAB)
     if (article.forward_by) {
         metaline = `${article.forward_by.username}${TAB}转发推文:\n\n${metaline}`
     }
@@ -64,7 +67,19 @@ class XCollector extends Collector {
         const _paths = shuffle(paths)
         if (type === 'tweet') {
             for (const path of _paths) {
-                log.info(`[${this.name}] grab tweets for ${domain}/${path}`)
+                try {
+                    const replies = (await this.collect(page, `${domain}/${path}/with_replies`, 'reply')).filter(
+                        (item) => item !== undefined,
+                    )
+                    log.info(`[${this.name}] forward ${replies.length} replies from ${domain}/${path}`)
+                    this.forwardReply(
+                        replies.map((thread) => orderBy(thread, ['timestamp'], 'desc')),
+                        forward_to,
+                    )
+                } catch (e) {
+                    log.error(`[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
+                }
+
                 try {
                     const items = (await this.collect(page, `${domain}/${path}`, type)).filter(
                         (item) => item !== undefined,
@@ -86,8 +101,29 @@ class XCollector extends Collector {
             }
         }
 
+        if (type === 'reply') {
+            for (const path of _paths) {
+                try {
+                    const replies = (await this.collect(page, `${domain}/${path}/with_replies`, 'reply')).filter(
+                        (item) => item !== undefined,
+                    )
+                    log.info(`[${this.name}] forward ${replies.length} replies from ${domain}/${path}`)
+                    // forward replies
+                } catch (e) {
+                    log.error(`[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
+                }
+                if (config.interval_time) {
+                    const time = Math.floor(
+                        Math.random() * (config.interval_time.max - config.interval_time.min) +
+                            config.interval_time.min,
+                    )
+                    log.info(`[${this.name}] wait for next loop ${time}ms`)
+                    await delay(time)
+                }
+            }
+        }
+
         if (type === 'follows') {
-            log.info(`[${this.name}] grab follows for ${domain}`)
             let collection = []
             for (const path of _paths) {
                 try {
@@ -158,6 +194,7 @@ class XCollector extends Collector {
 
     public async collect<T extends TaskType>(page: Page, url: string, type?: T): Promise<Array<TaskResult<T>>> {
         if (type === 'tweet') {
+            log.info(`[${this.name}] grab tweets for ${url}`)
             const res = await X.TweetGrabber.UserPage.grabTweets(page, url)
             log.info(`[${this.name}] grab ${res.length} tweets from ${url}`)
             const tweets = await Promise.all(res.map(X_DB.saveTweet))
@@ -165,6 +202,7 @@ class XCollector extends Collector {
         }
 
         if (type === 'follows') {
+            log.info(`[${this.name}] grab follows for ${url}`)
             const follows = await X.TweetGrabber.UserPage.grabFollowsNumer(page, url)
             log.info(`[${this.name}] grab ${follows.username}'s follows from ${url}`)
             const saved_profile = await X_DB.saveFollows(
@@ -175,9 +213,21 @@ class XCollector extends Collector {
             )
             return [saved_profile] as Array<TaskResult<T>>
         }
+
+        if (type === 'reply') {
+            log.info(`[${this.name}] grab replies for ${url}`)
+            const reply_threads = await X.TweetGrabber.UserPage.grabReply(page, url)
+            log.info(`[${this.name}] grab ${reply_threads.length} reply threads from ${url}`)
+            const res = []
+            for (const reply_thread of reply_threads) {
+                const saved_thread = await X_DB.saveReply(reply_thread)
+                res.push(saved_thread)
+            }
+            return res as Array<TaskResult<T>>
+        }
         return []
     }
-    public async forward(items: Array<ISavedArticle>, forwrad_to: Array<BaseForwarder>) {
+    public async forward(items: Array<ISavedArticle>, forwrad_to: Array<BaseForwarder>, type: TaskType = 'tweet') {
         const tweets = items
         for (const tweet of tweets) {
             let forward_tweet = tweet
@@ -204,6 +254,17 @@ class XCollector extends Collector {
             }
         }
         return this
+    }
+
+    async forwardReply(threads: Array<Exclude<TaskResult<'reply'>, undefined>>, forward_to: Array<BaseForwarder>) {
+        for (const thread of threads) {
+            let format_thread = thread.map(formatArticle).join(`\n${'-'.repeat(12)}\n`)
+            for (const forwarder of forward_to) {
+                forwarder.send(format_thread).catch((e) => {
+                    log.error('forward failed', e)
+                })
+            }
+        }
     }
 }
 
