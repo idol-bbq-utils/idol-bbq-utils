@@ -1,6 +1,6 @@
 import { Page } from 'puppeteer'
 import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../../types/types'
-import { tweetArticleParser } from './parser/article'
+import { tweetArticleParser, tweetReplyParser } from './parser/article'
 import { getTimelineType } from './parser/timeline'
 
 /**
@@ -26,7 +26,7 @@ export async function grabTweets(page: Page, url: string): Promise<Array<ITweetA
     return articles.filter((a) => a !== undefined)
 }
 
-export async function grabReply(page: Page, url: string): Promise<Array<ITweetArticle>> {
+export async function grabReply(page: Page, url: string): Promise<Array<Array<ITweetArticle>>> {
     await page.setViewport({ width: 1080, height: 1920 })
     await page.goto(url)
     // Click on the tweets tab
@@ -40,8 +40,8 @@ export async function grabReply(page: Page, url: string): Promise<Array<ITweetAr
     // await page.mouse.wheel({ deltaY: 600 })
     const timeline_items = await article_wrapper?.$$('div[data-testid="cellInnerDiv"]')
     const timeline_types = await Promise.all(timeline_items?.map(getTimelineType) ?? [])
-    console.log(timeline_types)
-    return []
+    const res = await tweetReplyParser(timeline_items?.map((e, i) => ({ item: e, type: timeline_types[i] })) ?? [])
+    return res
 }
 
 export async function grabFollowsNumer(page: Page, url: string): Promise<ITweetProfile> {

@@ -1,5 +1,5 @@
 import { ElementHandle } from 'puppeteer'
-import { ArticleTypeEnum, ITweetArticle } from '@/websites/x/types/types'
+import { ArticleTypeEnum, ITweetArticle, TimelineTypeEnum } from '@/websites/x/types/types'
 import { articleElementParser } from './element'
 
 const QUERY_TEXT_PATTERN = 'div[data-testid="tweetText"]'
@@ -74,6 +74,74 @@ export async function tweetArticleParser(article: ElementHandle<HTMLElement>): P
             },
         }
     }
+}
+
+// reply pattern divider article article (show more) ... article
+// recommand pattern divider heading follow ... show more divider
+export async function tweetReplyParser(
+    items: Array<{
+        item: ElementHandle<Element>
+        type: TimelineTypeEnum
+    }>,
+) {
+    enum StateEnum {
+        NORMAL,
+        DIVIDER_START,
+        REPLY,
+    }
+    let state: StateEnum = StateEnum.NORMAL
+    const reply_articles: Array<Array<ITweetArticle>> = []
+    for (const { item, type } of items) {
+        switch (state) {
+            case StateEnum.NORMAL:
+                if (type === TimelineTypeEnum.DIVIDER) {
+                    state = StateEnum.DIVIDER_START
+                }
+                break
+            case StateEnum.DIVIDER_START:
+                if (type === TimelineTypeEnum.ARTICLE) {
+                    const has_line = await item.$('article div[data-testid="Tweet-User-Avatar"] + div')
+                    if (has_line) {
+                        const article_Wrapper = await item.$('article')
+                        const article = article_Wrapper && (await tweetArticleParser(article_Wrapper))
+                        if (!article) {
+                            throw new Error('article parse error maybe the item is not an article')
+                        }
+                        reply_articles.push([article])
+                        state = StateEnum.REPLY
+                    }
+                } else if (type === TimelineTypeEnum.DIVIDER) {
+                    // do nothing
+                } else {
+                    state = StateEnum.NORMAL
+                }
+
+                break
+            case StateEnum.REPLY:
+                if (type === TimelineTypeEnum.ARTICLE) {
+                    const article_Wrapper = await item.$('article')
+                    const article = article_Wrapper && (await tweetArticleParser(article_Wrapper))
+                    if (!article) {
+                        throw new Error('article parse error maybe the item is not an article')
+                    }
+
+                    reply_articles[reply_articles.length - 1].push({
+                        ...article,
+                        type: ArticleTypeEnum.REPLY,
+                    })
+
+                    const has_line = await item.$('article div[data-testid="Tweet-User-Avatar"] + div')
+                    if (!has_line) {
+                        state = StateEnum.NORMAL
+                    }
+                }
+                if (type === TimelineTypeEnum.SHOW_MORE) {
+                    // do nothing
+                }
+                break
+        }
+    }
+    return reply_articles
 }
 
 async function tweetMetaParser(

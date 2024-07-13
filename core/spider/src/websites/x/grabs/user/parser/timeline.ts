@@ -31,6 +31,7 @@ async function getTimelineType(item: ElementHandle<Element>) {
     if (show_more) {
         return TimelineTypeEnum.SHOW_MORE
     }
+    return TimelineTypeEnum.DEFAULT
 }
 
 export { getTimelineType }

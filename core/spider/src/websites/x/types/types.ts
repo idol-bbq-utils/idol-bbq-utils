@@ -20,6 +20,7 @@ enum TimelineTypeEnum {
     SHOW_MORE = 'show_more',
     HEADING = 'heading',
     FOLLOW_RECOMMEND = 'follow_recommend',
+    DEFAULT = 'default',
 }
 
 enum ArticleElementTypeEnum {
