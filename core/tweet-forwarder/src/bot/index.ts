@@ -14,6 +14,7 @@ import { BiliForwarder } from '@/middleware/forwarder/bilibili'
 import { orderBy, shuffle } from 'lodash'
 import { collectorFetcher } from '@/middleware/collector'
 import { delay } from '@/utils/time'
+import { Gemini } from '@/middleware/translator/gemini'
 
 export class FWDBot {
     public name: string
@@ -59,6 +60,8 @@ export class FWDBot {
                 ...this.config,
                 ...website.config,
             }
+            const translator = website.config?.translator && new Gemini(website.config.translator.key)
+            await translator?.init()
             // do cron here
             const job = CronJob.from({
                 cronTime: website.config?.cron || '* * * * *',
@@ -88,6 +91,7 @@ export class FWDBot {
                         type: website.task_type,
                         title: website.task_title,
                         interval_time: website.config?.interval_time,
+                        translator,
                     })
                     await page.close()
                     log.info(`[${this.name}] job done for ${website.domain}`)

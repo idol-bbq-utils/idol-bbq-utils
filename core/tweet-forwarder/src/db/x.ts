@@ -165,4 +165,25 @@ async function saveReply(replies: ITweetArticle[]) {
     return res
 }
 
-export { saveTweet, saveFollows, saveReply, getTweets, getPreviousNFollows }
+async function getTranslation(ref: number) {
+    return await prisma.x_translation.findUnique({
+        where: {
+            ref,
+        },
+    })
+}
+
+async function saveTranslation(ref: number, text: string) {
+    let exist_one = await getTranslation(ref)
+    if (exist_one) {
+        return exist_one
+    }
+    return await prisma.x_translation.create({
+        data: {
+            ref,
+            text,
+        },
+    })
+}
+
+export { saveTweet, saveFollows, saveReply, saveTranslation, getTranslation, getTweets, getPreviousNFollows }

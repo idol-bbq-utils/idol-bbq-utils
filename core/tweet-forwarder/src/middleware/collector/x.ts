@@ -7,8 +7,9 @@ import { getTweets, ITweetDB } from '@/db/x'
 import { log } from '@/config'
 import dayjs from 'dayjs'
 import { Page } from 'puppeteer'
-import { orderBy, shuffle } from 'lodash'
+import { orderBy, shuffle, transform } from 'lodash'
 import { delay } from '@/utils/time'
+import { Gemini } from '../translator/gemini'
 
 type TaskType = 'tweet' | 'reply' | 'follows'
 type TaskResult<T extends TaskType> = T extends 'tweet'
@@ -61,6 +62,7 @@ class XCollector extends Collector {
                 min: number
                 max: number
             }
+            translator?: Gemini
         },
     ): Promise<this> {
         const { type = 'tweet' } = config
@@ -75,6 +77,9 @@ class XCollector extends Collector {
                     this.forwardReply(
                         replies.map((thread) => orderBy(thread, ['timestamp'], 'desc')),
                         forward_to,
+                        {
+                            translator: config.translator,
+                        },
                     )
                 } catch (e) {
                     log.error(`[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
@@ -85,7 +90,9 @@ class XCollector extends Collector {
                         (item) => item !== undefined,
                     )
                     log.info(`[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
-                    this.forward(items, forward_to)
+                    this.forward(items, forward_to, 'tweet', {
+                        translator: config.translator,
+                    })
                 } catch (e) {
                     log.error(`[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
                 }
@@ -227,7 +234,14 @@ class XCollector extends Collector {
         }
         return []
     }
-    public async forward(items: Array<ISavedArticle>, forwrad_to: Array<BaseForwarder>, type: TaskType = 'tweet') {
+    public async forward(
+        items: Array<ISavedArticle>,
+        forwrad_to: Array<BaseForwarder>,
+        type: TaskType = 'tweet',
+        config?: {
+            translator?: Gemini
+        },
+    ) {
         const tweets = items
         for (const tweet of tweets) {
             let forward_tweet = tweet
@@ -247,6 +261,14 @@ class XCollector extends Collector {
             }
             // TODO Text convertor
             // TODO Translate plugin
+            if (config?.translator) {
+                let translated_article = await X_DB.getTranslation(forward_tweet.id)
+                if (!translated_article) {
+                    let text = await config.translator.translate(tweet.text)
+                    translated_article = await X_DB.saveTranslation(forward_tweet.id, text)
+                }
+                format_article += `\n\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n\n${translated_article.text}`
+            }
             for (const forwarder of forwrad_to) {
                 forwarder.send(format_article).catch((e) => {
                     log.error('forward failed', e)
@@ -256,9 +278,31 @@ class XCollector extends Collector {
         return this
     }
 
-    async forwardReply(threads: Array<Exclude<TaskResult<'reply'>, undefined>>, forward_to: Array<BaseForwarder>) {
+    async forwardReply(
+        threads: Array<Exclude<TaskResult<'reply'>, undefined>>,
+        forward_to: Array<BaseForwarder>,
+        config?: {
+            translator?: Gemini
+        },
+    ) {
         for (const thread of threads) {
-            let format_thread = thread.map(formatArticle).join(`\n${'-'.repeat(12)}\n`)
+            let format_thread = (
+                await Promise.all(
+                    thread.map(async (article) => {
+                        let format_article = formatArticle(article)
+                        if (config?.translator) {
+                            let translated_article = await X_DB.getTranslation(article.id)
+                            log.info(translated_article)
+                            if (!translated_article) {
+                                let text = await config.translator.translate(article.text)
+                                translated_article = await X_DB.saveTranslation(article.id, text)
+                            }
+                            format_article += `\n\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n\n${translated_article.text}`
+                        }
+                        return format_article
+                    }),
+                )
+            ).join(`\n${'-'.repeat(12)}\n`)
             for (const forwarder of forward_to) {
                 forwarder.send(format_thread).catch((e) => {
                     log.error('forward failed', e)

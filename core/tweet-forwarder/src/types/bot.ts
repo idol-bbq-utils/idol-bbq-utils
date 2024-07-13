@@ -6,6 +6,10 @@ interface IWebsiteConfig {
         max: number
         min: number
     }
+    translator?: {
+        type: string
+        key: string
+    }
 }
 
 interface IWebsite {

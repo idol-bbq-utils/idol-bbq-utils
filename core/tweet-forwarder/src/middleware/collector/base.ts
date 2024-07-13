@@ -1,6 +1,7 @@
 import { Page } from 'puppeteer'
 import { BaseForwarder } from '../forwarder/base'
 abstract class Collector {
+    // todo plugin
     public abstract collect(page: Page, url: string, ...args: any[]): Promise<any>
     public abstract forward(...args: any[]): Promise<this>
     public abstract collectAndForward(
