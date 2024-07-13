@@ -1,16 +1,17 @@
 import { Page } from 'puppeteer'
 import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../../types/types'
 import { tweetArticleParser } from './parser/article'
+import { getTimelineType } from './parser/timeline'
 
 /**
  * The URL like https://x.com/username
  */
 export async function grabTweets(page: Page, url: string): Promise<Array<ITweetArticle>> {
+    // Set screen size
+    await page.setViewport({ width: 1080, height: 1920 })
     // Navigate the page to a URL
     await page.goto(url)
 
-    // Set screen size
-    await page.setViewport({ width: 1080, height: 1024 })
     // Click on the tweets tab
     const tablist = await page.$('div[role="tablist"]')
     const tabs = await tablist?.$$('div[role="presentation"]')
@@ -23,6 +24,24 @@ export async function grabTweets(page: Page, url: string): Promise<Array<ITweetA
     const articles = await Promise.all(raw_articles?.map(tweetArticleParser) ?? [])
 
     return articles.filter((a) => a !== undefined)
+}
+
+export async function grabReply(page: Page, url: string): Promise<Array<ITweetArticle>> {
+    await page.setViewport({ width: 1080, height: 1920 })
+    await page.goto(url)
+    // Click on the tweets tab
+    const tablist = await page.$('div[role="tablist"]')
+    const tabs = await tablist?.$$('div[role="presentation"]')
+    const tab = await tabs?.[TweetTabsEnum.REPLIES].$('a')
+    await tab?.click()
+    const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
+    // wait for article to load
+    await article_wrapper?.waitForSelector('article')
+    // await page.mouse.wheel({ deltaY: 600 })
+    const timeline_items = await article_wrapper?.$$('div[data-testid="cellInnerDiv"]')
+    const timeline_types = await Promise.all(timeline_items?.map(getTimelineType) ?? [])
+    console.log(timeline_types)
+    return []
 }
 
 export async function grabFollowsNumer(page: Page, url: string): Promise<ITweetProfile> {

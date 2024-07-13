@@ -11,6 +11,15 @@ enum ArticleTypeEnum {
     TWEET = 'tweet',
     FORWARD = 'forward',
     REF = 'ref',
+    REPLY = 'reply',
+}
+
+enum TimelineTypeEnum {
+    ARTICLE = 'article',
+    DIVIDER = 'divider',
+    SHOW_MORE = 'show_more',
+    HEADING = 'heading',
+    FOLLOW_RECOMMEND = 'follow_recommend',
 }
 
 enum ArticleElementTypeEnum {
@@ -39,5 +48,5 @@ interface ITweetProfile {
     timestamp: number
 }
 
-export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum }
+export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum, TimelineTypeEnum }
 export type { ITweetArticle, ITweetProfile }
