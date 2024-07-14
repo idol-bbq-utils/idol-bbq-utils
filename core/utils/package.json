@@ -29,13 +29,9 @@
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
-        "@types/retry": "0.12.2",
         "retry": "^0.13.1"
     },
     "devDependencies": {
-        "ava": "^5.3.1",
-        "delay": "^6.0.0",
-        "tsd": "^0.28.1",
-        "xo": "^0.56.0"
+        "@types/retry": "0.12.2"
     }
 }
