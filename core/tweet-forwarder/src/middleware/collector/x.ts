@@ -10,6 +10,7 @@ import { Page } from 'puppeteer'
 import { orderBy, shuffle, transform } from 'lodash'
 import { delay } from '@/utils/time'
 import { Gemini } from '../translator/gemini'
+import { pRetry } from '@idol-bbq-utils/utils'
 
 type TaskType = 'tweet' | 'reply' | 'follows'
 type TaskResult<T extends TaskType> = T extends 'tweet'
@@ -221,7 +222,14 @@ class XCollector extends Collector {
         const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
         if (type === 'tweet') {
             log.info(`${prefix}[${this.name}] grab tweets for ${url}`)
-            const res = await X.TweetGrabber.UserPage.grabTweets(page, url)
+            const res = await pRetry(() => X.TweetGrabber.UserPage.grabTweets(page, url), {
+                retries: 3,
+                onFailedAttempt: (e) => {
+                    log.error(
+                        `${prefix}[${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft}`,
+                    )
+                },
+            })
             log.info(`${prefix}[${this.name}] grab ${res.length} tweets from ${url}`)
             const tweets = await Promise.all(res.map(X_DB.saveTweet))
             return tweets as Array<TaskResult<T>>
@@ -229,7 +237,14 @@ class XCollector extends Collector {
 
         if (type === 'follows') {
             log.info(`${prefix}[${this.name}] grab follows for ${url}`)
-            const follows = await X.TweetGrabber.UserPage.grabFollowsNumer(page, url)
+            const follows = await pRetry(() => X.TweetGrabber.UserPage.grabFollowsNumer(page, url), {
+                retries: 3,
+                onFailedAttempt: (e) => {
+                    log.error(
+                        `${prefix}[${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft}`,
+                    )
+                },
+            })
             log.info(`${prefix}[${this.name}] grab ${follows.username}'s follows from ${url}`)
             const saved_profile = await X_DB.saveFollows(
                 follows.username,
@@ -242,7 +257,14 @@ class XCollector extends Collector {
 
         if (type === 'reply') {
             log.info(`${prefix}[${this.name}] grab replies for ${url}`)
-            const reply_threads = await X.TweetGrabber.UserPage.grabReply(page, url)
+            const reply_threads = await pRetry(() => X.TweetGrabber.UserPage.grabReply(page, url), {
+                retries: 3,
+                onFailedAttempt: (e) => {
+                    log.error(
+                        `${prefix}[${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft}`,
+                    )
+                },
+            })
             log.info(`${prefix}[${this.name}] grab ${reply_threads.length} reply threads from ${url}`)
             const res = []
             for (const reply_thread of reply_threads) {
@@ -285,8 +307,13 @@ class XCollector extends Collector {
             if (config?.translator) {
                 let translated_article = await X_DB.getTranslation(forward_tweet.id)
                 if (!translated_article) {
-                    let text = await config.translator.translate(tweet.text)
-                    translated_article = await X_DB.saveTranslation(forward_tweet.id, text)
+                    let text = await pRetry(() => config.translator?.translate(tweet.text), {
+                        retries: 3,
+                        onFailedAttempt: (e) => {
+                            log.error(`${prefix}translate failed. remained retry times: ${e.retriesLeft}`, e)
+                        },
+                    })
+                    translated_article = await X_DB.saveTranslation(forward_tweet.id, text || '')
                 }
                 format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
             }
@@ -317,8 +344,16 @@ class XCollector extends Collector {
                             let translated_article = await X_DB.getTranslation(article.id)
                             log.debug(`${prefix}`, translated_article)
                             if (!translated_article) {
-                                let text = await config.translator.translate(article.text)
-                                translated_article = await X_DB.saveTranslation(article.id, text)
+                                let text = await pRetry(() => config.translator?.translate(article.text), {
+                                    retries: 3,
+                                    onFailedAttempt: (e) => {
+                                        log.error(
+                                            `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
+                                            e,
+                                        )
+                                    },
+                                })
+                                translated_article = await X_DB.saveTranslation(article.id, text || '')
                             }
                             format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
                         }
