@@ -36,13 +36,8 @@ class Gemini {
         log.info(`[Gemini] model loaded with prompt ${this.prompt}`)
     }
     public async translate(text: string) {
-        try {
-            const res = (await this.chat?.sendMessage(text))?.response.text() || ''
-            return res
-        } catch (e) {
-            log.error(`[Gemini] translate failed`, e)
-            return '╮(╯-╰)╭非常抱歉无法翻译'
-        }
+        const res = (await this.chat?.sendMessage(text))?.response.text() || ''
+        return res
     }
 }
 

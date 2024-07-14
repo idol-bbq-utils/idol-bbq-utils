@@ -288,7 +288,7 @@ class XCollector extends Collector {
         const tweets = items
         for (const tweet of tweets) {
             let forward_tweet = tweet
-            let ref_tweet
+            let ref_tweet: undefined | ISavedArticle
             if (tweet.type === ArticleTypeEnum.REF && tweet.ref !== null) {
                 const _ref_tweet = await getTweets([tweet.ref])
                 ref_tweet = _ref_tweet && _ref_tweet[0]
@@ -297,26 +297,54 @@ class XCollector extends Collector {
                 forward_tweet = tweet
             }
             let format_article = formatArticle(forward_tweet)
-            const ref_article = ref_tweet ? formatArticle(ref_tweet) : undefined
-
-            if (ref_article) {
-                format_article = `${format_article}\n\n${'-'.repeat(12)}\n\n${ref_article}`
-            }
-            // TODO Text convertor
-            // TODO Translate plugin
             if (config?.translator) {
                 let translated_article = await X_DB.getTranslation(forward_tweet.id)
                 if (!translated_article) {
-                    let text = await pRetry(() => config.translator?.translate(tweet.text), {
-                        retries: 3,
-                        onFailedAttempt: (e) => {
-                            log.error(`${prefix}translate failed. remained retry times: ${e.retriesLeft}`, e)
-                        },
-                    })
+                    let text = '╮(╯-╰)╭非常抱歉无法翻译'
+                    try {
+                        text =
+                            (await pRetry(() => config.translator?.translate(tweet.text), {
+                                retries: 3,
+                                onFailedAttempt: (e) => {
+                                    log.error(`${prefix}translate failed. remained retry times: ${e.retriesLeft}`, e)
+                                },
+                            })) || '╮(╯-╰)╭非常抱歉无法翻译'
+                    } catch (e) {
+                        log.error(`${prefix}translate failed`, e)
+                    }
                     translated_article = await X_DB.saveTranslation(forward_tweet.id, text || '')
                 }
                 format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
             }
+
+            if (ref_tweet) {
+                const ref_article = formatArticle(ref_tweet)
+                format_article = `${format_article}\n\n${'-'.repeat(12)}\n\n${ref_article}`
+                if (config?.translator) {
+                    let translated_article = await X_DB.getTranslation(ref_tweet.id)
+                    if (!translated_article) {
+                        let text = '╮(╯-╰)╭非常抱歉无法翻译'
+                        try {
+                            text =
+                                (await pRetry(() => config.translator?.translate(ref_tweet.text), {
+                                    retries: 3,
+                                    onFailedAttempt: (e) => {
+                                        log.error(
+                                            `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
+                                            e,
+                                        )
+                                    },
+                                })) || '╮(╯-╰)╭非常抱歉无法翻译'
+                        } catch (e) {
+                            log.error(`${prefix}translate failed`, e)
+                        }
+                        translated_article = await X_DB.saveTranslation(forward_tweet.id, text || '')
+                    }
+                    format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
+                }
+            }
+            // TODO Text convertor
+            // TODO Translate plugin
             for (const forwarder of forwrad_to) {
                 forwarder.send(format_article).catch((e) => {
                     log.error(`${prefix}forward failed`, e)
@@ -344,15 +372,21 @@ class XCollector extends Collector {
                             let translated_article = await X_DB.getTranslation(article.id)
                             log.debug(`${prefix}`, translated_article)
                             if (!translated_article) {
-                                let text = await pRetry(() => config.translator?.translate(article.text), {
-                                    retries: 3,
-                                    onFailedAttempt: (e) => {
-                                        log.error(
-                                            `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
-                                            e,
-                                        )
-                                    },
-                                })
+                                let text = '╮(╯-╰)╭非常抱歉无法翻译'
+                                try {
+                                    text =
+                                        (await pRetry(() => config.translator?.translate(article.text), {
+                                            retries: 3,
+                                            onFailedAttempt: (e) => {
+                                                log.error(
+                                                    `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
+                                                    e,
+                                                )
+                                            },
+                                        })) || '╮(╯-╰)╭非常抱歉无法翻译'
+                                } catch (e) {
+                                    log.error(`${prefix}translate failed`, e)
+                                }
                                 translated_article = await X_DB.saveTranslation(article.id, text || '')
                             }
                             format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`

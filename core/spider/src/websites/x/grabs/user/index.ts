@@ -8,7 +8,7 @@ import { getTimelineType } from './parser/timeline'
  */
 export async function grabTweets(page: Page, url: string): Promise<Array<ITweetArticle>> {
     // Set screen size
-    await page.setViewport({ width: 954, height: 1320 })
+    await page.setViewport({ width: 954, height: 1024 })
     // Navigate the page to a URL
     await page.goto(url)
 
