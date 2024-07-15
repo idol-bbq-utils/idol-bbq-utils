@@ -194,7 +194,7 @@ class XCollector extends Collector {
                             text += `${item.cur_follows.toString().padEnd(2)}`
                         }
                         const offset = (item.cur_follows || 0) - (item.pre_follows || 0)
-                        text += `${TAB}${offset >= 0 ? '+' : '-'}${offset.toString()}`
+                        text += `${TAB}${offset >= 0 ? '+' : ''}${offset.toString()}`
                         return text
                     })
                     .join('\n')
@@ -226,7 +226,7 @@ class XCollector extends Collector {
                 retries: 3,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix}[${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft}`,
+                        `${prefix}[${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
                     )
                 },
             })
@@ -241,7 +241,7 @@ class XCollector extends Collector {
                 retries: 3,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix}[${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft}`,
+                        `${prefix}[${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
                     )
                 },
             })
@@ -261,7 +261,7 @@ class XCollector extends Collector {
                 retries: 3,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix}[${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft}`,
+                        `${prefix}[${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
                     )
                 },
             })
@@ -306,7 +306,10 @@ class XCollector extends Collector {
                             (await pRetry(() => config.translator?.translate(tweet.text), {
                                 retries: 3,
                                 onFailedAttempt: (e) => {
-                                    log.error(`${prefix}translate failed. remained retry times: ${e.retriesLeft}`, e)
+                                    log.error(
+                                        `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
+                                        e.message,
+                                    )
                                 },
                             })) || '╮(╯-╰)╭非常抱歉无法翻译'
                     } catch (e) {
@@ -331,7 +334,7 @@ class XCollector extends Collector {
                                     onFailedAttempt: (e) => {
                                         log.error(
                                             `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
-                                            e,
+                                            e.message,
                                         )
                                     },
                                 })) || '╮(╯-╰)╭非常抱歉无法翻译'

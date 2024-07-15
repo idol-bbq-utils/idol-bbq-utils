@@ -27,7 +27,7 @@ export async function grabTweets(page: Page, url: string): Promise<Array<ITweetA
 }
 
 export async function grabReply(page: Page, url: string): Promise<Array<Array<ITweetArticle>>> {
-    await page.setViewport({ width: 1080, height: 1920 })
+    await page.setViewport({ width: 873, height: 1500 })
     await page.goto(url)
     // Click on the tweets tab
     const tablist = await page.$('div[role="tablist"]')

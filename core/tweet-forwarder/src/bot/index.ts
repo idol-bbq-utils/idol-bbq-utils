@@ -11,6 +11,7 @@ import { BiliForwarder } from '@/middleware/forwarder/bilibili'
 import { collectorFetcher } from '@/middleware/collector'
 import { delay } from '@/utils/time'
 import { Gemini } from '@/middleware/translator/gemini'
+import { pRetry } from '@idol-bbq-utils/utils'
 
 export class FWDBot {
     public name: string
@@ -65,7 +66,12 @@ export class FWDBot {
                 onTick: async () => {
                     const task_id = Math.random().toString(36).substring(7)
                     log.info(`[${task_id}] [${this.name}] start job for ${website.domain}`)
-                    const page = await browser.newPage()
+                    const page = await pRetry(() => browser.newPage(), {
+                        retries: 3,
+                        onFailedAttempt(error) {
+                            log.error(`[${task_id}] failed to create page, retrying... ${error.message}`)
+                        },
+                    })
                     if (cookie) {
                         log.info(`[${task_id}] [${this.name}] set cookie for ${website.domain}`)
                         const cookies = JSON.parse(cookie)
@@ -101,6 +107,9 @@ export class FWDBot {
             this.jobs.push(job)
         }
         return this
+    }
+    public stop() {
+        this.jobs.forEach((job) => job.stop())
     }
 
     public start() {
