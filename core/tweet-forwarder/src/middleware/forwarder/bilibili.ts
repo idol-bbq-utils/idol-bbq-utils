@@ -25,7 +25,7 @@ class BiliForwarder extends BaseForwarder {
                     },
                 ),
             {
-                retries: 3,
+                retries: 2,
                 onFailedAttempt(error) {
                     log.error(
                         `Send text to bilibili failed. There are ${error.retriesLeft} retries left. ${error.message}`,

@@ -13,7 +13,7 @@ class TgForwarder extends BaseForwarder {
     }
     public async send(text: string) {
         await pRetry(() => this.bot.telegram.sendMessage(this.chat_id, text), {
-            retries: 3,
+            retries: 2,
             onFailedAttempt(error) {
                 log.error(`Send text to telegram failed. There are ${error.retriesLeft} retries left. ${error.message}`)
             },

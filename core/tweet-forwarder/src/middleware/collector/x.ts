@@ -223,7 +223,7 @@ class XCollector extends Collector {
         if (type === 'tweet') {
             log.info(`${prefix}[${this.name}] grab tweets for ${url}`)
             const res = await pRetry(() => X.TweetGrabber.UserPage.grabTweets(page, url), {
-                retries: 3,
+                retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
                         `${prefix}[${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
@@ -238,7 +238,7 @@ class XCollector extends Collector {
         if (type === 'follows') {
             log.info(`${prefix}[${this.name}] grab follows for ${url}`)
             const follows = await pRetry(() => X.TweetGrabber.UserPage.grabFollowsNumer(page, url), {
-                retries: 3,
+                retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
                         `${prefix}[${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
@@ -258,7 +258,7 @@ class XCollector extends Collector {
         if (type === 'reply') {
             log.info(`${prefix}[${this.name}] grab replies for ${url}`)
             const reply_threads = await pRetry(() => X.TweetGrabber.UserPage.grabReply(page, url), {
-                retries: 3,
+                retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
                         `${prefix}[${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
@@ -304,7 +304,7 @@ class XCollector extends Collector {
                     try {
                         text =
                             (await pRetry(() => config.translator?.translate(tweet.text), {
-                                retries: 3,
+                                retries: 2,
                                 onFailedAttempt: (e) => {
                                     log.error(
                                         `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
@@ -330,7 +330,7 @@ class XCollector extends Collector {
                         try {
                             text =
                                 (await pRetry(() => config.translator?.translate(ref_tweet.text), {
-                                    retries: 3,
+                                    retries: 2,
                                     onFailedAttempt: (e) => {
                                         log.error(
                                             `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
@@ -379,7 +379,7 @@ class XCollector extends Collector {
                                 try {
                                     text =
                                         (await pRetry(() => config.translator?.translate(article.text), {
-                                            retries: 3,
+                                            retries: 2,
                                             onFailedAttempt: (e) => {
                                                 log.error(
                                                     `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,

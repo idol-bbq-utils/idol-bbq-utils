@@ -67,7 +67,7 @@ export class FWDBot {
                     const task_id = Math.random().toString(36).substring(7)
                     log.info(`[${task_id}] [${this.name}] start job for ${website.domain}`)
                     const page = await pRetry(() => browser.newPage(), {
-                        retries: 3,
+                        retries: 2,
                         onFailedAttempt(error) {
                             log.error(`[${task_id}] failed to create page, retrying... ${error.message}`)
                         },
