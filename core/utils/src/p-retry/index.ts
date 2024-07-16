@@ -6,8 +6,16 @@ export class FailedAttemptError extends Error {
     attemptNumber: number
     retriesLeft: number
     readonly name: 'FailedAttemptError'
-    constructor(message: string, attemptNumber: number, retriesLeft: number) {
+    readonly originalError: Error
+    constructor(message: string | Error, attemptNumber: number, retriesLeft: number) {
         super()
+        if (message instanceof Error) {
+            this.originalError = message
+            ;({ message } = message)
+        } else {
+            this.originalError = new Error(message)
+            this.originalError.stack = this.stack
+        }
         this.name = 'FailedAttemptError'
         this.attemptNumber = attemptNumber
         this.retriesLeft = retriesLeft
@@ -107,8 +115,7 @@ export type Options = {
 const decorateErrorWithCounts = (error: Error, attemptNumber: number, options: Options) => {
     // Minus 1 from attemptNumber because the first attempt does not count as a retry
     const retriesLeft = options.retries - (attemptNumber - 1)
-
-    return new FailedAttemptError(error.message, attemptNumber, retriesLeft)
+    return new FailedAttemptError(error, attemptNumber, retriesLeft)
 }
 
 export async function pRetry<T>(input: (attemptCount: number) => PromiseLike<T> | T, _options?: Options): Promise<T> {
