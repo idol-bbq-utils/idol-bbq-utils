@@ -8,7 +8,7 @@ import { log } from '@/config'
 import dayjs from 'dayjs'
 import { Page } from 'puppeteer'
 import { orderBy, shuffle, transform } from 'lodash'
-import { delay } from '@/utils/time'
+import { delay, formatTime } from '@/utils/time'
 import { Gemini } from '../translator/gemini'
 import { pRetry } from '@idol-bbq-utils/utils'
 
@@ -28,10 +28,7 @@ interface ISavedArticle extends ITweetDB {
 }
 
 const TAB = ' '.repeat(4)
-
-function formatTime(time: number | string) {
-    return dayjs(time).format('YYYY-MM-DD HH:mmZ')
-}
+class ArticleBuilder {}
 
 function formatArticle(article: ISavedArticle) {
     let metaline = [article.username, article.u_id].join(TAB) + '\n'
@@ -120,7 +117,7 @@ class XCollector extends Collector {
             for (const path of _paths) {
                 try {
                     const replies = (
-                        await this.collect(page, `${domain}/${path}/with_replies`, 'reply', {
+                        await this.collect(page, `${domain}/${path}/with_replies`, type, {
                             task_id: config.task_id,
                         })
                     ).filter((item) => item !== undefined)
@@ -293,9 +290,6 @@ class XCollector extends Collector {
                 const _ref_tweet = await getTweets([tweet.ref])
                 ref_tweet = _ref_tweet && _ref_tweet[0]
             }
-            if (tweet.forward_by) {
-                forward_tweet = tweet
-            }
             let format_article = formatArticle(forward_tweet)
             if (config?.translator) {
                 let translated_article = await X_DB.getTranslation(forward_tweet.id)
@@ -341,7 +335,7 @@ class XCollector extends Collector {
                         } catch (e) {
                             log.error(`${prefix}translate failed`, e)
                         }
-                        translated_article = await X_DB.saveTranslation(forward_tweet.id, text || '')
+                        translated_article = await X_DB.saveTranslation(ref_tweet.id, text || '')
                     }
                     format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
                 }

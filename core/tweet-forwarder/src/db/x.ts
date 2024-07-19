@@ -18,6 +18,8 @@ async function saveTweet(tweet: ITweetArticle) {
         if (tweet.type === ArticleTypeEnum.FORWARD && tweet.forward_by) {
             // we save treat the forwarded tweet as the normal tweet
             tweet['type'] = ArticleTypeEnum.TWEET
+            // cause this tweet maybe belong to other
+            // check first because of being forwarded by others
             const ref = await checkExistAndSave(tweet)
 
             const res = await saveForward(tweet.forward_by, ref.id)
@@ -32,6 +34,7 @@ async function saveTweet(tweet: ITweetArticle) {
                 },
             }
         }
+        // normal tweet
         res = await save(tweet)
         return res
     } catch (e) {
@@ -92,6 +95,7 @@ async function save(tweet: ITweetArticle, ref?: number) {
 }
 
 async function saveForward(username: string, ref: number) {
+    // if exist, that means we have saved this forward
     const exist_one = await prisma.x_forward.findUnique({
         where: {
             ref_username: {

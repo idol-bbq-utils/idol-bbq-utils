@@ -177,9 +177,8 @@ export async function pRetry<T>(input: (attemptCount: number) => PromiseLike<T> 
                         throw operation.mainError()
                     }
                 } catch (_finalError) {
-                    const finalError = decorateErrorWithCounts(_finalError, attemptNumber, options)
                     cleanUp()
-                    reject(finalError)
+                    reject(_finalError)
                 }
             }
         })
