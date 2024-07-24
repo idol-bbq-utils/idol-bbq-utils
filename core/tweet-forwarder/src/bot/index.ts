@@ -57,6 +57,7 @@ export class FWDBot {
                 ...this.config,
                 ...website.config,
             }
+            log.debug(website.config)
             const translator = website.config?.translator && new Gemini(website.config.translator.key)
             await translator?.init()
             // do cron here
@@ -95,6 +96,7 @@ export class FWDBot {
                         interval_time: website.config?.interval_time,
                         translator,
                         task_id,
+                        media: website.config?.media,
                     })
                     await page.close()
                     log.info(`[${task_id}] [${this.name}] job done for ${website.domain}`)

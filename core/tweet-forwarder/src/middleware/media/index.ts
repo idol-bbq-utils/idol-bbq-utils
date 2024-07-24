@@ -1,4 +1,5 @@
 import os from 'os'
+import fs from 'fs'
 import { execSync } from 'child_process'
 
 function downloadMediaFiles(
@@ -25,3 +26,22 @@ function downloadMediaFiles(
         })
     return res
 }
+
+function cleanMediaFiles(paths: string[]) {
+    paths.forEach((path) => {
+        fs.unlinkSync(path)
+    })
+}
+
+function getMediaType(path: string) {
+    const ext = path.split('.').pop() || ''
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        return 'photo'
+    }
+    if (['mp4', 'webm'].includes(ext)) {
+        return 'video'
+    }
+    return 'unknown'
+}
+
+export { downloadMediaFiles, cleanMediaFiles, getMediaType }

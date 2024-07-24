@@ -1,16 +1,17 @@
-import { ArticleTypeEnum, ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
+import { ArticleTypeEnum } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
 import { Collector } from './base'
 import { X } from '@idol-bbq-utils/spider'
 import { X as X_DB } from '@/db'
 import { BaseForwarder } from '../forwarder/base'
 import { getTweets, ITweetDB } from '@/db/x'
 import { log } from '@/config'
-import dayjs from 'dayjs'
 import { Page } from 'puppeteer'
 import { orderBy, shuffle, transform } from 'lodash'
 import { delay, formatTime } from '@/utils/time'
 import { Gemini } from '../translator/gemini'
 import { pRetry } from '@idol-bbq-utils/utils'
+import { IWebsiteConfig } from '@/types/bot'
+import { cleanMediaFiles, downloadMediaFiles, getMediaType } from '../media'
 
 type TaskType = 'tweet' | 'reply' | 'follows'
 type TaskResult<T extends TaskType> = T extends 'tweet'
@@ -41,6 +42,7 @@ class XCollector extends Collector {
             }
             translator?: Gemini
             task_id?: string
+            media?: IWebsiteConfig['media']
         },
     ): Promise<this> {
         const { type = 'tweet', task_id } = config
@@ -56,6 +58,7 @@ class XCollector extends Collector {
                     this.forward(items, forward_to, 'tweet', {
                         translator: config.translator,
                         task_id: config.task_id,
+                        media: config.media,
                     })
                 } catch (e) {
                     log.error(`${prefix}[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
@@ -86,6 +89,8 @@ class XCollector extends Collector {
                         'reply',
                         {
                             translator: config.translator,
+                            task_id: config.task_id,
+                            media: config.media,
                         },
                     )
                 } catch (e) {
@@ -198,9 +203,11 @@ class XCollector extends Collector {
             translator?: Gemini
             task_id?: string
             title?: string
+            media?: IWebsiteConfig['media']
         },
     ) {
         const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
+        /*** prepare ***/
         let raw_article_groups = []
         if (type === 'tweet') {
             const tweets = items as Array<TaskResult<'tweet'>>
@@ -221,6 +228,9 @@ class XCollector extends Collector {
             }
         }
 
+        /*** starting forwarding ***/
+
+        // do article forwarding
         if (type === 'tweet' || type === 'reply') {
             for (const articles of raw_article_groups) {
                 let formated_article = (
@@ -253,12 +263,42 @@ class XCollector extends Collector {
                         }),
                     )
                 ).join(`\n\n${'-'.repeat(12)}\n\n`)
-                // do forwarding
-                for (const forwarder of forward_to) {
-                    forwarder.send(formated_article).catch((e) => {
-                        log.error(`${prefix}forward failed`, e)
-                    })
+
+                // handle image
+                let images = [] as string[]
+                if (config?.media) {
+                    for (const article of articles) {
+                        if (article.has_media) {
+                            images = images.concat(
+                                downloadMediaFiles(`https://x.com${article.tweet_link}`, config.media.gallery_dl),
+                            )
+                        }
+                    }
                 }
+                let images_to_send = images.map((path) => ({
+                    type: config?.media?.type || 'no-storage',
+                    media_type: getMediaType(path),
+                    path: path,
+                }))
+
+                // async and send
+                new Promise(async (res) => {
+                    try {
+                        await pRetry(
+                            () =>
+                                Promise.all(
+                                    forward_to.map((forwarder) => forwarder.send(formated_article, images_to_send)),
+                                ),
+                            {
+                                retries: 2,
+                            },
+                        )
+                        cleanMediaFiles(images)
+                        res('')
+                    } catch (e) {
+                        log.error(`${prefix}forward failed`, e)
+                    }
+                })
             }
         }
 

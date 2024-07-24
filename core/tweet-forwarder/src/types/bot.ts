@@ -50,4 +50,4 @@ interface IBot {
     config: IWebsiteConfig
 }
 export { ForwardPlatformEnum }
-export type { IBot, IWebsite, IWebsiteConfig, IForwardTo }
+export type { IBot, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType }
