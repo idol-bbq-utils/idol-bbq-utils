@@ -1,3 +1,5 @@
+type MediaStorageType = 'no-storage' | 'minio'
+
 interface IWebsiteConfig {
     user_agent?: string
     // TODO: random_user_agent?: boolean
@@ -9,6 +11,15 @@ interface IWebsiteConfig {
     translator?: {
         type: string
         key: string
+    }
+    media?: {
+        type: MediaStorageType
+        gallery_dl: {
+            path: string
+            cookie_file?: string
+        }
+        // todo s3 storage
+        config?: {}
     }
 }
 
@@ -36,7 +47,7 @@ interface IBot {
     name: string
     websites: Array<IWebsite>
     forward_to: Array<IForwardTo>
-    configs: IWebsiteConfig
+    config: IWebsiteConfig
 }
 export { ForwardPlatformEnum }
 export type { IBot, IWebsite, IWebsiteConfig, IForwardTo }

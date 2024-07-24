@@ -2,7 +2,6 @@ import { ForwardPlatformEnum, IForwardTo, IWebsite, IWebsiteConfig } from '@/typ
 import { CronJob } from 'cron'
 import { fwd_app } from '@/config'
 import { Browser } from 'puppeteer'
-import fs from 'fs'
 import { log } from '../config'
 import { Collector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
@@ -12,6 +11,7 @@ import { collectorFetcher } from '@/middleware/collector'
 import { delay } from '@/utils/time'
 import { Gemini } from '@/middleware/translator/gemini'
 import { pRetry } from '@idol-bbq-utils/utils'
+import { parseNetscapeCookieToPuppeteerCookie } from '@/utils/auth'
 
 export class FWDBot {
     public name: string
@@ -50,7 +50,7 @@ export class FWDBot {
     public async init(browser: Browser) {
         log.info(`[${this.name}] init`)
         for (const website of this.websites) {
-            const cookie = website.cookie_file && fs.readFileSync(website.cookie_file, 'utf8')
+            const cookies = website.cookie_file && parseNetscapeCookieToPuppeteerCookie(website.cookie_file)
             const url = new URL(website.domain)
             const collector = this.collectors.get(url.hostname)
             website.config = {
@@ -60,7 +60,6 @@ export class FWDBot {
             const translator = website.config?.translator && new Gemini(website.config.translator.key)
             await translator?.init()
             // do cron here
-            log.debug(website)
             const job = CronJob.from({
                 cronTime: website.config?.cron || '* * * * *',
                 onTick: async () => {
@@ -72,9 +71,8 @@ export class FWDBot {
                             log.error(`[${task_id}] failed to create page, retrying... ${error.message}`)
                         },
                     })
-                    if (cookie) {
+                    if (cookies) {
                         log.info(`[${task_id}] [${this.name}] set cookie for ${website.domain}`)
-                        const cookies = JSON.parse(cookie)
                         await page.setCookie(...cookies)
                     }
                     await page.setUserAgent(

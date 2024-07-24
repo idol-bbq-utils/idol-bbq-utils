@@ -1,5 +1,6 @@
 import { IYamlConfig } from './types/config'
 import fs from 'fs'
+import os from 'os'
 import YAML from 'yaml'
 import { IBot, IWebsiteConfig } from './types/bot'
 import { createLogger, Logger, winston } from '@idol-bbq-utils/log'
@@ -9,9 +10,9 @@ class FWDApp {
     public config: IWebsiteConfig
     constructor() {
         const yaml = fs.readFileSync('./config.yaml', 'utf8')
-        const config = YAML.parse(yaml) as IYamlConfig
-        this.bots = config.bots
-        this.config = config.configs || {}
+        const yaml_cfg = YAML.parse(yaml) as IYamlConfig
+        this.bots = yaml_cfg.bots
+        this.config = yaml_cfg.config || {}
     }
 }
 
@@ -23,7 +24,7 @@ const log: Logger = createLogger({
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({
-            filename: `/tmp/logs/tweet-forwarder-${new Date().getTime()}.log`,
+            filename: `${os.tmpdir()}/logs/tweet-forwarder-${new Date().getTime()}.log`,
         }),
     ],
 })

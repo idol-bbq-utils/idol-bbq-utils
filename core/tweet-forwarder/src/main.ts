@@ -11,7 +11,7 @@ async function main() {
         handleSIGTERM: false,
     })
     console.log('Browser launched')
-    const bots = fwd_app.bots.map((_b) => new FWDBot(_b.name, _b.websites, _b.forward_to, _b.configs))
+    const bots = fwd_app.bots.map((_b) => new FWDBot(_b.name, _b.websites, _b.forward_to, _b.config))
     for (const bot of bots) {
         const _b = await bot.init(browser)
         _b.start()
