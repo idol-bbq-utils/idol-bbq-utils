@@ -7,8 +7,12 @@ import FormData from 'form-data'
 import fs from 'fs'
 class BiliForwarder extends BaseForwarder {
     private bili_jct: string
+    name = 'bilibili'
     constructor(token: string, bili_jct: string) {
         super(token)
+        if (!bili_jct) {
+            throw new Error(`forwarder ${this.name} bili_jct is required`)
+        }
         this.bili_jct = bili_jct
     }
     public async send(
@@ -31,8 +35,8 @@ class BiliForwarder extends BaseForwarder {
         })
         return
     }
-    sendPureText(text: string) {
-        return axios.post(
+    async sendPureText(text: string) {
+        const res = await axios.post(
             'https://api.bilibili.com/x/dynamic/feed/create/dyn',
             {
                 dyn_req: {
@@ -58,6 +62,10 @@ class BiliForwarder extends BaseForwarder {
                 },
             },
         )
+        if (res.data.code !== 0) {
+            throw new Error(`Send text to ${this.name} failed. ${res.data.message}`)
+        }
+        return res
     }
     async sendTextWithPhotos(
         text: string,
@@ -99,7 +107,7 @@ class BiliForwarder extends BaseForwarder {
         ).filter((i) => i !== undefined)
         pics = pics.slice(0, 9)
         log.debug(`pics: ${pics}`)
-        return axios.post(
+        const res = await axios.post(
             'https://api.bilibili.com/x/dynamic/feed/create/dyn',
             {
                 dyn_req: {
@@ -131,6 +139,10 @@ class BiliForwarder extends BaseForwarder {
                 },
             },
         )
+        if (res.data.code !== 0) {
+            throw new Error(`Send text with photos to ${this.name} failed. ${res.data.message}`)
+        }
+        return res
     }
     async uploadPhoto(path: string) {
         const form = new FormData()

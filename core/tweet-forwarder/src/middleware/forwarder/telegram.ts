@@ -7,8 +7,12 @@ import { InputMedia, InputMediaPhoto, InputMediaVideo } from 'telegraf/types'
 class TgForwarder extends BaseForwarder {
     private chat_id: string
     private bot: Telegraf
+    name = 'telegram'
     constructor(token: string, chat_id: string) {
         super(token)
+        if (!chat_id) {
+            throw new Error(`forwarder ${this.name} chat_id is required`)
+        }
         this.chat_id = chat_id
         this.bot = new Telegraf(token)
     }
