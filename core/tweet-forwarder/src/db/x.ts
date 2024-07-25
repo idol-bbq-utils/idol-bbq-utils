@@ -169,23 +169,31 @@ async function saveReply(replies: ITweetArticle[]) {
     return res
 }
 
-async function getTranslation(ref: number) {
-    return await prisma.x_translation.findUnique({
+async function getTranslation(id: number) {
+    return await prisma.x_tweet.findUnique({
         where: {
-            ref,
+            id,
+        },
+        select: {
+            translation: true,
         },
     })
 }
 
-async function saveTranslation(ref: number, text: string) {
-    let exist_one = await getTranslation(ref)
-    if (exist_one) {
+async function saveTranslation(id: number, text: string) {
+    let exist_one = await getTranslation(id)
+    if (exist_one?.translation) {
         return exist_one
     }
-    return await prisma.x_translation.create({
+    return await prisma.x_tweet.update({
+        where: {
+            id: id,
+        },
         data: {
-            ref,
-            text,
+            translation: text,
+        },
+        select: {
+            translation: true,
         },
     })
 }

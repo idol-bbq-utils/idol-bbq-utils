@@ -239,7 +239,7 @@ class XCollector extends Collector {
                             let format_article = this.formatArticle(article)
                             if (config?.translator) {
                                 let translated_article = await X_DB.getTranslation(article.id)
-                                if (!translated_article) {
+                                if (!translated_article?.translation) {
                                     let text = '╮(╯-╰)╭非常抱歉无法翻译'
                                     try {
                                         text =
@@ -257,7 +257,7 @@ class XCollector extends Collector {
                                     }
                                     translated_article = await X_DB.saveTranslation(article.id, text || '')
                                 }
-                                format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article.text}`
+                                format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article?.translation || ''}`
                             }
                             return format_article
                         }),
