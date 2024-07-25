@@ -335,7 +335,7 @@ class XCollector extends Collector {
                 }${formatTime(prepare_to_forward[0].cur_timestamp * 1000)}\n\n` +
                 prepare_to_forward
                     .map((item) => {
-                        let text = `${item.username.padEnd(12)}`
+                        let text = `${item.username}\n${' '.repeat(4)}`
                         if (item.pre_follows) {
                             text += `${item.pre_follows.toString().padStart(2)}  --->  `
                         }
