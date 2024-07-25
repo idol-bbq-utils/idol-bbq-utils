@@ -32,6 +32,10 @@ interface IWebsite {
     config?: IWebsiteConfig
 }
 
+enum SourcePlatformEnum {
+    X = 'x',
+}
+
 enum ForwardPlatformEnum {
     Telegram = 'telegram',
     Bilibili = 'bilibili',
@@ -41,6 +45,7 @@ interface IForwardTo {
     type: ForwardPlatformEnum
     token: string
     chat_id?: string
+    bili_jct?: string
 }
 
 interface IBot {
@@ -49,5 +54,5 @@ interface IBot {
     forward_to: Array<IForwardTo>
     config: IWebsiteConfig
 }
-export { ForwardPlatformEnum }
+export { ForwardPlatformEnum, SourcePlatformEnum }
 export type { IBot, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType }

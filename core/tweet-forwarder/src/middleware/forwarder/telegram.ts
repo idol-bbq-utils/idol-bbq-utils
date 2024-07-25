@@ -15,6 +15,7 @@ class TgForwarder extends BaseForwarder {
     public async send(
         text: string,
         media?: Array<{
+            source: string
             type: string
             media_type: string
             path: string

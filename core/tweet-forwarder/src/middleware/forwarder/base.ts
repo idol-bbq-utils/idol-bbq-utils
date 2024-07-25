@@ -1,4 +1,4 @@
-import { MediaStorageType } from '@/types/bot'
+import { MediaStorageType, SourcePlatformEnum } from '@/types/bot'
 
 abstract class BaseForwarder {
     protected token: string
@@ -8,6 +8,7 @@ abstract class BaseForwarder {
     public abstract send(
         text: string,
         media?: Array<{
+            source: SourcePlatformEnum
             type: MediaStorageType
             media_type: string
             path: string

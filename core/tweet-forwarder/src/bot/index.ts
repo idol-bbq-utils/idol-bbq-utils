@@ -34,7 +34,7 @@ export class FWDBot {
                 this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
             }
             if (forward.type === ForwardPlatformEnum.Bilibili) {
-                this.forwarders.push(new BiliForwarder(forward.token))
+                this.forwarders.push(new BiliForwarder(forward.token, forward.bili_jct ?? ''))
             }
         }
         for (const website of this.websites) {

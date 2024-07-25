@@ -10,7 +10,7 @@ import { orderBy, shuffle, transform } from 'lodash'
 import { delay, formatTime } from '@/utils/time'
 import { Gemini } from '../translator/gemini'
 import { pRetry } from '@idol-bbq-utils/utils'
-import { IWebsiteConfig } from '@/types/bot'
+import { IWebsiteConfig, SourcePlatformEnum } from '@/types/bot'
 import { cleanMediaFiles, downloadMediaFiles, getMediaType } from '../media'
 
 type TaskType = 'tweet' | 'reply' | 'follows'
@@ -276,6 +276,7 @@ class XCollector extends Collector {
                     }
                 }
                 let images_to_send = images.map((path) => ({
+                    source: SourcePlatformEnum.X,
                     type: config?.media?.type || 'no-storage',
                     media_type: getMediaType(path),
                     path: path,
