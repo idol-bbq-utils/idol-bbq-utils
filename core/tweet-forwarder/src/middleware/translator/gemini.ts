@@ -1,16 +1,18 @@
 import { log } from '@/config'
 import { ChatSession, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai'
+import { BaseTranslator } from './base'
 
 const TRANSLATION_PROMPT: string =
-    '现在你是一个翻译，接下来会给你日语或英语，请翻译以下日语或英语为简体中文，只输出译文，不要输出原文。如果无法翻译请输出：“╮(╯-╰)╭非常抱歉无法翻译”'
+    '现在你是一个翻译，接下来会给你日语或英语，请翻译以下日语或英语为简体中文，只输出译文，不要输出原文。如果是带有# hash tag的标签，不需要翻译。如果无法翻译请输出：“╮(╯-╰)╭非常抱歉无法翻译”'
 
-class Gemini {
+class Gemini extends BaseTranslator {
     private genAI
     private model
     private prompt: string
     private chat: ChatSession | undefined
     public name = 'Gemini'
     constructor(api_key: string, prompt?: string) {
+        super()
         this.genAI = new GoogleGenerativeAI(api_key)
         this.model = this.genAI.getGenerativeModel({
             model: 'gemini-1.0-pro',

@@ -8,7 +8,7 @@ import { log } from '@/config'
 import { Page } from 'puppeteer'
 import { orderBy, shuffle, transform } from 'lodash'
 import { delay, formatTime } from '@/utils/time'
-import { Gemini } from '../translator/gemini'
+import { BaseTranslator } from '../translator/base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { IWebsiteConfig, SourcePlatformEnum } from '@/types/bot'
 import { cleanMediaFiles, downloadMediaFiles, getMediaType } from '../media'
@@ -40,7 +40,7 @@ class XCollector extends Collector {
                 min: number
                 max: number
             }
-            translator?: Gemini
+            translator?: BaseTranslator
             task_id?: string
             media?: IWebsiteConfig['media']
         },
@@ -55,7 +55,7 @@ class XCollector extends Collector {
                         task_id: config.task_id,
                     })
                     log.info(`${prefix}[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
-                    this.forward(items, forward_to, 'tweet', {
+                    this.forward(orderBy(items, ['timestamp'], 'asc'), forward_to, 'tweet', {
                         translator: config.translator,
                         task_id: config.task_id,
                         media: config.media,
@@ -200,7 +200,7 @@ class XCollector extends Collector {
         forward_to: Array<BaseForwarder>,
         type: T,
         config?: {
-            translator?: Gemini
+            translator?: BaseTranslator
             task_id?: string
             title?: string
             media?: IWebsiteConfig['media']
@@ -285,19 +285,21 @@ class XCollector extends Collector {
                 // async and send
                 new Promise(async (res) => {
                     try {
-                        await pRetry(
-                            () =>
-                                Promise.all(
-                                    forward_to.map((forwarder) => forwarder.send(formated_article, images_to_send)),
-                                ),
-                            {
-                                retries: 2,
-                            },
+                        await Promise.all(
+                            forward_to.map((forwarder) =>
+                                pRetry(() => forwarder.send(formated_article, images_to_send), { retries: 2 }),
+                            ),
                         )
+
                         cleanMediaFiles(images)
                         res('')
                     } catch (e) {
                         log.error(`${prefix}forward failed`, e)
+                        try {
+                            cleanMediaFiles(images)
+                        } catch (e) {
+                            log.error(`${prefix}clean media failed`, e)
+                        }
                     }
                 })
             }

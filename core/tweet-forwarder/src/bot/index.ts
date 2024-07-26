@@ -12,6 +12,7 @@ import { delay } from '@/utils/time'
 import { Gemini } from '@/middleware/translator/gemini'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { parseNetscapeCookieToPuppeteerCookie } from '@/utils/auth'
+import { BaseTranslator } from '@/middleware/translator/base'
 
 export class FWDBot {
     public name: string
@@ -58,7 +59,13 @@ export class FWDBot {
                 ...website.config,
             }
             log.debug(website.config)
-            const translator = website.config?.translator && new Gemini(website.config.translator.key)
+            let translator: BaseTranslator | undefined
+            if (website.config?.translator) {
+                const _translator = website.config.translator
+                if (_translator.type === 'gemini') {
+                    translator = new Gemini(_translator.key)
+                }
+            }
             await translator?.init()
             // do cron here
             const job = CronJob.from({

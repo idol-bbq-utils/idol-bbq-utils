@@ -1,4 +1,5 @@
 type MediaStorageType = 'no-storage' | 'minio'
+type TranslatorType = 'gemini'
 
 interface IWebsiteConfig {
     user_agent?: string
@@ -9,7 +10,7 @@ interface IWebsiteConfig {
         min: number
     }
     translator?: {
-        type: string
+        type: TranslatorType
         key: string
     }
     media?: {
