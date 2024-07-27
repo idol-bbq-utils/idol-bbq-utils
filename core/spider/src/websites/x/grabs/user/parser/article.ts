@@ -57,7 +57,6 @@ async function refTweetParser(article: ElementHandle<HTMLElement>, article_type:
         has_media = (
             await Promise.all([
                 next?.$(QUERY_IMG_PATTERN),
-                next?.$(QUERY_IMG_PATTERN),
                 next?.$(QUERY_REF_MEDIA_PATTERN),
                 next?.$(QUERY_VIDEO_PATTERN),
                 next?.$(QUERY_VIDEO_PATTERN_2),
@@ -92,7 +91,6 @@ async function singleTweetParser(article: ElementHandle<HTMLElement>, article_ty
     const has_media_by_link = tweet_links?.some((l) => l?.includes('photo') || l?.includes('video'))
     const has_media_by_selector = (
         await Promise.all([
-            article?.$(QUERY_IMG_PATTERN),
             article?.$(QUERY_IMG_PATTERN),
             article?.$(QUERY_REF_MEDIA_PATTERN),
             article?.$(QUERY_VIDEO_PATTERN),
