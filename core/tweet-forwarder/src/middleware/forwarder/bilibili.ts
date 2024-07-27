@@ -5,6 +5,13 @@ import { log } from '@/config'
 import { SourcePlatformEnum } from '@/types/bot'
 import FormData from 'form-data'
 import fs from 'fs'
+
+const BASIC_TEXT_LIMIT = 1000
+const CHUNK_SEPARATOR_NEXT = '\n\n----⬇️----'
+const CHUNK_SPSERATOR_PREV = '----⬆️----\n\n'
+const PADDING_LENGTH = 24
+const TEXT_LIMIT = BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SPSERATOR_PREV.length - PADDING_LENGTH
+
 class BiliForwarder extends BaseForwarder {
     private bili_jct: string
     name = 'bilibili'
@@ -25,7 +32,7 @@ class BiliForwarder extends BaseForwarder {
         }>,
     ) {
         const has_media = media && media.length !== 0
-        await pRetry(() => (has_media ? this.sendTextWithPhotos(text, media) : this.sendPureText(text)), {
+        await pRetry(() => (has_media ? this.sendPhotoText(text, media) : this.sendPureText(text)), {
             retries: 2,
             onFailedAttempt(error) {
                 log.error(
@@ -36,6 +43,113 @@ class BiliForwarder extends BaseForwarder {
         return
     }
     async sendPureText(text: string) {
+        let _res = []
+        let text_to_be_sent = text
+        let i = 0
+        while (text_to_be_sent.length > BASIC_TEXT_LIMIT) {
+            const current_chunk = text_to_be_sent.slice(0, TEXT_LIMIT)
+            const res = await this.sendText(
+                `${i > 0 ? CHUNK_SPSERATOR_PREV : ''}${current_chunk}${CHUNK_SEPARATOR_NEXT}`,
+            )
+            _res.push(res)
+            text_to_be_sent = text_to_be_sent.slice(TEXT_LIMIT)
+            i = i + 1
+        }
+        const res = await this.sendText(`${i > 0 ? CHUNK_SPSERATOR_PREV : ''}${text_to_be_sent}`)
+        _res.push(res)
+        _res.forEach((res) => {
+            if (res.data.code !== 0) {
+                throw new Error(`Send text to ${this.name} failed. ${res.data.message}`)
+            }
+        })
+        return _res
+    }
+    async sendPhotoText(
+        text: string,
+        media: Array<{
+            source: SourcePlatformEnum
+            type: string
+            media_type: string
+            path: string
+        }>,
+    ) {
+        log.debug(`Send text with photos..., media: ${media}`)
+        let pics: Array<{
+            img_src: string
+            img_width: number
+            img_height: number
+            img_size: number
+        }> = (
+            await Promise.all(
+                media.map(async (item) => {
+                    if (item.media_type === 'photo') {
+                        try {
+                            log.debug(`Uploading photo ${item.path}`)
+                            const obj = await pRetry(() => this.uploadPhoto(item.path), {
+                                retries: 2,
+                                onFailedAttempt() {
+                                    log.error('Upload photo failed, retrying...')
+                                },
+                            })
+                            log.debug(obj)
+                            return obj
+                        } catch (e) {
+                            log.error(`Upload photo ${item.path} failed, skip this photo`)
+                            return
+                        }
+                    }
+                    // video to gif
+                }),
+            )
+        )
+            .filter((i) => i !== undefined)
+            .map((i) => ({
+                img_src: i.image_url,
+                img_width: i.image_width,
+                img_height: i.image_height,
+                img_size: i.image_size,
+            }))
+        pics = pics.slice(0, 9)
+        log.debug(`pics: ${pics}`)
+        let _res = []
+        let text_to_be_sent = text
+        let i = 0
+        while (text_to_be_sent.length > BASIC_TEXT_LIMIT) {
+            const current_chunk = text_to_be_sent.slice(0, TEXT_LIMIT)
+            const res = await this.sendTextWithPhotos(
+                `${i > 0 ? CHUNK_SPSERATOR_PREV : ''}${current_chunk}${CHUNK_SEPARATOR_NEXT}`,
+                pics,
+            )
+            _res.push(res)
+            text_to_be_sent = text_to_be_sent.slice(TEXT_LIMIT)
+            i = i + 1
+        }
+        const res = await this.sendTextWithPhotos(`${i > 0 ? CHUNK_SPSERATOR_PREV : ''}${text_to_be_sent}`, pics)
+        _res.push(res)
+        _res.forEach((res) => {
+            if (res.data.code !== 0) {
+                throw new Error(`Send text to ${this.name} failed. ${res.data.message}`)
+            }
+        })
+        return _res
+    }
+    async uploadPhoto(path: string) {
+        const form = new FormData()
+        form.append('file_up', fs.createReadStream(path))
+        form.append('category', 'daily')
+        const res = await axios.post('https://api.bilibili.com/x/dynamic/feed/draw/upload_bfs', form, {
+            headers: {
+                ...form.getHeaders(),
+                Cookie: `SESSDATA=${this.token}`,
+            },
+            params: {
+                csrf: this.bili_jct,
+            },
+        })
+        return res.data.data
+    }
+
+    async sendText(text: string) {
         const res = await axios.post(
             'https://api.bilibili.com/x/dynamic/feed/create/dyn',
             {
@@ -62,51 +176,18 @@ class BiliForwarder extends BaseForwarder {
                 },
             },
         )
-        if (res.data.code !== 0) {
-            throw new Error(`Send text to ${this.name} failed. ${res.data.message}`)
-        }
         return res
     }
+
     async sendTextWithPhotos(
         text: string,
-        media: Array<{
-            source: SourcePlatformEnum
-            type: string
-            media_type: string
-            path: string
+        pics: Array<{
+            img_src: string
+            img_width: number
+            img_height: number
+            img_size: number
         }>,
     ) {
-        log.debug(`Send text with photos..., media: ${media}`)
-        let pics: Array<{
-            image_url: string
-            image_width: number
-            image_height: number
-            image_size: number
-        }> = (
-            await Promise.all(
-                media.map(async (item) => {
-                    if (item.media_type === 'photo') {
-                        try {
-                            log.debug(`Uploading photo ${item.path}`)
-                            const obj = await pRetry(() => this.uploadPhoto(item.path), {
-                                retries: 2,
-                                onFailedAttempt() {
-                                    log.error('Upload photo failed, retrying...')
-                                },
-                            })
-                            log.debug(obj)
-                            return obj
-                        } catch (e) {
-                            log.error(`Upload photo ${item.path} failed, skip this photo`)
-                            return
-                        }
-                    }
-                    // video to gif
-                }),
-            )
-        ).filter((i) => i !== undefined)
-        pics = pics.slice(0, 9)
-        log.debug(`pics: ${pics}`)
         const res = await axios.post(
             'https://api.bilibili.com/x/dynamic/feed/create/dyn',
             {
@@ -120,12 +201,7 @@ class BiliForwarder extends BaseForwarder {
                             },
                         ],
                     },
-                    pics: pics.map((i) => ({
-                        img_src: i.image_url,
-                        img_width: i.image_width,
-                        img_height: i.image_height,
-                        img_size: i.image_size,
-                    })),
+                    pics: pics,
                     scene: 2,
                 },
             },
@@ -139,25 +215,7 @@ class BiliForwarder extends BaseForwarder {
                 },
             },
         )
-        if (res.data.code !== 0) {
-            throw new Error(`Send text with photos to ${this.name} failed. ${res.data.message}`)
-        }
         return res
-    }
-    async uploadPhoto(path: string) {
-        const form = new FormData()
-        form.append('file_up', fs.createReadStream(path))
-        form.append('category', 'daily')
-        const res = await axios.post('https://api.bilibili.com/x/dynamic/feed/draw/upload_bfs', form, {
-            headers: {
-                ...form.getHeaders(),
-                Cookie: `SESSDATA=${this.token}`,
-            },
-            params: {
-                csrf: this.bili_jct,
-            },
-        })
-        return res.data.data
     }
 }
 
