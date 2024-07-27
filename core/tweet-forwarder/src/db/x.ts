@@ -4,6 +4,7 @@ import { log } from '@/config'
 
 export type ITweetDB = Prisma.x_tweetGetPayload<{}>
 
+// depend the result is empty string or not
 async function saveTweet(tweet: ITweetArticle) {
     try {
         let res
@@ -11,26 +12,38 @@ async function saveTweet(tweet: ITweetArticle) {
             const ref_article = tweet.ref
             // make sure the ref is saved first
             const ref = await checkExistAndSave(ref_article)
+            if (tweet.forward_by) {
+                res = await checkExistAndSave(tweet, ref.id)
+                const forward_res = await saveForward(tweet.forward_by, res.id)
+                if (!forward_res) {
+                    return
+                }
+                return {
+                    ...res,
+                    forward_by: {
+                        username: forward_res.username,
+                        ref: forward_res.ref,
+                    },
+                }
+            }
             // save the tweet
             res = await save(tweet, ref.id)
             return res
         }
-        if (tweet.type === ArticleTypeEnum.FORWARD && tweet.forward_by) {
-            // we save treat the forwarded tweet as the normal tweet
-            tweet['type'] = ArticleTypeEnum.TWEET
+        if (tweet.forward_by) {
             // cause this tweet maybe belong to other
             // check first because of being forwarded by others
-            const ref = await checkExistAndSave(tweet)
+            const res = await checkExistAndSave(tweet)
 
-            const res = await saveForward(tweet.forward_by, ref.id)
-            if (!res) {
+            const forward_res = await saveForward(tweet.forward_by, res.id)
+            if (!forward_res) {
                 return
             }
             return {
-                ...ref,
+                ...res,
                 forward_by: {
-                    username: res.username,
-                    ref: res.ref,
+                    username: forward_res.username,
+                    ref: forward_res.ref,
                 },
             }
         }

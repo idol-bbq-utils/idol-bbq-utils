@@ -6,9 +6,23 @@ import { getTimelineType } from './parser/timeline'
 /**
  * The URL like https://x.com/username
  */
-export async function grabTweets(page: Page, url: string): Promise<Array<ITweetArticle>> {
+export async function grabTweets(
+    page: Page,
+    url: string,
+    config: {
+        viewport?: {
+            width: number
+            height: number
+        }
+    } = {
+        viewport: {
+            width: 954,
+            height: 1024,
+        },
+    },
+): Promise<Array<ITweetArticle>> {
     // Set screen size
-    await page.setViewport({ width: 954, height: 1024 })
+    await page.setViewport(config.viewport ?? { width: 954, height: 1024 })
     // Navigate the page to a URL
     await page.goto(url)
 

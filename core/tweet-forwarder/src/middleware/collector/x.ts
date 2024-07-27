@@ -48,34 +48,8 @@ class XCollector extends Collector {
         const { type = 'tweet', task_id } = config
         const prefix = task_id ? `[${task_id}] ` : ''
         const _paths = shuffle(paths)
-        if (type === 'tweet') {
-            for (const path of _paths) {
-                try {
-                    const items = await this.collect(page, `${domain}/${path}`, type, {
-                        task_id: config.task_id,
-                    })
-                    log.info(`${prefix}[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
-                    this.forward(orderBy(items, ['timestamp'], 'asc'), forward_to, 'tweet', {
-                        translator: config.translator,
-                        task_id: config.task_id,
-                        media: config.media,
-                    })
-                } catch (e) {
-                    log.error(`${prefix}[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
-                }
 
-                if (config.interval_time) {
-                    const time = Math.floor(
-                        Math.random() * (config.interval_time.max - config.interval_time.min) +
-                            config.interval_time.min,
-                    )
-                    log.info(`${prefix}[${this.name}] wait for next loop ${time}ms`)
-                    await delay(time)
-                }
-            }
-        }
-
-        // do reply collector
+        // do reply collector, and do reply first
         if (type === 'reply' || type === 'tweet') {
             for (const path of _paths) {
                 try {
@@ -96,6 +70,33 @@ class XCollector extends Collector {
                 } catch (e) {
                     log.error(`${prefix}[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
                 }
+                if (config.interval_time) {
+                    const time = Math.floor(
+                        Math.random() * (config.interval_time.max - config.interval_time.min) +
+                            config.interval_time.min,
+                    )
+                    log.info(`${prefix}[${this.name}] wait for next loop ${time}ms`)
+                    await delay(time)
+                }
+            }
+        }
+
+        if (type === 'tweet') {
+            for (const path of _paths) {
+                try {
+                    const items = await this.collect(page, `${domain}/${path}`, type, {
+                        task_id: config.task_id,
+                    })
+                    log.info(`${prefix}[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
+                    this.forward(orderBy(items, ['timestamp'], 'asc'), forward_to, 'tweet', {
+                        translator: config.translator,
+                        task_id: config.task_id,
+                        media: config.media,
+                    })
+                } catch (e) {
+                    log.error(`${prefix}[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
+                }
+
                 if (config.interval_time) {
                     const time = Math.floor(
                         Math.random() * (config.interval_time.max - config.interval_time.min) +
@@ -149,7 +150,12 @@ class XCollector extends Collector {
                 },
             })
             log.info(`${prefix}[${this.name}] grab ${res.length} tweets from ${url}`)
-            const tweets = await Promise.all(res.map(X_DB.saveTweet))
+            const tweets = []
+            // sequential save for avoiding data conflict
+            for (const tweet of res) {
+                const saved_tweet = await X_DB.saveTweet(tweet)
+                tweets.push(saved_tweet)
+            }
             return tweets.filter((item) => item !== undefined) as Array<TaskResult<T>>
         }
 
