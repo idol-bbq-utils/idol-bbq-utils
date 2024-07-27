@@ -248,6 +248,7 @@ class XCollector extends Collector {
                                 if (!translated_article?.translation) {
                                     let text = '╮(╯-╰)╭非常抱歉无法翻译'
                                     try {
+                                        log.debug(`${prefix}translate for :${article.text}`)
                                         text =
                                             (await pRetry(() => config.translator?.translate(article.text), {
                                                 retries: 2,
