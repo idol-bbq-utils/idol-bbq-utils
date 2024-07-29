@@ -111,6 +111,9 @@ class BiliForwarder extends BaseForwarder {
             }))
         pics = pics.slice(0, 9)
         log.debug(`pics: ${pics}`)
+        if (pics.length === 0) {
+            return this.sendPureText(text)
+        }
         let _res = []
         let text_to_be_sent = text
         let i = 0
