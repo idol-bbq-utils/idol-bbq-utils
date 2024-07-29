@@ -2,19 +2,17 @@ import { ForwardPlatformEnum, IForwardTo, IWebsite, IWebsiteConfig } from '@/typ
 import { CronJob } from 'cron'
 import { fwd_app } from '@/config'
 import { Browser } from 'puppeteer'
-import fs from 'fs'
-import { X } from '@idol-bbq-utils/spider'
-import { ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
 import { log } from '../config'
-import { XCollector } from '@/middleware/collector/x'
 import { Collector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { BiliForwarder } from '@/middleware/forwarder/bilibili'
-import { orderBy, shuffle } from 'lodash'
 import { collectorFetcher } from '@/middleware/collector'
 import { delay } from '@/utils/time'
 import { Gemini } from '@/middleware/translator/gemini'
+import { pRetry } from '@idol-bbq-utils/utils'
+import { parseNetscapeCookieToPuppeteerCookie } from '@/utils/auth'
+import { BaseTranslator } from '@/middleware/translator/base'
 
 export class FWDBot {
     public name: string
@@ -37,7 +35,7 @@ export class FWDBot {
                 this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
             }
             if (forward.type === ForwardPlatformEnum.Bilibili) {
-                this.forwarders.push(new BiliForwarder(forward.token))
+                this.forwarders.push(new BiliForwarder(forward.token, forward.bili_jct ?? ''))
             }
         }
         for (const website of this.websites) {
@@ -53,24 +51,36 @@ export class FWDBot {
     public async init(browser: Browser) {
         log.info(`[${this.name}] init`)
         for (const website of this.websites) {
-            const cookie = website.cookie_file && fs.readFileSync(website.cookie_file, 'utf8')
+            const cookies = website.cookie_file && parseNetscapeCookieToPuppeteerCookie(website.cookie_file)
             const url = new URL(website.domain)
             const collector = this.collectors.get(url.hostname)
             website.config = {
                 ...this.config,
                 ...website.config,
             }
-            const translator = website.config?.translator && new Gemini(website.config.translator.key)
+            log.debug(website.config)
+            let translator: BaseTranslator | undefined
+            if (website.config?.translator) {
+                const _translator = website.config.translator
+                if (_translator.type === 'gemini') {
+                    translator = new Gemini(_translator.key)
+                }
+            }
             await translator?.init()
             // do cron here
             const job = CronJob.from({
                 cronTime: website.config?.cron || '* * * * *',
                 onTick: async () => {
-                    log.info(`[${this.name}] start job for ${website.domain}`)
-                    const page = await browser.newPage()
-                    if (cookie) {
-                        log.info(`[${this.name}] set cookie for ${website.domain}`)
-                        const cookies = JSON.parse(cookie)
+                    const task_id = Math.random().toString(36).substring(7)
+                    log.info(`[${task_id}] [${this.name}] start job for ${website.domain}`)
+                    const page = await pRetry(() => browser.newPage(), {
+                        retries: 2,
+                        onFailedAttempt(error) {
+                            log.error(`[${task_id}] failed to create page, retrying... ${error.message}`)
+                        },
+                    })
+                    if (cookies) {
+                        log.info(`[${task_id}] [${this.name}] set cookie for ${website.domain}`)
                         await page.setCookie(...cookies)
                     }
                     await page.setUserAgent(
@@ -83,7 +93,7 @@ export class FWDBot {
                             Math.random() * (website.config.interval_time.max - website.config.interval_time.min) +
                                 website.config.interval_time.min,
                         )
-                        log.info(`[${this.name}] cron triggered but wait for ${time}ms`)
+                        log.info(`[${task_id}] [${this.name}] cron triggered but wait for ${time}ms`)
                         await delay(time)
                     }
 
@@ -92,9 +102,11 @@ export class FWDBot {
                         title: website.task_title,
                         interval_time: website.config?.interval_time,
                         translator,
+                        task_id,
+                        media: website.config?.media,
                     })
                     await page.close()
-                    log.info(`[${this.name}] job done for ${website.domain}`)
+                    log.info(`[${task_id}] [${this.name}] job done for ${website.domain}`)
                     // saving and notify bot
                 },
             })
@@ -102,6 +114,9 @@ export class FWDBot {
             this.jobs.push(job)
         }
         return this
+    }
+    public stop() {
+        this.jobs.forEach((job) => job.stop())
     }
 
     public start() {

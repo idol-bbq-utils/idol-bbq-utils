@@ -6,9 +6,23 @@ import { getTimelineType } from './parser/timeline'
 /**
  * The URL like https://x.com/username
  */
-export async function grabTweets(page: Page, url: string): Promise<Array<ITweetArticle>> {
+export async function grabTweets(
+    page: Page,
+    url: string,
+    config: {
+        viewport?: {
+            width: number
+            height: number
+        }
+    } = {
+        viewport: {
+            width: 954,
+            height: 1024,
+        },
+    },
+): Promise<Array<ITweetArticle>> {
     // Set screen size
-    await page.setViewport({ width: 954, height: 1320 })
+    await page.setViewport(config.viewport ?? { width: 954, height: 1024 })
     // Navigate the page to a URL
     await page.goto(url)
 
@@ -27,7 +41,7 @@ export async function grabTweets(page: Page, url: string): Promise<Array<ITweetA
 }
 
 export async function grabReply(page: Page, url: string): Promise<Array<Array<ITweetArticle>>> {
-    await page.setViewport({ width: 1080, height: 1920 })
+    await page.setViewport({ width: 873, height: 1500 })
     await page.goto(url)
     // Click on the tweets tab
     const tablist = await page.$('div[role="tablist"]')

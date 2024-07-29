@@ -18,19 +18,19 @@ model x_forward {
 }
 
 model x_tweet {
-  id            Int            @id @unique(map: "sqlite_autoindex_x_tweet_1") @default(autoincrement())
+  id            Int         @id @unique(map: "sqlite_autoindex_x_tweet_1") @default(autoincrement())
   u_id          String
   username      String
   timestamp     Int
   text          String
   type          String
-  tweet_link    String?        @default("")
+  tweet_link    String?     @default("")
   has_media     Boolean?
   ref           Int?
+  translation   String?
   x_forward     x_forward[]
-  x_translation x_translation?
-  x_tweet       x_tweet?       @relation("x_tweetTox_tweet", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_x_tweet x_tweet[]      @relation("x_tweetTox_tweet")
+  x_tweet       x_tweet?    @relation("x_tweetTox_tweet", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_x_tweet x_tweet[]   @relation("x_tweetTox_tweet")
 
   @@unique([u_id, timestamp(sort: Desc)], map: "article")
 }
@@ -43,11 +43,4 @@ model x_follows {
   follows   Int?
 
   @@index([u_id(sort: Desc)], map: "follows_for_user")
-}
-
-model x_translation {
-  id      Int     @id @unique(map: "sqlite_autoindex_x_translation_1") @default(autoincrement())
-  ref     Int     @unique(map: "x_translation_ref_index", sort: Desc)
-  text    String?
-  x_tweet x_tweet @relation(fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }

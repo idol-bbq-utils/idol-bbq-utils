@@ -7,72 +7,103 @@ const QUERY_META_PATTERN = 'div[data-testid="User-Name"]'
 const QUERY_IMG_PATTERN = 'div[data-testid="tweetPhoto"]'
 const QUERY_VIDEO_PATTERN = 'div[data-testid="previewInterstitial"]'
 const QUERY_CARD_PATTERN = 'div[data-testid="card.wrapper"]'
+const QUERY_CARD_VOTE_PATTERN = 'div[data-testid="cardPoll"]'
+
+const QUERY_VIDEO_PATTERN_2 = 'div[data-testid="videoComponent"]'
+const QUERY_REF_MEDIA_PATTERN = 'div[data-testid="testCondensedMedia"]'
 
 export async function tweetArticleParser(article: ElementHandle<HTMLElement>): Promise<ITweetArticle | undefined> {
     const article_type = await getArticleTypeEnum(article)
     if ([ArticleTypeEnum.FORWARD, ArticleTypeEnum.TWEET].includes(article_type)) {
-        const [raw_meta, texts, img, video] = await Promise.all([
-            await article.$(QUERY_META_PATTERN),
-            await article.$$(`${QUERY_TEXT_PATTERN} > *`),
-            await article.$(QUERY_IMG_PATTERN),
-            await article.$(QUERY_VIDEO_PATTERN),
-        ])
-        const meta = await tweetMetaParser(raw_meta)
-        const elements = await Promise.all(texts.map(articleElementParser))
+        let resolved_article = await singleTweetParser(article, article_type)
+
         let forward_by = undefined
+        let forward_maybe_ref = undefined
         if (article_type === ArticleTypeEnum.FORWARD) {
             const forwarder = await article.$('span[data-testid="socialContext"] span:not(:has(span)')
             forward_by = (await forwarder?.evaluate((e) => e.textContent)) || undefined
+            // maybe also ref
+            const next = await article?.$('div[aria-labelledby] > div')
+            const next_has_meta = await next?.$(QUERY_META_PATTERN)
+            if (next_has_meta) {
+                forward_maybe_ref = true
+                resolved_article = await refTweetParser(article, ArticleTypeEnum.REF)
+            }
         }
 
         return {
-            username: meta.username,
-            u_id: meta.u_id,
-            text: elements.join(''),
-            tweet_link: meta.tweet_link,
-            timestamp: meta.timestamp,
-            type: article_type,
-            has_media: !!img || !!video,
+            ...resolved_article,
+            type: forward_maybe_ref ? ArticleTypeEnum.REF : article_type,
             forward_by,
         }
     }
 
     // ref tweet
     if (article_type === ArticleTypeEnum.REF) {
-        const [metas, texts] = await Promise.all([
-            await article.$$(QUERY_META_PATTERN),
-            await article.$$(QUERY_TEXT_PATTERN),
-        ])
-        const [origin_meta, ref_meta] = await Promise.all([
-            await tweetMetaParser(metas?.[0]),
-            await tweetMetaParser(metas?.[1]),
-        ])
-        const [origin_contents, ref_contents] = await Promise.all([
-            await texts?.[0].$$(`:scope > *`),
-            await texts?.[1].$$(`:scope > *`),
-        ])
-        const [origin_elements, ref_elements] = await Promise.all([
-            await Promise.all(origin_contents.map(articleElementParser)),
-            await Promise.all(ref_contents.map(articleElementParser)),
-        ])
+        return await refTweetParser(article, article_type)
+    }
+}
 
-        const next = await article?.$('div[aria-labelledby] > div')
-        const next_has_meta = await next?.$(QUERY_META_PATTERN)
-        const next_has_media = (
-            await Promise.all([await next?.$(QUERY_IMG_PATTERN), await next?.$(QUERY_VIDEO_PATTERN)])
+async function refTweetParser(article: ElementHandle<HTMLElement>, article_type: ArticleTypeEnum) {
+    let resolved_article = await singleTweetParser(article, article_type)
+
+    const next = await article?.$('div[aria-labelledby] > div')
+    const next_has_meta = await next?.$(QUERY_META_PATTERN)
+    let ref_article = null
+    let has_media = false
+    if (next_has_meta) {
+        ref_article = next
+    } else {
+        has_media = (
+            await Promise.all([
+                next?.$(QUERY_IMG_PATTERN),
+                next?.$(QUERY_REF_MEDIA_PATTERN),
+                next?.$(QUERY_VIDEO_PATTERN),
+                next?.$(QUERY_VIDEO_PATTERN_2),
+            ])
         ).some((e) => !!e)
-        return {
-            ...origin_meta,
-            text: origin_elements.join(''),
-            type: article_type,
-            // this is a little tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
-            has_media: !!next_has_media && !next_has_meta,
-            ref: {
-                ...ref_meta,
-                text: ref_elements.join(''),
-                type: ArticleTypeEnum.TWEET,
-            },
-        }
+        ref_article = await article?.$('div[aria-labelledby] > div + div')
+    }
+
+    // for ref tweet
+    let ref = ref_article && (await singleTweetParser(ref_article, ArticleTypeEnum.TWEET))
+
+    return {
+        ...resolved_article,
+        // this is a little tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
+        has_media: has_media && !next_has_meta,
+        ref,
+    }
+}
+
+async function singleTweetParser(article: ElementHandle<HTMLElement>, article_type: ArticleTypeEnum) {
+    const [raw_meta, texts] = await Promise.all([
+        await article.$(QUERY_META_PATTERN),
+        await (await article.$(`${QUERY_TEXT_PATTERN}`))?.$$(':scope > *'),
+    ])
+    const meta = await tweetMetaParser(raw_meta)
+    // article content
+    const elements = texts && (await Promise.all(texts?.map(articleElementParser)))
+    const partial_href = `/${meta.u_id.slice(1)}/status`
+    const _tweet_links = await article?.$$(`a[href*="${partial_href}"`)
+    const tweet_links =
+        _tweet_links && (await Promise.all(_tweet_links?.map((r) => r?.evaluate((e) => e.getAttribute('href')))))
+    const has_media_by_link = tweet_links?.some((l) => l?.includes('photo') || l?.includes('video'))
+    const has_media_by_selector = (
+        await Promise.all([
+            article?.$(QUERY_IMG_PATTERN),
+            article?.$(QUERY_REF_MEDIA_PATTERN),
+            article?.$(QUERY_VIDEO_PATTERN),
+            article?.$(QUERY_VIDEO_PATTERN_2),
+        ])
+    ).some((e) => !!e)
+    const status_link = tweet_links?.[0]?.split('/').slice(0, 4).join('/')
+    return {
+        ...meta,
+        text: elements?.join('') || '',
+        type: article_type,
+        has_media: has_media_by_link || !!has_media_by_selector,
+        tweet_link: status_link,
     }
 }
 

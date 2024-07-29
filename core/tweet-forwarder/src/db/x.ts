@@ -4,6 +4,7 @@ import { log } from '@/config'
 
 export type ITweetDB = Prisma.x_tweetGetPayload<{}>
 
+// depend the result is empty string or not
 async function saveTweet(tweet: ITweetArticle) {
     try {
         let res
@@ -11,27 +12,42 @@ async function saveTweet(tweet: ITweetArticle) {
             const ref_article = tweet.ref
             // make sure the ref is saved first
             const ref = await checkExistAndSave(ref_article)
+            if (tweet.forward_by) {
+                res = await checkExistAndSave(tweet, ref.id)
+                const forward_res = await saveForward(tweet.forward_by, res.id)
+                if (!forward_res) {
+                    return
+                }
+                return {
+                    ...res,
+                    forward_by: {
+                        username: forward_res.username,
+                        ref: forward_res.ref,
+                    },
+                }
+            }
             // save the tweet
             res = await save(tweet, ref.id)
             return res
         }
-        if (tweet.type === ArticleTypeEnum.FORWARD && tweet.forward_by) {
-            // we save treat the forwarded tweet as the normal tweet
-            tweet['type'] = ArticleTypeEnum.TWEET
-            const ref = await checkExistAndSave(tweet)
+        if (tweet.forward_by) {
+            // cause this tweet maybe belong to other
+            // check first because of being forwarded by others
+            const res = await checkExistAndSave(tweet)
 
-            const res = await saveForward(tweet.forward_by, ref.id)
-            if (!res) {
+            const forward_res = await saveForward(tweet.forward_by, res.id)
+            if (!forward_res) {
                 return
             }
             return {
-                ...ref,
+                ...res,
                 forward_by: {
-                    username: res.username,
-                    ref: res.ref,
+                    username: forward_res.username,
+                    ref: forward_res.ref,
                 },
             }
         }
+        // normal tweet
         res = await save(tweet)
         return res
     } catch (e) {
@@ -92,6 +108,7 @@ async function save(tweet: ITweetArticle, ref?: number) {
 }
 
 async function saveForward(username: string, ref: number) {
+    // if exist, that means we have saved this forward
     const exist_one = await prisma.x_forward.findUnique({
         where: {
             ref_username: {
@@ -165,23 +182,31 @@ async function saveReply(replies: ITweetArticle[]) {
     return res
 }
 
-async function getTranslation(ref: number) {
-    return await prisma.x_translation.findUnique({
+async function getTranslation(id: number) {
+    return await prisma.x_tweet.findUnique({
         where: {
-            ref,
+            id,
+        },
+        select: {
+            translation: true,
         },
     })
 }
 
-async function saveTranslation(ref: number, text: string) {
-    let exist_one = await getTranslation(ref)
-    if (exist_one) {
+async function saveTranslation(id: number, text: string) {
+    let exist_one = await getTranslation(id)
+    if (exist_one?.translation) {
         return exist_one
     }
-    return await prisma.x_translation.create({
+    return await prisma.x_tweet.update({
+        where: {
+            id: id,
+        },
         data: {
-            ref,
-            text,
+            translation: text,
+        },
+        select: {
+            translation: true,
         },
     })
 }
