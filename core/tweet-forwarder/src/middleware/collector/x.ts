@@ -70,21 +70,8 @@ class XCollector extends Collector {
                 } catch (e) {
                     log.error(`${prefix}[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
                 }
-                if (config.interval_time) {
-                    const time = Math.floor(
-                        Math.random() * (config.interval_time.max - config.interval_time.min) +
-                            config.interval_time.min,
-                    )
-                    log.info(`${prefix}[${this.name}] wait for next loop ${time}ms`)
-                    await delay(time)
-                }
-            }
-        }
-
-        if (type === 'tweet') {
-            for (const path of _paths) {
                 try {
-                    const items = await this.collect(page, `${domain}/${path}`, type, {
+                    const items = await this.collect(page, `${domain}/${path}`, 'tweet', {
                         task_id: config.task_id,
                     })
                     log.info(`${prefix}[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
