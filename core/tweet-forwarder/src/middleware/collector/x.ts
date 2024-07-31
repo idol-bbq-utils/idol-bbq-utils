@@ -160,6 +160,9 @@ class XCollector extends Collector {
             const res = []
             for (const reply_thread of reply_threads) {
                 const saved_thread = await X_DB.saveReply(reply_thread)
+                if (!saved_thread) {
+                    continue
+                }
                 let all_thread = []
                 let latest_single_article = orderBy(saved_thread, ['timestamp'], 'desc')[0]
                 while (latest_single_article && latest_single_article.ref !== null && latest_single_article.ref !== 0) {
