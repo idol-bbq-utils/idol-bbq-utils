@@ -236,6 +236,7 @@ class XCollector extends Collector {
         // do article forwarding
         if (type === 'tweet' || type === 'reply') {
             for (const articles of raw_article_groups) {
+                const DEFAULT_TRANSLATION = '╮(╯-╰)╭非常抱歉无法翻译'
                 let formated_article = (
                     await Promise.all(
                         articles.map(async (article) => {
@@ -243,7 +244,7 @@ class XCollector extends Collector {
                             if (config?.translator) {
                                 let translated_article = await X_DB.getTranslation(article.id)
                                 if (!translated_article?.translation) {
-                                    let text = '╮(╯-╰)╭非常抱歉无法翻译'
+                                    let text = DEFAULT_TRANSLATION
                                     try {
                                         log.debug(`${prefix}translate for :${article.text}`)
                                         text =
@@ -255,11 +256,17 @@ class XCollector extends Collector {
                                                         e,
                                                     )
                                                 },
-                                            })) || '╮(╯-╰)╭非常抱歉无法翻译'
+                                            })) || DEFAULT_TRANSLATION
                                     } catch (e) {
                                         log.error(`${prefix}translate failed`, e)
                                     }
-                                    translated_article = await X_DB.saveTranslation(article.id, text || '')
+                                    translated_article =
+                                        // do not save default translation
+                                        text === DEFAULT_TRANSLATION
+                                            ? {
+                                                  translation: DEFAULT_TRANSLATION,
+                                              }
+                                            : await X_DB.saveTranslation(article.id, text || '')
                                 }
                                 format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article?.translation || ''}`
                             }
