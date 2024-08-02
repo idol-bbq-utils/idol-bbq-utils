@@ -13,6 +13,7 @@ import { Gemini } from '@/middleware/translator/gemini'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { parseNetscapeCookieToPuppeteerCookie } from '@/utils/auth'
 import { BaseTranslator } from '@/middleware/translator/base'
+import { QQForwarder } from '@/middleware/forwarder/qq'
 
 export class FWDBot {
     public name: string
@@ -36,6 +37,9 @@ export class FWDBot {
             }
             if (forward.type === ForwardPlatformEnum.Bilibili) {
                 this.forwarders.push(new BiliForwarder(forward.token, forward.bili_jct ?? ''))
+            }
+            if (forward.type === ForwardPlatformEnum.QQ) {
+                this.forwarders.push(new QQForwarder(forward.token, forward.group_id ?? '', forward.url ?? ''))
             }
         }
         for (const website of this.websites) {
