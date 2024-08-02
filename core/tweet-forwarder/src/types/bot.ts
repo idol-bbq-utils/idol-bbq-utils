@@ -40,6 +40,7 @@ enum SourcePlatformEnum {
 enum ForwardPlatformEnum {
     Telegram = 'telegram',
     Bilibili = 'bilibili',
+    QQ = 'qq',
 }
 
 interface IForwardTo {
@@ -47,6 +48,8 @@ interface IForwardTo {
     token: string
     chat_id?: string
     bili_jct?: string
+    group_id?: string
+    url?: string
 }
 
 interface IBot {
