@@ -19,6 +19,13 @@ interface IWebsiteConfig {
             path: string
             cookie_file?: string
         }
+        ffmpeg?: {
+            path: string
+        }
+        yt_dl?: {
+            path: string
+            cookie_file?: string
+        }
         // todo s3 storage
         config?: {}
     }
