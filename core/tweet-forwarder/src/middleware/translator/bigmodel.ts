@@ -35,7 +35,8 @@ class BigModelGLM4Flash extends BaseBigModel {
                     role: 'user',
                     content: text
                 }
-            ]
+            ],
+            max_tokens: 4000
         }, {
             headers: {
                 Authorization: `Bearer ${this.api_key}`
