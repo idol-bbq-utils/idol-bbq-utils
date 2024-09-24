@@ -1,5 +1,5 @@
 type MediaStorageType = 'no-storage' | 'minio'
-type TranslatorType = 'gemini'
+type TranslatorType = 'gemini' | 'glm-4-flash'
 
 interface IWebsiteConfig {
     user_agent?: string
@@ -12,6 +12,7 @@ interface IWebsiteConfig {
     translator?: {
         type: TranslatorType
         key: string
+        prompt?: string
     }
     media?: {
         type: MediaStorageType
