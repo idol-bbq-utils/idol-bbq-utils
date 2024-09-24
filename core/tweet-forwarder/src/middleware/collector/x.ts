@@ -240,7 +240,8 @@ class XCollector extends Collector {
                 let formated_article = (
                     await Promise.all(
                         articles.map(async (article) => {
-                            let format_article = this.formatArticle(article)
+                            let metaline = this.formatMetaline(article)
+                            let format_article = `${metaline}\n\n`
                             if (config?.translator) {
                                 let translated_article = await X_DB.getTranslation(article.id)
                                 if (!translated_article?.translation) {
@@ -268,9 +269,9 @@ class XCollector extends Collector {
                                               }
                                             : await X_DB.saveTranslation(article.id, text || '')
                                 }
-                                format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article?.translation || ''}`
+                                format_article += `${translated_article?.translation || ''}\n${'-'.repeat(6)}↑${config.translator.name + '渣翻'}--↓原文${'-'.repeat(6)}\n`
                             }
-                            return format_article
+                            return `${format_article}${article.text}`
                         }),
                     )
                 ).join(`\n\n${'-'.repeat(12)}\n\n`)
@@ -373,7 +374,7 @@ class XCollector extends Collector {
         return this
     }
 
-    formatArticle(
+    formatMetaline(
         article: ITweetDB & {
             forward_by?: {
                 username: string
@@ -392,9 +393,8 @@ class XCollector extends Collector {
             metaline = `${article.forward_by.username}${TAB}转发推文:\n\n${metaline}`
         }
 
-        let text = article.text
 
-        return [metaline, text].join('\n\n')
+        return metaline
     }
 }
 

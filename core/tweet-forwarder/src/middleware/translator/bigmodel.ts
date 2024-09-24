@@ -21,7 +21,7 @@ class BigModelGLM4Flash extends BaseBigModel {
         this.prompt = prompt || this.TRANSLATION_PROMPT
     }
     public async init() {
-        log.info(`[Gemini] model loaded with prompt ${this.prompt}`)
+        log.info(`[BigModel] ${this.name} model loaded with prompt ${this.prompt}`)
     }
     public async translate(text: string) {
         const res = await axios.post(this.BASE_URL, {
