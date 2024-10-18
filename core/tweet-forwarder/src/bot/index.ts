@@ -13,6 +13,8 @@ import { Gemini } from '@/middleware/translator/gemini'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { parseNetscapeCookieToPuppeteerCookie } from '@/utils/auth'
 import { BaseTranslator } from '@/middleware/translator/base'
+import { QQForwarder } from '@/middleware/forwarder/qq'
+import { BigModelGLM4Flash } from '@/middleware/translator/bigmodel'
 
 export class FWDBot {
     public name: string
@@ -36,6 +38,9 @@ export class FWDBot {
             }
             if (forward.type === ForwardPlatformEnum.Bilibili) {
                 this.forwarders.push(new BiliForwarder(forward.token, forward.bili_jct ?? ''))
+            }
+            if (forward.type === ForwardPlatformEnum.QQ) {
+                this.forwarders.push(new QQForwarder(forward.token, forward.group_id ?? '', forward.url ?? ''))
             }
         }
         for (const website of this.websites) {
@@ -63,7 +68,10 @@ export class FWDBot {
             if (website.config?.translator) {
                 const _translator = website.config.translator
                 if (_translator.type === 'gemini') {
-                    translator = new Gemini(_translator.key)
+                    translator = new Gemini(_translator.key, _translator.prompt)
+                }
+                if (_translator.type === 'glm-4-flash') { 
+                    translator = new BigModelGLM4Flash(_translator.key, _translator.prompt)
                 }
             }
             await translator?.init()
