@@ -2,4 +2,8 @@ config.yaml
 assets
 
 # Prisma Client
-prisma/generated
+prisma/client
+prisma/migrations
+*-journal
+
+*.db
