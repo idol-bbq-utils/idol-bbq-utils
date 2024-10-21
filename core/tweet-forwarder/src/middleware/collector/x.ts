@@ -70,21 +70,8 @@ class XCollector extends Collector {
                 } catch (e) {
                     log.error(`${prefix}[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
                 }
-                if (config.interval_time) {
-                    const time = Math.floor(
-                        Math.random() * (config.interval_time.max - config.interval_time.min) +
-                            config.interval_time.min,
-                    )
-                    log.info(`${prefix}[${this.name}] wait for next loop ${time}ms`)
-                    await delay(time)
-                }
-            }
-        }
-
-        if (type === 'tweet') {
-            for (const path of _paths) {
                 try {
-                    const items = await this.collect(page, `${domain}/${path}`, type, {
+                    const items = await this.collect(page, `${domain}/${path}`, 'tweet', {
                         task_id: config.task_id,
                     })
                     log.info(`${prefix}[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
@@ -173,7 +160,17 @@ class XCollector extends Collector {
             const res = []
             for (const reply_thread of reply_threads) {
                 const saved_thread = await X_DB.saveReply(reply_thread)
-                res.push(saved_thread)
+                if (!saved_thread) {
+                    continue
+                }
+                let all_thread = []
+                let latest_single_article = orderBy(saved_thread, ['timestamp'], 'desc')[0]
+                while (latest_single_article && latest_single_article.ref !== null && latest_single_article.ref !== 0) {
+                    all_thread.push(latest_single_article)
+                    latest_single_article = (await X_DB.getTweets([latest_single_article.ref]))[0]
+                }
+                all_thread.push(latest_single_article)
+                res.push(all_thread)
             }
             return res.filter((item) => item !== undefined) as Array<TaskResult<T>>
         }
@@ -239,14 +236,16 @@ class XCollector extends Collector {
         // do article forwarding
         if (type === 'tweet' || type === 'reply') {
             for (const articles of raw_article_groups) {
+                const DEFAULT_TRANSLATION = '╮(╯-╰)╭非常抱歉无法翻译'
                 let formated_article = (
                     await Promise.all(
                         articles.map(async (article) => {
-                            let format_article = this.formatArticle(article)
+                            let metaline = this.formatMetaline(article)
+                            let format_article = `${metaline}\n\n`
                             if (config?.translator) {
                                 let translated_article = await X_DB.getTranslation(article.id)
                                 if (!translated_article?.translation) {
-                                    let text = '╮(╯-╰)╭非常抱歉无法翻译'
+                                    let text = DEFAULT_TRANSLATION
                                     try {
                                         log.debug(`${prefix}translate for :${article.text}`)
                                         text =
@@ -258,15 +257,21 @@ class XCollector extends Collector {
                                                         e,
                                                     )
                                                 },
-                                            })) || '╮(╯-╰)╭非常抱歉无法翻译'
+                                            })) || DEFAULT_TRANSLATION
                                     } catch (e) {
                                         log.error(`${prefix}translate failed`, e)
                                     }
-                                    translated_article = await X_DB.saveTranslation(article.id, text || '')
+                                    translated_article =
+                                        // do not save default translation
+                                        text === DEFAULT_TRANSLATION
+                                            ? {
+                                                  translation: DEFAULT_TRANSLATION,
+                                              }
+                                            : await X_DB.saveTranslation(article.id, text || '')
                                 }
-                                format_article += `\n${'-'.repeat(6)}${config.translator.name + '渣翻'}${'-'.repeat(6)}\n${translated_article?.translation || ''}`
+                                format_article += `${translated_article?.translation || ''}\n${'-'.repeat(6)}↑${config.translator.name + '渣翻'}--↓原文${'-'.repeat(6)}\n`
                             }
-                            return format_article
+                            return `${format_article}${article.text}`
                         }),
                     )
                 ).join(`\n\n${'-'.repeat(12)}\n\n`)
@@ -275,7 +280,7 @@ class XCollector extends Collector {
                 let images = [] as string[]
                 if (config?.media) {
                     for (const article of articles) {
-                        if (article.has_media) {
+                        if (article.has_media && article.tweet_link) {
                             images = images.concat(
                                 downloadMediaFiles(`https://x.com${article.tweet_link}`, config.media.gallery_dl),
                             )
@@ -369,7 +374,7 @@ class XCollector extends Collector {
         return this
     }
 
-    formatArticle(
+    formatMetaline(
         article: ITweetDB & {
             forward_by?: {
                 username: string
@@ -388,9 +393,8 @@ class XCollector extends Collector {
             metaline = `${article.forward_by.username}${TAB}转发推文:\n\n${metaline}`
         }
 
-        let text = article.text
 
-        return [metaline, text].join('\n\n')
+        return metaline
     }
 }
 

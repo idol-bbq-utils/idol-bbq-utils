@@ -1,5 +1,5 @@
 type MediaStorageType = 'no-storage' | 'minio'
-type TranslatorType = 'gemini'
+type TranslatorType = 'gemini' | 'glm-4-flash'
 
 interface IWebsiteConfig {
     user_agent?: string
@@ -12,10 +12,18 @@ interface IWebsiteConfig {
     translator?: {
         type: TranslatorType
         key: string
+        prompt?: string
     }
     media?: {
         type: MediaStorageType
         gallery_dl: {
+            path: string
+            cookie_file?: string
+        }
+        ffmpeg?: {
+            path: string
+        }
+        yt_dl?: {
             path: string
             cookie_file?: string
         }
@@ -40,6 +48,7 @@ enum SourcePlatformEnum {
 enum ForwardPlatformEnum {
     Telegram = 'telegram',
     Bilibili = 'bilibili',
+    QQ = 'qq',
 }
 
 interface IForwardTo {
@@ -47,6 +56,8 @@ interface IForwardTo {
     token: string
     chat_id?: string
     bili_jct?: string
+    group_id?: string
+    url?: string
 }
 
 interface IBot {
