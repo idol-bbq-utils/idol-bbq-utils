@@ -25,38 +25,20 @@ importers:
         specifier: ^5.5.3
         version: 5.5.3
 
-  core/log:
-    dependencies:
-      dayjs:
-        specifier: ^1.11.11
-        version: 1.11.11
-      winston:
-        specifier: ^3.13.0
-        version: 3.13.0
-
-  core/spider:
-    dependencies:
-      puppeteer:
-        specifier: ^22.12.1
-        version: 22.12.1(typescript@5.5.3)
-      winston:
-        specifier: ^3.13.0
-        version: 3.13.0
-
-  core/tweet-forwarder:
+  app/tweet-forwarder:
     dependencies:
       '@google/generative-ai':
         specifier: ^0.14.1
         version: 0.14.1
       '@idol-bbq-utils/log':
         specifier: workspace:^
-        version: link:../log
+        version: link:../../core/log
       '@idol-bbq-utils/spider':
         specifier: workspace:^
-        version: link:../spider
+        version: link:../../core/spider
       '@idol-bbq-utils/utils':
         specifier: workspace:^
-        version: link:../utils
+        version: link:../../core/utils
       '@prisma/client':
         specifier: ^5.16.2
         version: 5.16.2(prisma@5.16.2)
@@ -97,6 +79,21 @@ importers:
       prisma:
         specifier: ^5.16.2
         version: 5.16.2
+
+  core/log:
+    dependencies:
+      dayjs:
+        specifier: ^1.11.11
+        version: 1.11.11
+      winston:
+        specifier: ^3.13.0
+        version: 3.13.0
+
+  core/spider:
+    dependencies:
+      puppeteer:
+        specifier: ^22.12.1
+        version: 22.12.1(typescript@5.5.3)
 
   core/utils:
     dependencies:
