@@ -9,23 +9,33 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml lerna.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml lerna.json tsconfig.json ./
 COPY ./app/tweet-forwarder ./app/tweet-forwarder
 COPY ./core ./core
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV NO_SANDBOX=true
+ENV DATABASE_URL="file:/app/data.db"
 
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder generate
 RUN pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder build --include-dependencies
 
-RUN pnpm lerna clean -y
-RUN rm -rf node_modules
-RUN pnpm install --production -y
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --production
 
 
 FROM base AS runner
+
+RUN apk update
+RUN apk add --no-cache chromium
+
 WORKDIR /app
 
 COPY --from=builder /app/ .
+RUN chown -R node:node /app/
+
+USER node
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 CMD ["node", "app/tweet-forwarder/lib/main.js"]

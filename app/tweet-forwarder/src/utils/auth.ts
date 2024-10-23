@@ -1,4 +1,4 @@
-import { CookieParam } from 'puppeteer'
+import { CookieParam } from 'puppeteer-core'
 import fs from 'fs'
 /**
  * @description convert netscape cookie file to puppeteer cookie like https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en

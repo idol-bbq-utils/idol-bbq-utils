@@ -4,6 +4,3 @@ assets
 # Prisma Client
 prisma/client
 prisma/migrations
-*-journal
-
-*.db
