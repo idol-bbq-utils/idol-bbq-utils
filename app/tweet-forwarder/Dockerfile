@@ -14,7 +14,6 @@ COPY ./app/tweet-forwarder ./app/tweet-forwarder
 COPY ./core ./core
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV NO_SANDBOX=true
 ENV DATABASE_URL="file:/app/data.db"
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
@@ -36,6 +35,8 @@ RUN chown -R node:node /app/
 
 USER node
 
+ENV NO_SANDBOX=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV DATABASE_URL="file:/app/data.db"
 
 CMD ["node", "app/tweet-forwarder/lib/main.js"]
