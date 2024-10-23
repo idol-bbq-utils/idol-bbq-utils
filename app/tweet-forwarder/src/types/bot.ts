@@ -20,14 +20,15 @@ interface IWebsiteConfig {
             path: string
             cookie_file?: string
         }
-        ffmpeg?: {
-            path: string
-        }
-        yt_dl?: {
-            path: string
-            cookie_file?: string
-        }
-        // todo s3 storage
+        // TODO
+        // ffmpeg?: {
+        //     path: string
+        // }
+        // yt_dl?: {
+        //     path: string
+        //     cookie_file?: string
+        // }
+        // TODO s3 storage
         config?: {}
     }
 }
