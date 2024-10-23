@@ -135,4 +135,4 @@ lib/
 
 *.db
 
-!assets/*
+!assets/**/*

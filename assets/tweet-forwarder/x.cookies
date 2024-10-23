@@ -1,0 +1,10 @@
+# Netscape HTTP Cookie File
+# http://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file!  Do not edit.
+
+.x.com	TRUE	/	TRUE	1761204643	guest_id	v1%3A172647443303327755
+.x.com	TRUE	/	TRUE	1761204643	night_mode	2
+.x.com	TRUE	/	TRUE	1764228643	guest_id_marketing	v1%3A172647443303327755
+.x.com	TRUE	/	TRUE	1764228643	guest_id_ads	v1%3A172647443303327755
+.x.com	TRUE	/	TRUE	1764228643	personalization_id	"v1_2zEIro0pBkOuysk8sE66pw=="
+.x.com	TRUE	/	TRUE	1729677643	gt	1848990417771237638

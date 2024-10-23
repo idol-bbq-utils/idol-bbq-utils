@@ -1,4 +1,4 @@
-type MediaStorageType = 'no-storage' | 'minio'
+type MediaStorageType = 'no-storage'
 type TranslatorType = 'gemini' | 'glm-4-flash'
 
 interface IWebsiteConfig {

@@ -1,0 +1,91 @@
+bots:
+  - name: 'example-bot'
+    websites:                                 # (required) websites to forward tweets from
+      - domain: 'https://x.com'               # (required) website domain, notice the slash at the end
+        paths: ['user1', 'user2', 'user3']
+        cookie_file: ./assets/forwarder/x.cookies
+        config:
+          cron: '*/2 * * * *'
+      - domain: 'https://x.com'
+        task_type: 'follows'
+        task_title: '【Follows】'
+        paths: ['user5', 'user6', 'user7']
+        config:                               # (optional) task configurations
+          cron: '5 23 * * *'                  # (optional) cron job default: '* * * * *'
+          interval_time:                      # (optional) interval time default: {max: 0, min: 0}
+            max: 0
+            min: 0
+          translator:                         # (optional) translator configurations
+            type: 'none'                      # (required) translator type: 'none' | 'geminis' | 'glm-4-flash'
+    forward_to:                               # (optional) forward to multiple platforms, you can add more than one
+      - type: 'telegram'                      # (optional) forward type
+        token: 'telegram bot token'           # (required) telegram bot token
+        chat_id: 'telegram channel id'        # (required) telegram channel id
+      - type: 'bilibili'                      # (optional) forward type
+        token: 'SESSDATA in cookies'          # (required) bilibili SESSDATA
+        bili_jct: 'blit_jct in cookies'       # (required) bilibili bili_jct
+      - type: 'qq'                            # (optional) forward type (onebot 11)
+        token: 'onebot 11 token'              # (required) onebot 11 token
+        group_id: 'qq group id'               # (required) qq group id
+        url: 'onebot server url'              # (required) onebot server url
+    config:                                   # (optional) forwarder configurations
+      user_agent:  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'                 # (optional) puppeteer supported user agent
+      cron: "*/5 4-23 * * *"                  
+      interval_time:
+        max: 6000
+        min: 2000
+      media:                                  # (optional) media configurations, handle media files
+        type: 'no-storage'                    # (optional) media type default 'no-storage', will delete media files after forwarding
+        gallery_dl:                           # (optional) gallery_dl configurations
+          path: '<path-to-gallery_dl-executable>'           # (required) path to gallery_dl executable
+          cookie_file: './assets/forwarder/x.cookies'       # (required) path to cookies file
+      translator:                             # (optional) translator configurations, if you want to translate the tweet
+        type: 'glm-4-flash'                   # (required) translator type: 'geminis' | 'glm-4-flash'
+        key: 'glm-token'                      # (required) translator key
+  - name: 'all-follows-bot'
+    websites:
+      - domain: 'https://x.com'
+        task_type: 'follows'
+        task_title: '【星团声优推特粉丝变化情况】'
+        paths: ['SayuriDate', 'Liyu0109', '_Naomi_Payton_', 'AoyamaNagisa', 'MisakiNako_', 'NozomiSuzuhara', 'AyaEmori_BOX', 'a_yabushima', '0927_yuina', 'Sakakura_Sakura']
+        config:
+          cron: '14 23 * * *'
+      - domain: 'https://x.com'
+        task_type: 'follows'
+        task_title: '【虹团声优推特粉丝变化情况】'
+        paths: ['yano_hinaki35', 'aguri_onishi', 'tomori_kusunoki', 'cocohayashi515', 'kaor1n_n', 'MayuSgr',  'kitoakari_1016', 'sashide_m', 't_chiemi1006', 'natyaaaaaaan07', 'iRis_k_miyu', 'k_moeka_', 'uchida_shu0524', 'homoto_akina']
+        config:
+          cron: '16 23 * * *'
+      - domain: 'https://x.com'
+        task_type: 'follows'
+        task_title: '【水团声优推特粉丝变化情况】'
+        paths: ['anju_inami', 'Rikako_Aida', 'suwananaka', 'box_komiyaarisa', 'Saito_Shuka', 'aikyan_', 'Kanako_tktk', 'aina_suzuki723', 'furihata_ai']
+        config:
+          cron: '24 23 * * *'
+      - domain: 'https://x.com'
+        task_type: 'follows'
+        task_title: '【缪斯声优推特粉丝变化情况】'
+        paths: ['nittaemi85', 'nanjolno', 'aya_uchida', 'mimori_suzuko', 'rippialoha', 'pile_eric', 'kusudaaina', 'INFO_shikaco', 'tokui_sorangley']
+        config:
+          cron: '26 23 * * *'
+    forward_to:                               # (optional) forward to multiple platforms, you can add more than one
+      - type: 'telegram'                      # (optional) forward type
+        token: 'telegram bot token'           # (required) telegram bot token
+        chat_id: 'telegram channel id'        # (required) telegram channel id
+      - type: 'bilibili'                      # (optional) forward type
+        token: 'SESSDATA in cookies'          # (required) bilibili SESSDATA
+        bili_jct: 'blit_jct in cookies'       # (required) bilibili bili_jct
+      - type: 'qq'                            # (optional) forward type (onebot 11)
+        token: 'onebot 11 token'              # (required) onebot 11 token
+        group_id: 'qq group id'               # (required) qq group id
+        url: 'onebot server url'              # (required) onebot server url
+    config:
+      interval_time:
+        max: 0
+        min: 0
+config:                                       # (not required) forwarder configurations
+  user_agent:  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'                 # (not required) puppeteer supported user agent
+  cron: "*/5 4-23 * * *"                      # (not required) cron job
+  interval_time:
+    max: 1000
+    min: 10
