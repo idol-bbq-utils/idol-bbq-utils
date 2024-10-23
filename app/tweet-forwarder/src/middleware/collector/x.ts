@@ -5,7 +5,7 @@ import { X as X_DB } from '@/db'
 import { BaseForwarder } from '../forwarder/base'
 import { getTweets, ITweetDB } from '@/db/x'
 import { log } from '@/config'
-import { Page } from 'puppeteer'
+import { Page } from 'puppeteer-core'
 import { orderBy, shuffle, transform } from 'lodash'
 import { delay, formatTime } from '@/utils/time'
 import { BaseTranslator } from '../translator/base'
@@ -392,7 +392,6 @@ class XCollector extends Collector {
         if (article.forward_by) {
             metaline = `${article.forward_by.username}${TAB}转发推文:\n\n${metaline}`
         }
-
 
         return metaline
     }

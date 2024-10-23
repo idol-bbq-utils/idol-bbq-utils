@@ -1,1 +1,4 @@
 *.yaml
+lib/
+dist/
+prisma/

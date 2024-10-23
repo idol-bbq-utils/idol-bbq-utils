@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'puppeteer-core'
 import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../../types/types'
 import { tweetArticleParser, tweetReplyParser } from './parser/article'
 import { getTimelineType } from './parser/timeline'
@@ -35,9 +35,10 @@ export async function grabTweets(
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
     const raw_articles = await article_wrapper?.$$('article')
-    const articles = await Promise.all(raw_articles?.map(tweetArticleParser) ?? [])
+    const articles =
+        raw_articles && ((await Promise.all(raw_articles?.map(tweetArticleParser))) as Array<ITweetArticle | undefined>)
 
-    return articles.filter((a) => a !== undefined)
+    return articles?.filter((a) => a !== undefined) || []
 }
 
 export async function grabReply(page: Page, url: string): Promise<Array<Array<ITweetArticle>>> {

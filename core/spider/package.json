@@ -29,7 +29,6 @@
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
-        "puppeteer": "^22.12.1",
-        "winston": "^3.13.0"
+        "puppeteer-core": "^23.6.0"
     }
 }

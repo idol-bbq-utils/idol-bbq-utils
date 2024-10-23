@@ -1,4 +1,4 @@
-import { ElementHandle } from 'puppeteer'
+import { ElementHandle } from 'puppeteer-core'
 import { ArticleTypeEnum, ITweetArticle, TimelineTypeEnum } from '@/websites/x/types/types'
 import { articleElementParser } from './element'
 

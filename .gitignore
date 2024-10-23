@@ -130,3 +130,9 @@ dist
 .pnp.*
 
 lib/
+
+*-journal
+
+*.db
+
+!assets/**/*

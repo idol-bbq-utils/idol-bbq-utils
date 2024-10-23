@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'puppeteer-core'
 import { BaseForwarder } from '../forwarder/base'
 abstract class Collector {
     // todo plugin

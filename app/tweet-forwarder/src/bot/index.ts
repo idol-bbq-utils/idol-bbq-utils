@@ -1,7 +1,7 @@
 import { ForwardPlatformEnum, IForwardTo, IWebsite, IWebsiteConfig } from '@/types/bot'
 import { CronJob } from 'cron'
 import { fwd_app } from '@/config'
-import { Browser } from 'puppeteer'
+import { Browser } from 'puppeteer-core'
 import { log } from '../config'
 import { Collector } from '@/middleware/collector/base'
 import { TgForwarder } from '@/middleware/forwarder/telegram'
@@ -70,7 +70,7 @@ export class FWDBot {
                 if (_translator.type === 'gemini') {
                     translator = new Gemini(_translator.key, _translator.prompt)
                 }
-                if (_translator.type === 'glm-4-flash') { 
+                if (_translator.type === 'glm-4-flash') {
                     translator = new BigModelGLM4Flash(_translator.key, _translator.prompt)
                 }
             }

@@ -9,10 +9,12 @@ async function main() {
         handleSIGINT: false,
         handleSIGHUP: false,
         handleSIGTERM: false,
+        args: [ process.env.NO_SANDBOX ? '--no-sandbox' : '']
     })
     console.log('Browser launched')
     const bots = fwd_app.bots.map((_b) => new FWDBot(_b.name, _b.websites, _b.forward_to, _b.config))
     for (const bot of bots) {
+        // @ts-ignore
         const _b = await bot.init(browser)
         _b.start()
     }

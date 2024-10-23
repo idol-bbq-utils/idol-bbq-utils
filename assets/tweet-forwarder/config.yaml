@@ -1,0 +1,23 @@
+bots:
+  - name: 'test-bot'
+    websites:                                 # (required) websites to forward tweets from
+      - domain: 'https://x.com'
+        task_type: 'follows'                  # (not required) task type
+        task_title: '【Follows】'             # (not required) task title
+        paths: ['user1']             # (required) users to forward tweets from
+        config:
+          cron: '* * * * *'
+          interval_time:
+            max: 0
+            min: 0
+    forward_to:                               # (not required) forward to multiple platforms, you can add more than one
+      - type: 'telegram'                      # (required) forward type
+        token: 'token'   # (required) telegram bot token
+        chat_id: 'id'
+    configs:                                  # (not required) forwarder configurations
+      user_agent:  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'                 # (not required) puppeteer supported user agent
+      cron: "*/5 4-23 * * *"                   # (not required) cron job
+      interval_time:
+        max: 15000
+        min: 5000
+        

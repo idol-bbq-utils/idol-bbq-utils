@@ -1,4 +1,4 @@
-type MediaStorageType = 'no-storage' | 'minio'
+type MediaStorageType = 'no-storage'
 type TranslatorType = 'gemini' | 'glm-4-flash'
 
 interface IWebsiteConfig {
@@ -20,14 +20,15 @@ interface IWebsiteConfig {
             path: string
             cookie_file?: string
         }
-        ffmpeg?: {
-            path: string
-        }
-        yt_dl?: {
-            path: string
-            cookie_file?: string
-        }
-        // todo s3 storage
+        // TODO
+        // ffmpeg?: {
+        //     path: string
+        // }
+        // yt_dl?: {
+        //     path: string
+        //     cookie_file?: string
+        // }
+        // TODO s3 storage
         config?: {}
     }
 }
