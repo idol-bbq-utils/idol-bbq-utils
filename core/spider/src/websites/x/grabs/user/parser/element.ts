@@ -1,5 +1,5 @@
 import { ArticleElementTypeEnum } from '@/websites/x/types/types'
-import { ElementHandle } from 'puppeteer'
+import { ElementHandle } from 'puppeteer-core'
 
 async function articleElementParser(element: ElementHandle<Element>) {
     const element_type = await getArticleElementTypeEnum(element)

@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'puppeteer-core'
 import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../../types/types'
 import { tweetArticleParser, tweetReplyParser } from './parser/article'
 import { getTimelineType } from './parser/timeline'
