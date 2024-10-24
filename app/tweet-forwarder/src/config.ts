@@ -5,6 +5,8 @@ import YAML from 'yaml'
 import { IBot, IWebsiteConfig } from './types/bot'
 import { createLogger, Logger, winston } from '@idol-bbq-utils/log'
 
+const CACHE_DIR_ROOT = process.env.CACHE_DIR || `${os.tmpdir()}`
+
 class FWDApp {
     public bots: IBot[]
     public config: IWebsiteConfig
@@ -24,9 +26,9 @@ const log: Logger = createLogger({
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({
-            filename: `${os.tmpdir()}/logs/tweet-forwarder-${new Date().getTime()}.log`,
+            filename: `${CACHE_DIR_ROOT}/logs/tweet-forwarder-${new Date().getTime()}.log`,
         }),
     ],
 })
 
-export { FWDApp, fwd_app, log }
+export { FWDApp, fwd_app, log, CACHE_DIR_ROOT }
