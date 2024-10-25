@@ -46,7 +46,7 @@ export class FWDBot {
         for (const website of this.websites) {
             const url = new URL(website.domain)
             const CollectorBuilder = collectorFetcher(website.domain)
-            this.collectors.set(url.hostname, new CollectorBuilder())
+            this.collectors.set(url.hostname, new CollectorBuilder(this.name))
         }
 
         this.jobs = []

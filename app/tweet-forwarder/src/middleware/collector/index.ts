@@ -6,7 +6,7 @@ const collectorMap: Record<string, new () => Collector> = {
     'twitter.com': XCollector,
 }
 
-export function collectorFetcher(website: string): new () => Collector {
+export function collectorFetcher(website: string): new (bot_name?: string) => Collector {
     const url = new URL(website)
     const collector = collectorMap[url.hostname]
     if (!collector) {
