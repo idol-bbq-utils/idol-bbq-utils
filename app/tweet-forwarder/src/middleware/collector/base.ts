@@ -1,6 +1,10 @@
 import { Page } from 'puppeteer-core'
 import { BaseForwarder } from '../forwarder/base'
 abstract class Collector {
+    protected bot_name: string = ''
+    constructor(bot_name?: string) {
+        this.bot_name = bot_name || ''
+    }
     // todo plugin
     public abstract collect(page: Page, url: string, ...args: any[]): Promise<any>
     public abstract forward(...args: any[]): Promise<this>
@@ -12,12 +16,5 @@ abstract class Collector {
         ...args: any[]
     ): Promise<this>
 }
-abstract class TypedCollector<T, R> extends Collector {
-    constructor() {
-        super()
-    }
-    public abstract collect(page: Page, url: string): Promise<R[]>
-    public abstract forward(items: R[], forward_to: BaseForwarder[]): Promise<this>
-}
 
-export { Collector, TypedCollector }
+export { Collector }

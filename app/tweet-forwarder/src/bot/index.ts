@@ -15,6 +15,7 @@ import { parseNetscapeCookieToPuppeteerCookie } from '@/utils/auth'
 import { BaseTranslator } from '@/middleware/translator/base'
 import { QQForwarder } from '@/middleware/forwarder/qq'
 import { BigModelGLM4Flash } from '@/middleware/translator/bigmodel'
+import { Doubao128KPro } from '@/middleware/translator/doubao'
 
 export class FWDBot {
     public name: string
@@ -46,7 +47,7 @@ export class FWDBot {
         for (const website of this.websites) {
             const url = new URL(website.domain)
             const CollectorBuilder = collectorFetcher(website.domain)
-            this.collectors.set(url.hostname, new CollectorBuilder())
+            this.collectors.set(url.hostname, new CollectorBuilder(this.name))
         }
 
         this.jobs = []
@@ -72,6 +73,9 @@ export class FWDBot {
                 }
                 if (_translator.type === 'glm-4-flash') {
                     translator = new BigModelGLM4Flash(_translator.key, _translator.prompt)
+                }
+                if (_translator.type === 'doubao-pro-128k') {
+                    translator = new Doubao128KPro(_translator.key, _translator.model_id || '', _translator.prompt)
                 }
             }
             await translator?.init()

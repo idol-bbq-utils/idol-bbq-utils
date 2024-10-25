@@ -28,6 +28,9 @@ type TaskResult<T extends TaskType> = T extends 'tweet'
 const TAB = ' '.repeat(4)
 class XCollector extends Collector {
     public name = 'collector x'
+    constructor(bot_name?: string) {
+        super(bot_name)
+    }
     public async collectAndForward(
         page: Page,
         domain: string,
@@ -46,7 +49,7 @@ class XCollector extends Collector {
         },
     ): Promise<this> {
         const { type = 'tweet', task_id } = config
-        const prefix = task_id ? `[${task_id}] ` : ''
+        const prefix = task_id ? `[${task_id}]` : ''
         const _paths = shuffle(paths)
 
         // do reply collector, and do reply first
@@ -56,7 +59,9 @@ class XCollector extends Collector {
                     const replies = await this.collect(page, `${domain}/${path}/with_replies`, 'reply', {
                         task_id: config.task_id,
                     })
-                    log.info(`${prefix}[${this.name}] forward ${replies.length} replies from ${domain}/${path}`)
+                    log.info(
+                        `${prefix} [${this.bot_name}] [${this.name}] forward ${replies.length} replies from ${domain}/${path}`,
+                    )
                     this.forward(
                         replies.map((thread) => orderBy(thread, ['timestamp'], 'desc')),
                         forward_to,
@@ -68,20 +73,26 @@ class XCollector extends Collector {
                         },
                     )
                 } catch (e) {
-                    log.error(`${prefix}[${this.name}] grab replies failed for ${domain}/${path}: ${e}`)
+                    log.error(
+                        `${prefix} [${this.bot_name}] [${this.name}] grab replies failed for ${domain}/${path}: ${e}`,
+                    )
                 }
                 try {
                     const items = await this.collect(page, `${domain}/${path}`, 'tweet', {
                         task_id: config.task_id,
                     })
-                    log.info(`${prefix}[${this.name}] forward ${items.length} tweets from ${domain}/${path}`)
+                    log.info(
+                        `${prefix} [${this.bot_name}] [${this.name}] forward ${items.length} tweets from ${domain}/${path}`,
+                    )
                     this.forward(orderBy(items, ['timestamp'], 'asc'), forward_to, 'tweet', {
                         translator: config.translator,
                         task_id: config.task_id,
                         media: config.media,
                     })
                 } catch (e) {
-                    log.error(`${prefix}[${this.name}] grab tweets failed for ${domain}/${path}: ${e}`)
+                    log.error(
+                        `${prefix} [${this.bot_name}] [${this.name}] grab tweets failed for ${domain}/${path}: ${e}`,
+                    )
                 }
 
                 if (config.interval_time) {
@@ -89,7 +100,7 @@ class XCollector extends Collector {
                         Math.random() * (config.interval_time.max - config.interval_time.min) +
                             config.interval_time.min,
                     )
-                    log.info(`${prefix}[${this.name}] wait for next loop ${time}ms`)
+                    log.info(`${prefix} [${this.bot_name}] [${this.name}] wait for next loop ${time}ms`)
                     await delay(time)
                 }
             }
@@ -104,7 +115,7 @@ class XCollector extends Collector {
                     })
                     collection = collection.concat(res)
                 } catch (e) {
-                    log.error(`${prefix}[${this.name}] grab follows failed for ${domain}: ${e}`)
+                    log.error(`${prefix} [${this.bot_name}] [${this.name}] grab follows failed for ${domain}: ${e}`)
                 }
             }
             collection = orderBy(collection, ['profile.follows'], ['desc'])
@@ -127,16 +138,16 @@ class XCollector extends Collector {
     ): Promise<Array<TaskResult<T>>> {
         const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
         if (type === 'tweet') {
-            log.info(`${prefix}[${this.name}] grab tweets for ${url}`)
+            log.info(`${prefix} [${this.bot_name}] [${this.name}] grab tweets for ${url}`)
             const res = await pRetry(() => X.TweetGrabber.UserPage.grabTweets(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix}[${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
                     )
                 },
             })
-            log.info(`${prefix}[${this.name}] grab ${res.length} tweets from ${url}`)
+            log.info(`${prefix} [${this.bot_name}] [${this.name}] grab ${res.length} tweets from ${url}`)
             const tweets = []
             // sequential save for avoiding data conflict
             for (const tweet of res) {
@@ -147,16 +158,18 @@ class XCollector extends Collector {
         }
 
         if (type === 'reply') {
-            log.info(`${prefix}[${this.name}] grab replies for ${url}`)
+            log.info(`${prefix} [${this.bot_name}] [${this.name}] grab replies for ${url}`)
             const reply_threads = await pRetry(() => X.TweetGrabber.UserPage.grabReply(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix}[${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
                     )
                 },
             })
-            log.info(`${prefix}[${this.name}] grab ${reply_threads.length} reply threads from ${url}`)
+            log.info(
+                `${prefix} [${this.bot_name}] [${this.name}] grab ${reply_threads.length} reply threads from ${url}`,
+            )
             const res = []
             for (const reply_thread of reply_threads) {
                 const saved_thread = await X_DB.saveReply(reply_thread)
@@ -176,16 +189,16 @@ class XCollector extends Collector {
         }
 
         if (type === 'follows') {
-            log.info(`${prefix}[${this.name}] grab follows for ${url}`)
+            log.info(`${prefix} [${this.bot_name}] [${this.name}] grab follows for ${url}`)
             const follows = await pRetry(() => X.TweetGrabber.UserPage.grabFollowsNumer(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix}[${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
                     )
                 },
             })
-            log.info(`${prefix}[${this.name}] grab ${follows.username}'s follows from ${url}`)
+            log.info(`${prefix} [${this.bot_name}] [${this.name}] grab ${follows.username}'s follows from ${url}`)
             const saved_profile = await X_DB.saveFollows(
                 follows.username,
                 follows.u_id,
@@ -247,19 +260,20 @@ class XCollector extends Collector {
                                 if (!translated_article?.translation) {
                                     let text = DEFAULT_TRANSLATION
                                     try {
-                                        log.debug(`${prefix}translate for :${article.text}`)
+                                        log.debug(
+                                            `${prefix} [${this.bot_name}] [${this.name}] translate for :${article.text}`,
+                                        )
                                         text =
                                             (await pRetry(() => config.translator?.translate(article.text), {
                                                 retries: 2,
                                                 onFailedAttempt: (e) => {
                                                     log.error(
-                                                        `${prefix}translate failed. remained retry times: ${e.retriesLeft}`,
-                                                        e,
+                                                        `${prefix} [${this.bot_name}] [${this.name}] translate failed. remained retry times: ${e.retriesLeft}: ${e.message}`,
                                                     )
                                                 },
                                             })) || DEFAULT_TRANSLATION
                                     } catch (e) {
-                                        log.error(`${prefix}translate failed`, e)
+                                        log.error(`${prefix} [${this.bot_name}] [${this.name}] translate failed: ${e}`)
                                     }
                                     translated_article =
                                         // do not save default translation
@@ -306,11 +320,11 @@ class XCollector extends Collector {
                         cleanMediaFiles(images)
                         res('')
                     } catch (e) {
-                        log.error(`${prefix}forward failed`, e)
+                        log.error(`${prefix} [${this.bot_name}] [${this.name}] forward failed: ${e}`)
                         try {
                             cleanMediaFiles(images)
                         } catch (e) {
-                            log.error(`${prefix}clean media failed`, e)
+                            log.error(`${prefix} [${this.bot_name}] [${this.name}] clean media failed: ${e}`)
                         }
                     }
                 })
@@ -366,7 +380,7 @@ class XCollector extends Collector {
             }
             for (const forwarder of forward_to) {
                 forwarder.send(text_to_send).catch((e) => {
-                    log.error('forward failed', e)
+                    log.error(`${prefix} [${this.bot_name}] [${this.name}] forward failed: ${e}`)
                 })
             }
         }

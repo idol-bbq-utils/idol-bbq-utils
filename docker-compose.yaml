@@ -1,4 +1,3 @@
-version: '1.0'
 services:
   forwarder:
     build:
@@ -6,6 +5,9 @@ services:
       dockerfile: app/tweet-forwarder/Dockerfile
     container_name: 'forwarder'
     restart: 'on-failure'
+    environment:
+      - TZ=Asia/Shanghai
+      - NO_SANDBOX=true
     volumes:
-      - './assets/tweet-forwarder/config.yaml:/app/config.yaml:r'
-      - './assets/tweet-forwarder/data.db:/app/data.db:rw'
+      - './assets/tweet-forwarder/config.yaml:/app/config.yaml'
+      - './assets/tweet-forwarder/data.db:/app/data.db'

@@ -21,7 +21,7 @@
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
     },
     "scripts": {
-        "generate": "pnpm prisma migrate dev",
+        "generate": "pnpm prisma migrate dev --name init",
         "build": "tsc && tsc-alias",
         "dev": "pnpm build && node lib/main.js",
         "test": "pnpm build && node lib/test.js",

@@ -1,5 +1,9 @@
+type ByteDance_LLM = 'doubao-pro-128k'
+type BigModel_LLM = 'glm-4-flash'
+type Google_LLM = 'gemini'
+type TranslatorType = Google_LLM | BigModel_LLM | ByteDance_LLM
+
 type MediaStorageType = 'no-storage'
-type TranslatorType = 'gemini' | 'glm-4-flash'
 
 interface IWebsiteConfig {
     user_agent?: string
@@ -13,6 +17,7 @@ interface IWebsiteConfig {
         type: TranslatorType
         key: string
         prompt?: string
+        model_id?: string
     }
     media?: {
         type: MediaStorageType

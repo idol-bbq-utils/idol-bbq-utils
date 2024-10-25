@@ -1,4 +1,5 @@
 *.yaml
+*.yml
 lib/
 dist/
 prisma/

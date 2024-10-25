@@ -1,6 +1,6 @@
-import os from 'os'
 import fs from 'fs'
 import { execSync } from 'child_process'
+import { CACHE_DIR_ROOT } from '@/config'
 
 function downloadMediaFiles(
     url: string,
@@ -13,7 +13,7 @@ function downloadMediaFiles(
     if (gallery_dl.cookie_file) {
         args.push(`--cookies ${gallery_dl.cookie_file}`)
     }
-    args.push(`--directory ${os.tmpdir()}/gallery-dl`)
+    args.push(`--directory ${CACHE_DIR_ROOT}/gallery-dl`)
     args.push(`--filename {_now:%M%S%m}_{tweet_id}_{num}.{extension}`)
     args.push(url)
     const res = execSync(`${gallery_dl.path} ${args.join(' ')}`, { encoding: 'utf-8' })
