@@ -52,9 +52,13 @@
 
 本仓库cookies文件格式是Netscape，可以使用浏览器扩展[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)获取文件
 
+[gallery-dl](https://github.com/mikf/gallery-dl) 仓库地址
+
 #### 如何使用/部署
 
 **Docker**
+
+x86-64，debian
 
 docker-compose.yaml 示例
 
@@ -113,7 +117,11 @@ node ./app/tweet-forwrader/lib/main.js
 
 **具体可以参考我所使用的[配置文件](assets/tweet-forwarder/config.example.prod.zh.yaml)**
 
-如果爬取的用户没那么多，而且需要尝试更激进的策略，比如一分钟爬一次，那么可以自己探索下。
+-   如果爬取的用户没那么多，而且需要尝试更激进的策略，比如一分钟爬一次，那么可以自己探索下。
+
+-   如果有使用docker的需求，请注意一下文件/文件夹的权限等
+
+-   如果需要转发图片/视频，那么使用[gallery-dl.bin](https://github.com/mikf/gallery-dl?tab=readme-ov-file#standalone-executable)即可（注意这是glibc的）
 
 ##### 性能需求
 
@@ -141,3 +149,7 @@ node ./app/tweet-forwrader/lib/main.js
 ## 开发说明
 
 > todo
+
+## 其他说明
+
+实际测试，可以使用alpine运行，(gallery-dl需要在alpine下重新编译为standalone)，chromium浏览器一直占用一个核100%的问题。
