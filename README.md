@@ -15,6 +15,7 @@
     <th>抓取网站</th>
     <th>转发平台</th>
     <th>大模型翻译</th>
+    <th>转发功能</th>
     <th>媒体文件功能（使用gallery-dl）</th>
   </tr>
   <tr>
@@ -26,6 +27,9 @@
         <a href="https://bigmodel.cn/dev/api/normal-model/glm-4" target="_blank" style="display: block;">智谱 glm-4-flash（免费）</a>
         <br>
         <a href="https://www.volcengine.com/docs/82379/1263594#%E9%80%82%E7%94%A8%E8%8C%83%E5%9B%B4" target="_blank" style="display: block;">字节豆包 doubao-128k-pro</a>
+    </td>
+    <td rowspan="12">
+        转发原推文并翻译<br>转发带图/视频推文<br>粉丝数统计
     </td>
     <td rowspan="2">
         图片/视频
@@ -107,9 +111,11 @@ node ./app/tweet-forwrader/lib/main.js
 -   两个账号，每天分别爬取12小时，爬取间隔为每10分钟一次。
 -   爬取关注量不需要登录态。
 
-具体可以参考我所使用的[配置文件](assets/tweet-forwarder/config.example.prod.zh.yaml)
+**具体可以参考我所使用的[配置文件](assets/tweet-forwarder/config.example.prod.zh.yaml)**
 
-**性能需求**
+如果爬取的用户没那么多，而且需要尝试更激进的策略，比如一分钟爬一次，那么可以自己探索下。
+
+##### 性能需求
 
 内存至少大于1G（一般2G，防止swap），硬盘空间最少大于2G（因为你需要一个chrome），推荐2核及以上。
 
