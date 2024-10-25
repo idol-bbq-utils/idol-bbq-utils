@@ -21,9 +21,9 @@
     <td rowspan="12"><a href="https://x.com" target="_blank">推特(X)</a></td>
     <td>qq<a href="https://github.com/botuniverse/onebot-11" target="_blank">（onebot11）</a></td>
     <td rowspan="12">
-        <a href="https://ai.google.dev/gemini-api/docs/api-key?hl=zh-cn" target="_blank" style="display: block;">谷歌 gemini</a>
+        <a href="https://ai.google.dev/gemini-api/docs/api-key?hl=zh-cn" target="_blank" style="display: block;">谷歌 gemini（免费，api有区域限制）</a>
         <br>
-        <a href="https://bigmodel.cn/dev/api/normal-model/glm-4" target="_blank" style="display: block;">智谱 glm-4-flash</a>
+        <a href="https://bigmodel.cn/dev/api/normal-model/glm-4" target="_blank" style="display: block;">智谱 glm-4-flash（免费）</a>
         <br>
         <a href="https://www.volcengine.com/docs/82379/1263594#%E9%80%82%E7%94%A8%E8%8C%83%E5%9B%B4" target="_blank" style="display: block;">字节豆包 doubao-128k-pro</a>
     </td>
