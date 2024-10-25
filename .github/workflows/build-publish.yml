@@ -11,6 +11,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  CURRENT_BRANCH_NAME: ${{ github.head_ref  || github.ref_name }}
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   build-tests:
@@ -69,7 +70,7 @@ jobs:
       - name: Determine Tag or Branch Type
         id: tag_or_branch_check
         run: |
-          BRANCH_NAME=$(echo "$GITHUB_HEAD_REF" | sed 's|/|_|g')
+          BRANCH_NAME=$(echo "$CURRENT_BRANCH_NAME" | sed 's|/|_|g')
           if [[ ${BRANCH_NAME} == main ]]; then
             echo "TAG_NAME=latest" >> $GITHUB_ENV
           elif [[ ${BRANCH_NAME} == dev ]]; then
