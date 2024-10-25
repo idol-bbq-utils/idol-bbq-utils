@@ -3,7 +3,7 @@ name: Create and publish a Docker image
 
 on:
   push:
-    branches: ['main']
+    branches: ['main', 'dev']
 
   workflow_dispatch:
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
@@ -39,12 +39,12 @@ jobs:
       - name: Determine Tag or Branch Type
         id: tag_or_branch_check
         run: |
-          if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
+          if [[ ${{ github.ref_name }} == main ]]; then
             echo "TAG_NAME=latest" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF}" == refs/tags/dev ]] && ([[ "${GITHUB_BASE_REF}" == "main" ]]); then
+          elif [[ ${{ github.ref_name }} == dev ]]; then
             echo "TAG_NAME=canary" >> $GITHUB_ENV
           else
-            BRANCH_NAME=$(echo "${GITHUB_REF}" | sed 's|refs/heads/||' | sed 's|/|_|')
+            BRANCH_NAME=$(echo ${{ github.ref_name }} | sed 's|/|_|')
             echo "TAG_NAME=canary-${BRANCH_NAME}" >> $GITHUB_ENV
       # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels that will be applied to the specified image. The `id` "meta" allows the output of this step to be referenced in a subsequent step. The `images` value provides the base name for the tags and labels.
       - name: Extract metadata (tags, labels) for Docker
