@@ -10,7 +10,7 @@ on:
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: idol-bbq-utils/${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository }}
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   build-and-push-image:
@@ -41,6 +41,10 @@ jobs:
         id: tag_or_branch_check
         run: |
           BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's|/|_|')
+          echo "$GITHUB_REF"
+          echo "$GITHUB_HEAD_REF"
+          echo "$GITHUB_BASE_REF"
+          echo "${{ github.ref_name }}"
           if [[ ${BRANCH_NAME} == main ]]; then
             echo "TAG_NAME=latest" >> $GITHUB_ENV
           elif [[ ${BRANCH_NAME} == dev ]]; then
