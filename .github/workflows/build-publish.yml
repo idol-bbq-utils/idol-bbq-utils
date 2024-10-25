@@ -40,7 +40,7 @@ jobs:
       - name: Determine Tag or Branch Type
         id: tag_or_branch_check
         run: |
-          BRANCH_NAME = echo ${GITHUB_REF} | sed 's|/|_|'
+          BRANCH_NAME = echo $GITHUB_REF | sed 's|/|_|'
           if [[ ${BRANCH_NAME} == main ]]; then
             echo "TAG_NAME=latest" >> $GITHUB_ENV
           elif [[ ${BRANCH_NAME} == dev ]]; then
