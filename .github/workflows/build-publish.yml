@@ -11,7 +11,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CURRENT_BRANCH_NAME: ${{ env.GITHUB_HEAD_REF || github.ref_name }}
+  CURRENT_BRANCH_NAME: ${{ github.head_ref  || github.ref_name }}
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   build-tests:
