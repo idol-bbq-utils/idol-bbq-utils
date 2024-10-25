@@ -40,13 +40,14 @@ jobs:
       - name: Determine Tag or Branch Type
         id: tag_or_branch_check
         run: |
-          BRANCH_NAME=$(echo $GITHUB_REF | sed 's|/|_|')
+          BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's|/|_|')
           if [[ ${BRANCH_NAME} == main ]]; then
             echo "TAG_NAME=latest" >> $GITHUB_ENV
           elif [[ ${BRANCH_NAME} == dev ]]; then
             echo "TAG_NAME=canary" >> $GITHUB_ENV
           else
             echo "TAG_NAME=canary-${BRANCH_NAME}" >> $GITHUB_ENV
+          fi
       # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels that will be applied to the specified image. The `id` "meta" allows the output of this step to be referenced in a subsequent step. The `images` value provides the base name for the tags and labels.
       - name: Extract metadata (tags, labels) for Docker
         id: meta
