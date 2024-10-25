@@ -1,0 +1,36 @@
+name: "[PR] Build tests"
+on:
+  push:
+    branches: ['main', 'dev']
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  PUPPETEER_SKIP_DOWNLOAD: true
+  DATABASE_URL: 'file:./data.db'
+
+jobs:
+  build-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: pnpm support
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20  # 根据您的项目需求设置 Node.js 版本
+          cache: 'pnpm'     # 启用 pnpm 缓存
+
+      - name: enable pnpm
+        run: corepack enable
+
+      - name: install dependencies
+        run: |
+          pnpm install
+          pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder generate
+
+      - name: build tests
+        run: pnpm build
