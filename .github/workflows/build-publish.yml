@@ -6,6 +6,9 @@ on:
     branches: ['main', 'dev']
 
   workflow_dispatch:
+    branches:
+      - '!main'
+      - '!dev'
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
   REGISTRY: ghcr.io
@@ -60,6 +63,7 @@ jobs:
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
+          file: app/tweet-forwarder/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
