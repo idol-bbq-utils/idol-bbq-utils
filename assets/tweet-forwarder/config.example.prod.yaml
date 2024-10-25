@@ -3,17 +3,17 @@ bots:
     websites:                                 # (required) websites to forward tweets from
       - domain: 'https://x.com'               # (required) website domain, notice the slash at the end
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
-        cookie_file: ./assets/day.cookies
+        cookie_file: /path/to/day.cookies
         config:
           cron: '0-59/10 0-11 * * *'
       - domain: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
-        cookie_file: ./assets/night.cookies
+        cookie_file: /path/to/night.cookies
         config:
           cron: '0-59/10 12-22 * * *'
       - domain: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine','kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
-        cookie_file: ./assets/night.cookies
+        cookie_file: /path/to/night.cookies
         config:
           cron: '0-59/10 23 * * *'
       - domain: 'https://x.com'
@@ -48,7 +48,7 @@ bots:
         type: 'no-storage'
         gallery_dl:
           path: '<path-to-gallery_dl-executable>'
-          cookie_file: './assets/x.cookies'
+          cookie_file: '/path/to/assets/x.cookies'
       translator:
         type: 'glm-4-flash'
         key: 'glm-token'

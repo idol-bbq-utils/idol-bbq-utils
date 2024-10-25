@@ -3,7 +3,7 @@ bots:
     websites:                                 # (required) websites to forward tweets from
       - domain: 'https://x.com'               # (required) website domain, notice the slash at the end
         paths: ['user1', 'user2', 'user3']
-        cookie_file: ./assets/forwarder/x.cookies
+        cookie_file: ./assets/tweet-forwarder/x.cookies
         config:
           cron: '*/2 * * * *'
       - domain: 'https://x.com'
@@ -38,7 +38,7 @@ bots:
         type: 'no-storage'                    # (optional) media type default 'no-storage', will delete media files after forwarding
         gallery_dl:                           # (optional) gallery_dl configurations
           path: '<path-to-gallery_dl-executable>'           # (required) path to gallery_dl executable
-          cookie_file: './assets/forwarder/x.cookies'       # (required) path to cookies file
+          cookie_file: './assets/tweet-forwarder/x.cookies'       # (required) path to cookies file
       translator:                             # (optional) translator configurations, if you want to translate the tweet
         type: 'glm-4-flash'                   # (required) translator type: 'geminis' | 'glm-4-flash'
         key: 'glm-token'                      # (required) translator key

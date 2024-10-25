@@ -4,17 +4,17 @@ bots:
       - domain: 'https://x.com'               # (必须) 网站域名，注意最后不要有'/'
         # 抓取的用户id，即 https://x.com/userid, 以下示例是莲之空成员的X账号id，可以根据需要修改
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
-        cookie_file: ./assets/day.cookies     # 对应网站的cookies文件，格式为netscape
+        cookie_file: /path/to/day.cookies     # 对应网站的cookies文件，格式为netscape
         config:
           cron: '0-59/10 0-11 * * *'          # 定时任务，每10分钟抓取一次，抓取时间为 [0,12) 点之间
       - domain: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
-        cookie_file: ./assets/night.cookies   # 对应网站的cookies文件，格式为netscape
+        cookie_file: /path/to/night.cookies   # 对应网站的cookies文件，格式为netscape
         config:
           cron: '0-59/10 12-22 * * *'
       - domain: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine','kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
-        cookie_file: ./assets/night.cookies
+        cookie_file: /path/to/night.cookies
         config:
           cron: '0-59/10 23 * * *'
       - domain: 'https://x.com'
@@ -50,7 +50,7 @@ bots:
         type: 'no-storage'                    # (可选) 媒体类型，默认为'no-storage'，转发后删除媒体文件
         gallery_dl:                           # (可选) gallery_dl 配置
           path: '<path-to-gallery_dl-executable>'          # (必须) gallery_dl 可执行文件路径
-          cookie_file: './assets/x.cookies'                # (必须) cookies文件路径
+          cookie_file: '/path/to/x.cookies'                # (必须) cookies文件路径
       translator:                             # (可选) 翻译配置，如果需要翻译推文
         type: 'glm-4-flash'                   # (必须) 翻译类型: 'geminis' | 'glm-4-flash'
         key: 'glm-token'                      # (必须)

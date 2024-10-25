@@ -1,13 +1,17 @@
 services:
-  forwarder:
-    build:
-      context: .
-      dockerfile: app/tweet-forwarder/Dockerfile
-    container_name: 'forwarder'
+  sns-forwarder:
+    # build:
+    #   context: .
+    #   dockerfile: app/tweet-forwarder/Dockerfile
+    image: ghcr.io/idol-bbq-utils/idol-bbq-utils:latest
+    container_name: 'sns-forwarder'
+    network_mode: 'host'
     restart: 'on-failure'
     environment:
       - TZ=Asia/Shanghai
       - NO_SANDBOX=true
     volumes:
-      - './assets/tweet-forwarder/config.yaml:/app/config.yaml'
+      - './assets/tweet-forwarder/config.example.yaml:/app/config.yaml'
       - './assets/tweet-forwarder/data.db:/app/data.db'
+      - './assets:/app/assets'
+      - '/tmp:/tmp'
