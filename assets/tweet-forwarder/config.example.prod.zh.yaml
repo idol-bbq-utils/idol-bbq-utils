@@ -6,7 +6,7 @@ bots:
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/day.cookies     # 对应网站的cookies文件，格式为netscape
         config:
-          cron: '0-59/10 0-11 * * *'          # 定时任务，每10分钟抓取一次，抓取时间为 [0,12) 点之间
+          cron: '0-59/10 0-11 * * *'          # 定时任务（见https://crontab.guru/），每10分钟抓取一次，抓取时间为 [0,12) 点之间
       - domain: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/night.cookies   # 对应网站的cookies文件，格式为netscape
@@ -52,7 +52,7 @@ bots:
           path: '<path-to-gallery_dl-executable>'          # (必须) gallery_dl 可执行文件路径
           cookie_file: '/path/to/x.cookies'                # (必须) cookies文件路径
       translator:                             # (可选) 翻译配置，如果需要翻译推文
-        type: 'glm-4-flash'                   # (必须) 翻译类型: 'geminis' | 'glm-4-flash'
+        type: 'glm-4-flash'                   # (必须) 翻译类型: 'gemini' | 'glm-4-flash' | 'doubao-pro-128k'
         key: 'glm-token'                      # (必须)
   - name: 'all-follows-bot'
     websites:
