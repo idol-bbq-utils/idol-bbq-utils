@@ -52,7 +52,7 @@ bots:
           path: '<path-to-gallery_dl-executable>'          # (必须) gallery_dl 可执行文件路径
           cookie_file: '/path/to/x.cookies'                # (必须) cookies文件路径
       translator:                             # (可选) 翻译配置，如果需要翻译推文
-        type: 'glm-4-flash'                   # (必须) 翻译类型: 'geminis' | 'glm-4-flash'
+        type: 'glm-4-flash'                   # (必须) 翻译类型: 'gemini' | 'glm-4-flash' | 'doubao-pro-128k'
         key: 'glm-token'                      # (必须)
   - name: 'all-follows-bot'
     websites:
