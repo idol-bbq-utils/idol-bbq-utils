@@ -4,9 +4,9 @@
 
 -   [SNS转发爬虫](app/tweet-forwarder/README.md)
 
-## 应用介绍
+## SNS转发爬虫
 
-### SNS转发爬虫
+[直接上手的指南](docs/zh/app/tweet-forwarder/for-beginners.md)
 
 目前实现的功能如下
 
@@ -44,17 +44,17 @@
   </tr>
 </table>
 
-爬虫配置文件格式见 [config.yaml](assets/tweet-forwarder/config.example.prod.zh.yaml)
+-   配置文件: [config.yaml](assets/tweet-forwarder/config.example.prod.zh.yaml)
 
-环境变量说明见下方Docker部署方式
+-   cookie: 本仓库cookies文件格式是Netscape，可以使用浏览器扩展[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)获取文件
 
-[具体部署情况参考说明](#实战参考)
+-   gallery-dl: [gallery-dl](https://github.com/mikf/gallery-dl) 仓库地址
 
-本仓库cookies文件格式是Netscape，可以使用浏览器扩展[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)获取文件
+-   如何部署: [具体部署情况参考说明](#实战参考)
 
-[gallery-dl](https://github.com/mikf/gallery-dl) 仓库地址
+-   环境变量: 说明见下方Docker部署方式
 
-#### 如何使用/部署
+### 如何使用/部署
 
 **Docker**
 
@@ -106,7 +106,7 @@ cp assets/config.example.yaml ./config.yaml
 node ./app/tweet-forwrader/lib/main.js
 ```
 
-#### 实战参考
+### 实战参考
 
 由于受性能限制，我所使用的[配置文件](assets/tweet-forwarder/config.example.prod.zh.yaml)尽量在同一时间只允许使用一个浏览器标签页。所以可以看见我的爬虫规则都是在爬取完一个页面后才进行下一个用户信息的爬取。
 
@@ -123,7 +123,7 @@ node ./app/tweet-forwrader/lib/main.js
 
 -   如果需要转发图片/视频，那么使用[gallery-dl.bin](https://github.com/mikf/gallery-dl?tab=readme-ov-file#standalone-executable)即可（注意这是glibc的）
 
-##### 性能需求
+### 性能需求
 
 内存至少大于1G（一般2G，防止swap），硬盘空间最少大于2G（因为你需要一个chrome），推荐2核及以上。
 
@@ -146,10 +146,10 @@ node ./app/tweet-forwrader/lib/main.js
 
 ---
 
+### 其他说明
+
+实际测试，可以使用alpine运行，(gallery-dl需要在alpine下重新编译为standalone)，chromium浏览器一直占用一个核100%的问题。
+
 ## 开发说明
 
 > todo
-
-## 其他说明
-
-实际测试，可以使用alpine运行，(gallery-dl需要在alpine下重新编译为standalone)，chromium浏览器一直占用一个核100%的问题。

@@ -6,7 +6,7 @@ bots:
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/day.cookies     # 对应网站的cookies文件，格式为netscape
         config:
-          cron: '0-59/10 0-11 * * *'          # 定时任务，每10分钟抓取一次，抓取时间为 [0,12) 点之间
+          cron: '0-59/10 0-11 * * *'          # 定时任务（见https://crontab.guru/），每10分钟抓取一次，抓取时间为 [0,12) 点之间
       - domain: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/night.cookies   # 对应网站的cookies文件，格式为netscape
