@@ -35,13 +35,15 @@ export class FWDBot {
         }
         for (const forward of forward_to ?? []) {
             if (forward.type === ForwardPlatformEnum.Telegram) {
-                this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
+                this.forwarders.push(new TgForwarder(forward.chat_id ?? '', forward.token, forward.config || {}))
             }
             if (forward.type === ForwardPlatformEnum.Bilibili) {
-                this.forwarders.push(new BiliForwarder(forward.token, forward.bili_jct ?? ''))
+                this.forwarders.push(new BiliForwarder(forward.bili_jct ?? '', forward.token, forward.config || {}))
             }
             if (forward.type === ForwardPlatformEnum.QQ) {
-                this.forwarders.push(new QQForwarder(forward.token, forward.group_id ?? '', forward.url ?? ''))
+                this.forwarders.push(
+                    new QQForwarder(forward.group_id ?? '', forward.url ?? '', forward.token, forward.config || {}),
+                )
             }
         }
         for (const website of this.websites) {

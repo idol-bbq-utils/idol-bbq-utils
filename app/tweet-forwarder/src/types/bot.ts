@@ -64,6 +64,9 @@ interface IForwardTo {
     bili_jct?: string
     group_id?: string
     url?: string
+    config?: {
+        replace_regex?: string | Array<string> | Array<Array<string>>
+    }
 }
 
 interface IBot {
