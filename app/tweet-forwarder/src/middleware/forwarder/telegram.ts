@@ -1,30 +1,23 @@
 import { Input, Telegraf } from 'telegraf'
-import { BaseForwarder } from './base'
+import { Forwarder } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { log } from '@/config'
 import { InputMedia, InputMediaPhoto, InputMediaVideo } from 'telegraf/types'
 
-class TgForwarder extends BaseForwarder {
+class TgForwarder extends Forwarder {
     private chat_id: string
     private bot: Telegraf
     name = 'telegram'
-    constructor(token: string, chat_id: string) {
-        super(token)
+    constructor(chat_id: string, ...args: [...ConstructorParameters<typeof Forwarder>]) {
+        super(...args)
         if (!chat_id) {
             throw new Error(`forwarder ${this.name} chat_id is required`)
         }
         this.chat_id = chat_id
-        this.bot = new Telegraf(token)
+        this.bot = new Telegraf(this.token)
     }
-    public async send(
-        text: string,
-        media?: Array<{
-            source: string
-            type: string
-            media_type: string
-            path: string
-        }>,
-    ) {
+    public async realSend(text: string, props: Parameters<Forwarder['send']>[1]) {
+        const { media } = props || {}
         if (media && media.length !== 0) {
             await pRetry(
                 () =>

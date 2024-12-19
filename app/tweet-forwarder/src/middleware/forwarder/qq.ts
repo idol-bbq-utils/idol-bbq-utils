@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BaseForwarder } from './base'
+import { Forwarder } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { log } from '@/config'
 import { SourcePlatformEnum } from '@/types/bot'
@@ -10,12 +10,12 @@ const CHUNK_SPSERATOR_PREV = '----⬆️----\n\n'
 const PADDING_LENGTH = 24
 const TEXT_LIMIT = BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SPSERATOR_PREV.length - PADDING_LENGTH
 
-class QQForwarder extends BaseForwarder {
+class QQForwarder extends Forwarder {
     private group_id: string
     private url: string
     name = 'qq'
-    constructor(token: string, group_id: string, url: string) {
-        super(token)
+    constructor(group_id: string, url: string, ...args: [...ConstructorParameters<typeof Forwarder>]) {
+        super(...args)
         if (!group_id) {
             throw new Error(`forwarder ${this.name} group_id is required`)
         }
@@ -25,15 +25,8 @@ class QQForwarder extends BaseForwarder {
         this.group_id = group_id
         this.url = url
     }
-    public async send(
-        text: string,
-        media?: Array<{
-            source: SourcePlatformEnum
-            type: string
-            media_type: string
-            path: string
-        }>,
-    ) {
+    public async realSend(text: string, props: Parameters<Forwarder['send']>[1]) {
+        const { media } = props || {}
         await pRetry(() => this.sendPhotoText(text, media || []), {
             retries: 2,
             onFailedAttempt(error) {

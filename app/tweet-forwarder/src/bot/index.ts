@@ -1,6 +1,5 @@
-import { ForwardPlatformEnum, IForwardTo, IWebsite, IWebsiteConfig } from '@/types/bot'
+import { ForwardPlatformEnum, IBotConfig, IForwardTo, IWebsite } from '@/types/bot'
 import { CronJob } from 'cron'
-import { fwd_app } from '@/config'
 import { Browser } from 'puppeteer-core'
 import { log } from '../config'
 import { Collector } from '@/middleware/collector/base'
@@ -20,28 +19,31 @@ import { Doubao128KPro } from '@/middleware/translator/doubao'
 export class FWDBot {
     public name: string
     private websites: Array<IWebsite>
-    private config: IWebsiteConfig
+    private config: IBotConfig
 
     private forwarders: Array<BaseForwarder> = []
     private collectors: Map<string, Collector> = new Map()
 
     private jobs: Array<CronJob>
-    constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IWebsiteConfig = {}) {
+    constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IBotConfig = {}) {
         this.name = name
         this.websites = websites
-        this.config = {
-            ...fwd_app.config,
-            ...config,
-        }
+        this.config = config
         for (const forward of forward_to ?? []) {
+            forward.config = {
+                ...this.config.cfg_forward_to,
+                ...forward.config,
+            }
             if (forward.type === ForwardPlatformEnum.Telegram) {
-                this.forwarders.push(new TgForwarder(forward.token, forward.chat_id ?? ''))
+                this.forwarders.push(new TgForwarder(forward.chat_id ?? '', forward.token, forward.config || {}))
             }
             if (forward.type === ForwardPlatformEnum.Bilibili) {
-                this.forwarders.push(new BiliForwarder(forward.token, forward.bili_jct ?? ''))
+                this.forwarders.push(new BiliForwarder(forward.bili_jct ?? '', forward.token, forward.config || {}))
             }
             if (forward.type === ForwardPlatformEnum.QQ) {
-                this.forwarders.push(new QQForwarder(forward.token, forward.group_id ?? '', forward.url ?? ''))
+                this.forwarders.push(
+                    new QQForwarder(forward.group_id ?? '', forward.url ?? '', forward.token, forward.config || {}),
+                )
             }
         }
         for (const website of this.websites) {
@@ -61,7 +63,7 @@ export class FWDBot {
             const url = new URL(website.domain)
             const collector = this.collectors.get(url.hostname)
             website.config = {
-                ...this.config,
+                ...this.config.cfg_websites,
                 ...website.config,
             }
             log.debug(website.config)
@@ -97,7 +99,6 @@ export class FWDBot {
                     }
                     await page.setUserAgent(
                         website.config?.user_agent ||
-                            this.config.user_agent ||
                             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
                     )
                     if (website.config?.interval_time) {
