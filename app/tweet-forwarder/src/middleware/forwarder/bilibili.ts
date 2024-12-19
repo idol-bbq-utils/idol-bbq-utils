@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BaseForwarder } from './base'
+import { Forwarder } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { log } from '@/config'
 import { SourcePlatformEnum } from '@/types/bot'
@@ -12,17 +12,17 @@ const CHUNK_SPSERATOR_PREV = '----⬆️----\n\n'
 const PADDING_LENGTH = 24
 const TEXT_LIMIT = BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SPSERATOR_PREV.length - PADDING_LENGTH
 
-class BiliForwarder extends BaseForwarder {
+class BiliForwarder extends Forwarder {
     private bili_jct: string
     name = 'bilibili'
-    constructor(token: string, bili_jct: string) {
-        super(token)
+    constructor(bili_jct: string, ...args: [...ConstructorParameters<typeof Forwarder>]) {
+        super(...args)
         if (!bili_jct) {
             throw new Error(`forwarder ${this.name} bili_jct is required`)
         }
         this.bili_jct = bili_jct
     }
-    public async send(
+    public async realSend(
         text: string,
         media?: Array<{
             source: SourcePlatformEnum
