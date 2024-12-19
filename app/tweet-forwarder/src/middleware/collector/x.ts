@@ -144,7 +144,7 @@ class XCollector extends Collector {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix} [${this.bot_name}] [${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.originalError.message}`,
                     )
                 },
             })
@@ -164,7 +164,7 @@ class XCollector extends Collector {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix} [${this.bot_name}] [${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.originalError.message}`,
                     )
                 },
             })
@@ -195,7 +195,7 @@ class XCollector extends Collector {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix} [${this.bot_name}] [${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.originalError.message}`,
                     )
                 },
             })
@@ -269,7 +269,7 @@ class XCollector extends Collector {
                                                 retries: 2,
                                                 onFailedAttempt: (e) => {
                                                     log.error(
-                                                        `${prefix} [${this.bot_name}] [${this.name}] translate failed. remained retry times: ${e.retriesLeft}: ${e.message}`,
+                                                        `${prefix} [${this.bot_name}] [${this.name}] translate failed. remained retry times: ${e.retriesLeft}: ${e.originalError.message}`,
                                                     )
                                                 },
                                             })) || DEFAULT_TRANSLATION
