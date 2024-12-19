@@ -318,7 +318,14 @@ class XCollector extends Collector {
                     try {
                         await Promise.all(
                             forward_to.map((forwarder) =>
-                                pRetry(() => forwarder.send(formated_article, images_to_send), { retries: 2 }),
+                                pRetry(
+                                    () =>
+                                        forwarder.send(formated_article, {
+                                            media: images_to_send,
+                                            timestamp: articles[0].timestamp * 1000,
+                                        }),
+                                    { retries: 2 },
+                                ),
                             ),
                         )
 

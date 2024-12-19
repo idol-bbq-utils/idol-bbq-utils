@@ -16,15 +16,8 @@ class TgForwarder extends Forwarder {
         this.chat_id = chat_id
         this.bot = new Telegraf(this.token)
     }
-    public async realSend(
-        text: string,
-        media?: Array<{
-            source: string
-            type: string
-            media_type: string
-            path: string
-        }>,
-    ) {
+    public async realSend(text: string, props: Parameters<Forwarder['send']>[1]) {
+        const { media } = props || {}
         if (media && media.length !== 0) {
             await pRetry(
                 () =>

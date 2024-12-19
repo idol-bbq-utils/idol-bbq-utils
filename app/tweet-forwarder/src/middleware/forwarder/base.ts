@@ -1,7 +1,9 @@
 import { log } from '@/config'
 import { IForwardTo, MediaStorageType, SourcePlatformEnum } from '@/types/bot'
+import { formatTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
 
+const DATE_OFFSET = 1
 abstract class BaseForwarder {
     protected token: string
     protected name: string = 'base-forwarder'
@@ -10,20 +12,27 @@ abstract class BaseForwarder {
     }
     public abstract send(
         text: string,
-        media?: Array<{
-            source: SourcePlatformEnum
-            type: MediaStorageType
-            media_type: string
-            path: string
-        }>,
+        props?: {
+            media?: Array<{
+                source: SourcePlatformEnum
+                type: MediaStorageType
+                media_type: string
+                path: string
+            }>
+            timestamp?: number
+        },
     ): Promise<any>
 }
 
 abstract class Forwarder extends BaseForwarder {
     protected config: IForwardTo['config']
+    protected block_until_date: number
     constructor(token: string, config: IForwardTo['config']) {
         super(token)
         this.config = config
+        this.block_until_date = config?.block_until
+            ? new Date(config.block_until).getTime()
+            : new Date().setDate(new Date().getDate() - DATE_OFFSET)
         log.info(`checking config: ${JSON.stringify(this.config)}`)
         try {
             if (this.config?.replace_regex) {
@@ -36,8 +45,13 @@ abstract class Forwarder extends BaseForwarder {
         }
     }
 
-    public send(...[text, ...rest]: Parameters<BaseForwarder['send']>) {
-        return this.realSend(this.textFilter(text, this.config?.replace_regex), ...rest)
+    public send(...[text, props, ...rest]: Parameters<BaseForwarder['send']>) {
+        const { timestamp } = props || {}
+        if (timestamp && timestamp < this.block_until_date) {
+            log.warn(`blocked: can not send before ${formatTime(this.block_until_date)}`)
+            return Promise.resolve()
+        }
+        return this.realSend(this.textFilter(text, this.config?.replace_regex), props, ...rest)
     }
     protected abstract realSend(...args: Parameters<BaseForwarder['send']>): ReturnType<BaseForwarder['send']>
 
