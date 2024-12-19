@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Forwarder } from './base'
+import { BaseForwarder, Forwarder } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { log } from '@/config'
 import { SourcePlatformEnum } from '@/types/bot'
@@ -22,15 +22,8 @@ class BiliForwarder extends Forwarder {
         }
         this.bili_jct = bili_jct
     }
-    public async realSend(
-        text: string,
-        media?: Array<{
-            source: SourcePlatformEnum
-            type: string
-            media_type: string
-            path: string
-        }>,
-    ) {
+    public async realSend(text: string, props: Parameters<BaseForwarder['send']>[1]) {
+        const { media } = props || {}
         const has_media = media && media.length !== 0
         await pRetry(() => (has_media ? this.sendPhotoText(text, media) : this.sendPureText(text)), {
             retries: 2,

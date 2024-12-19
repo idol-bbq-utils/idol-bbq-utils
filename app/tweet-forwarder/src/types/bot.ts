@@ -40,6 +40,7 @@ interface IWebsiteConfig {
 
 interface IForwardToConfig {
     replace_regex?: string | Array<string> | Array<Array<string>>
+    block_until?: number | string
 }
 
 interface IWebsite {

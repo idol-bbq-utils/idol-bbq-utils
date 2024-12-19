@@ -25,15 +25,8 @@ class QQForwarder extends Forwarder {
         this.group_id = group_id
         this.url = url
     }
-    public async realSend(
-        text: string,
-        media?: Array<{
-            source: SourcePlatformEnum
-            type: string
-            media_type: string
-            path: string
-        }>,
-    ) {
+    public async realSend(text: string, props: Parameters<Forwarder['send']>[1]) {
+        const { media } = props || {}
         await pRetry(() => this.sendPhotoText(text, media || []), {
             retries: 2,
             onFailedAttempt(error) {
