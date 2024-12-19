@@ -1,8 +1,8 @@
-import { IBot, IWebsiteConfig } from './bot'
+import { IBot, IBotConfig, IWebsiteConfig } from './bot'
 
 interface IYamlConfig {
     bots: Array<IBot>
-    config?: IWebsiteConfig
+    config?: IBotConfig
 }
 
 export { IYamlConfig }

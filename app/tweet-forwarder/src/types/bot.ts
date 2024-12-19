@@ -38,6 +38,10 @@ interface IWebsiteConfig {
     }
 }
 
+interface IForwardToConfig {
+    replace_regex?: string | Array<string> | Array<Array<string>>
+}
+
 interface IWebsite {
     domain: string
     paths: Array<string>
@@ -64,16 +68,18 @@ interface IForwardTo {
     bili_jct?: string
     group_id?: string
     url?: string
-    config?: {
-        replace_regex?: string | Array<string> | Array<Array<string>>
-    }
+    config?: IForwardToConfig
 }
 
+interface IBotConfig {
+    cfg_websites?: IWebsiteConfig
+    cfg_forward_to?: IForwardToConfig
+}
 interface IBot {
     name: string
     websites: Array<IWebsite>
     forward_to: Array<IForwardTo>
-    config: IWebsiteConfig
+    config: IBotConfig
 }
 export { ForwardPlatformEnum, SourcePlatformEnum }
-export type { IBot, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType }
+export type { IBot, IBotConfig, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType }
