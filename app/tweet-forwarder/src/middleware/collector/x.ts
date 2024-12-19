@@ -6,7 +6,7 @@ import { BaseForwarder } from '../forwarder/base'
 import { getTweets, ITweetDB } from '@/db/x'
 import { log } from '@/config'
 import { Page } from 'puppeteer-core'
-import { orderBy, shuffle, transform } from 'lodash'
+import { orderBy, shuffle } from 'lodash'
 import { delay, formatTime } from '@/utils/time'
 import { BaseTranslator } from '../translator/base'
 import { pRetry } from '@idol-bbq-utils/utils'
@@ -87,6 +87,7 @@ class XCollector extends Collector {
                     this.forward(orderBy(items, ['timestamp'], 'asc'), forward_to, 'tweet', {
                         translator: config.translator,
                         task_id: config.task_id,
+                        title: config.title,
                         media: config.media,
                     })
                 } catch (e) {
@@ -136,7 +137,7 @@ class XCollector extends Collector {
             task_id?: string
         },
     ): Promise<Array<TaskResult<T>>> {
-        const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
+        const prefix = config?.task_id ? `[${config?.task_id}]` : ''
         if (type === 'tweet') {
             log.info(`${prefix} [${this.bot_name}] [${this.name}] grab tweets for ${url}`)
             const res = await pRetry(() => X.TweetGrabber.UserPage.grabTweets(page, url), {
@@ -289,6 +290,10 @@ class XCollector extends Collector {
                         }),
                     )
                 ).join(`\n\n${'-'.repeat(12)}\n\n`)
+
+                if (config?.title) {
+                    formated_article = `${config.title}\n${formated_article}`
+                }
 
                 // handle image
                 let images = [] as string[]
