@@ -65,10 +65,10 @@ export async function grabFollowsNumer(page: Page, url: string): Promise<ITweetP
     // Click on the tweets tab
     const profile_area = await page.waitForSelector('script[data-testid="UserProfileSchema-test"]')
     const profile = await profile_area?.evaluate((e) => JSON.parse(e.textContent ?? ''))
-    const follows = profile.author.interactionStatistic.filter((e: any) => e.name === 'Follows')[0]
+    const follows = profile.mainEntity.interactionStatistic.filter((e: any) => e.name === 'Follows')[0]
     return {
-        username: profile.author.givenName,
-        u_id: `@${profile.author.additionalName}`,
+        username: profile.mainEntity.givenName,
+        u_id: `@${profile.mainEntity.additionalName}`,
         follows: follows.userInteractionCount,
         timestamp: Math.floor(Date.now() / 1000),
     }
