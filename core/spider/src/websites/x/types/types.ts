@@ -1,7 +1,8 @@
 enum TweetTabsEnum {
     TWEETS = 0,
-    REPLIES = 1,
-    MEDIA = 2,
+    REPLIES,
+    HIGH_LIGHTS,
+    MEDIA,
 }
 
 enum ArticleTypeEnum {

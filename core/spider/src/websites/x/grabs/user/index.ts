@@ -27,7 +27,7 @@ export async function grabTweets(
     await page.goto(url)
 
     // Click on the tweets tab
-    const tablist = await page.$('div[role="tablist"]')
+    const tablist = await page.waitForSelector('div[role="tablist"]')
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.TWEETS].$('a')
     await tab?.click()
@@ -45,7 +45,7 @@ export async function grabReply(page: Page, url: string): Promise<Array<Array<IT
     await page.setViewport({ width: 873, height: 1500 })
     await page.goto(url)
     // Click on the tweets tab
-    const tablist = await page.$('div[role="tablist"]')
+    const tablist = await page.waitForSelector('div[role="tablist"]')
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.REPLIES].$('a')
     await tab?.click()
