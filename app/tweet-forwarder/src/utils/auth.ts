@@ -8,11 +8,15 @@ import fs from 'fs'
 function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<CookieParam> {
     let lines = fs.readFileSync(cookie_file, 'utf8').split('\n')
     const cookies = []
-    for (const line of lines) {
-        if (line.startsWith('#') || line === '') {
+    for (let line of lines) {
+        if ((line.startsWith('#') && !line.startsWith('#HttpOnly_.')) || line === '') {
             continue
         }
-        let fileds = line.split('\t')
+        //  ref: https://github.com/Moustachauve/cookie-editor
+        if (line.startsWith('#HttpOnly_.')) {
+            line = line.replace('#HttpOnly_.', '')
+        }
+        let fileds = line.split(new RegExp('[\t ]+'))
         let domain = fileds[0],
             includeSubdomain = fileds[1],
             path = fileds[2],

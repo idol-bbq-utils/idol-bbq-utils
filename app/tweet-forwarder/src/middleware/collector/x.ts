@@ -253,6 +253,7 @@ class XCollector extends Collector {
                 const DEFAULT_TRANSLATION = '╮(╯-╰)╭非常抱歉无法翻译'
                 let formated_article = (
                     await Promise.all(
+                        // TODO: extract to function
                         articles.map(async (article) => {
                             let metaline = this.formatMetaline(article)
                             let format_article = `${metaline}\n\n`
