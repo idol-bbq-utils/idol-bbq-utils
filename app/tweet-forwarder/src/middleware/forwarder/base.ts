@@ -33,7 +33,6 @@ abstract class Forwarder extends BaseForwarder {
         this.block_until_date = config?.block_until
             ? new Date(config.block_until).getTime()
             : new Date().setDate(new Date().getDate() - DATE_OFFSET)
-        log.info(`checking config: ${JSON.stringify(this.config)}`)
         try {
             if (this.config?.replace_regex) {
                 log.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)
