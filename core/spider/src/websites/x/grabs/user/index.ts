@@ -31,6 +31,7 @@ export async function grabTweets(
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.TWEETS].$('a')
     await tab?.click()
+    await checkSomethingWrong(page)
     const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
@@ -49,6 +50,7 @@ export async function grabReply(page: Page, url: string): Promise<Array<Array<IT
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.REPLIES].$('a')
     await tab?.click()
+    await checkSomethingWrong(page)
     const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
@@ -71,5 +73,20 @@ export async function grabFollowsNumer(page: Page, url: string): Promise<ITweetP
         u_id: `@${profile.mainEntity.additionalName}`,
         follows: follows.userInteractionCount,
         timestamp: Math.floor(Date.now() / 1000),
+    }
+}
+
+/**
+ * Check if there is something wrong on the page of https://x.com/username
+ */
+export async function checkSomethingWrong(page: Page) {
+    const retry_button = await page
+        .waitForSelector('nav[role="navigation"] + div > button', { timeout: 1000 })
+        .catch(() => null)
+    if (retry_button) {
+        const error = await page.$('nav[role="navigation"] + div > div:first-child')
+        throw new Error(
+            `Something wrong on the page, maybe cookies are expired: ${await error?.evaluate((e) => e.textContent)}`,
+        )
     }
 }

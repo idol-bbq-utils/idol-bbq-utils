@@ -36,6 +36,9 @@ interface IWebsiteConfig {
         // TODO s3 storage
         config?: {}
     }
+    puppeteer?: {
+        timeout?: number
+    }
 }
 
 interface IForwardToConfig {
