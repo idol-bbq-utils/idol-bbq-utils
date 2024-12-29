@@ -15,6 +15,7 @@ import { BaseTranslator } from '@/middleware/translator/base'
 import { QQForwarder } from '@/middleware/forwarder/qq'
 import { BigModelGLM4Flash } from '@/middleware/translator/bigmodel'
 import { Doubao128KPro } from '@/middleware/translator/doubao'
+import { DeepSeekV3 } from '@/middleware/translator/deepseek'
 
 export class FWDBot {
     public name: string
@@ -78,6 +79,9 @@ export class FWDBot {
                 }
                 if (_translator.type === 'doubao-pro-128k') {
                     translator = new Doubao128KPro(_translator.key, _translator.model_id || '', _translator.prompt)
+                }
+                if (_translator.type === 'deepseek-v3') {
+                    translator = new DeepSeekV3(_translator.key, _translator.model_id || '', _translator.prompt)
                 }
             }
             await translator?.init()

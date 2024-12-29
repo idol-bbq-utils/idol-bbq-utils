@@ -1,7 +1,8 @@
 type ByteDance_LLM = 'doubao-pro-128k'
 type BigModel_LLM = 'glm-4-flash'
 type Google_LLM = 'gemini'
-type TranslatorType = Google_LLM | BigModel_LLM | ByteDance_LLM
+type Deepseek_LLM = 'deepseek-v3'
+type TranslatorType = Google_LLM | BigModel_LLM | ByteDance_LLM | Deepseek_LLM
 
 type MediaStorageType = 'no-storage'
 
