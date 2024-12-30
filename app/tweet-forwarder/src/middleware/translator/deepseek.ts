@@ -2,6 +2,10 @@ import { log } from '@/config'
 import { BaseTranslator } from './base'
 import axios from 'axios'
 
+const RECOMMEND_CONFIGURATIONS = {
+    temperature: 1.3, // recommended for translation. ref: https://api-docs.deepseek.com/quick_start/parameter_settings
+}
+
 abstract class BaseDeepSeek extends BaseTranslator {
     public name = 'base deepseek translator'
     protected BASE_URL = 'https://api.deepseek.com/chat/completions'
@@ -25,6 +29,7 @@ class DeepSeekV3 extends BaseDeepSeek {
         const res = await axios.post(
             this.BASE_URL,
             {
+                ...RECOMMEND_CONFIGURATIONS,
                 model: this.model_id,
                 messages: [
                     {
