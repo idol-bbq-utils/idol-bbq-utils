@@ -7,7 +7,7 @@ async function main() {
     await page.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
     )
-    const res = await X.TweetGrabber.UserPage.grabFollowsNumer(page, 'https://x.com/hanamiya_nina')
+    const res = await X.UserPage.grabFollowsNumer(page, 'https://x.com/hanamiya_nina')
 
     console.log(res)
     await browser.close()
