@@ -56,7 +56,7 @@ class XCollector extends Collector {
         if (type === 'reply' || type === 'tweet') {
             for (const path of _paths) {
                 try {
-                    const replies = await this.collect(page, `${domain}/${path}/with_replies`, 'reply', {
+                    const replies = await this.collect(page, `${domain}/${path}`, 'reply', {
                         task_id: config.task_id,
                     })
                     log.info(
@@ -274,6 +274,7 @@ class XCollector extends Collector {
                                                     )
                                                 },
                                             })) || DEFAULT_TRANSLATION
+                                        log.debug('translation finished')
                                     } catch (e) {
                                         log.error(`${prefix} [${this.bot_name}] [${this.name}] translate failed: ${e}`)
                                     }
@@ -317,6 +318,7 @@ class XCollector extends Collector {
                 // async and send
                 new Promise(async (res) => {
                     try {
+                        log.debug(`${prefix} [${this.bot_name}] [${this.name}] trying to send tweets`)
                         await Promise.all(
                             forward_to.map((forwarder) =>
                                 pRetry(
@@ -329,7 +331,7 @@ class XCollector extends Collector {
                                 ),
                             ),
                         )
-
+                        log.debug(`${prefix} [${this.bot_name}] [${this.name}] send tweets finished`)
                         cleanMediaFiles(images)
                         res('')
                     } catch (e) {
