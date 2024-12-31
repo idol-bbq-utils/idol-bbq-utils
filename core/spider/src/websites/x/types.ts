@@ -31,6 +31,11 @@ enum ArticleElementTypeEnum {
     LINK,
 }
 
+enum TweetCardTypeEnum {
+    LAYOUT_SMALL,
+    LAYOUT_LARGE,
+}
+
 interface ITweetArticle {
     username: string
     u_id: string
@@ -49,6 +54,8 @@ interface ITweetProfile {
     follows: number
     timestamp: number
 }
+
+interface ITweetCard {}
 
 export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum, TimelineTypeEnum }
 export type { ITweetArticle, ITweetProfile }

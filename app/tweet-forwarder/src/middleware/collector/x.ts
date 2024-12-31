@@ -140,7 +140,7 @@ class XCollector extends Collector {
         const prefix = config?.task_id ? `[${config?.task_id}]` : ''
         if (type === 'tweet') {
             log.info(`${prefix} [${this.bot_name}] [${this.name}] grab tweets for ${url}`)
-            const res = await pRetry(() => X.TweetGrabber.UserPage.grabTweets(page, url), {
+            const res = await pRetry(() => X.UserPage.grabTweets(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
@@ -160,7 +160,7 @@ class XCollector extends Collector {
 
         if (type === 'reply') {
             log.info(`${prefix} [${this.bot_name}] [${this.name}] grab replies for ${url}`)
-            const reply_threads = await pRetry(() => X.TweetGrabber.UserPage.grabReply(page, url), {
+            const reply_threads = await pRetry(() => X.UserPage.grabReply(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
@@ -191,7 +191,7 @@ class XCollector extends Collector {
 
         if (type === 'follows') {
             log.info(`${prefix} [${this.bot_name}] [${this.name}] grab follows for ${url}`)
-            const follows = await pRetry(() => X.TweetGrabber.UserPage.grabFollowsNumer(page, url), {
+            const follows = await pRetry(() => X.UserPage.grabFollowsNumer(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(

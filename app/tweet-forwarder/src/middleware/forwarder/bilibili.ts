@@ -66,7 +66,6 @@ class BiliForwarder extends Forwarder {
             path: string
         }>,
     ) {
-        log.debug(`Send text with photos..., media: ${media}`)
         let pics: Array<{
             img_src: string
             img_width: number
@@ -107,6 +106,7 @@ class BiliForwarder extends Forwarder {
         if (pics.length === 0) {
             return this.sendPureText(text)
         }
+        log.debug(`Send text with photos..., media: ${media}`)
         let _res = []
         let text_to_be_sent = text
         let i = 0

@@ -1,7 +1,7 @@
 import { Page } from 'puppeteer-core'
-import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../../types/types'
-import { tweetArticleParser, tweetReplyParser } from './parser/article'
-import { getTimelineType } from './parser/timeline'
+import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../types'
+import { tweetArticleParser, tweetReplyParser } from './article'
+import { getTimelineType } from './timeline'
 
 /**
  * The URL like https://x.com/username
@@ -21,16 +21,14 @@ export async function grabTweets(
         },
     },
 ): Promise<Array<ITweetArticle>> {
-    // Set screen size
     await page.setViewport(config.viewport ?? { width: 954, height: 1024 })
-    // Navigate the page to a URL
     await page.goto(url)
-
     // Click on the tweets tab
     const tablist = await page.waitForSelector('div[role="tablist"]')
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.TWEETS].$('a')
     await tab?.click()
+    await checkLogin(page)
     await checkSomethingWrong(page)
     const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
     // wait for article to load
@@ -50,6 +48,7 @@ export async function grabReply(page: Page, url: string): Promise<Array<Array<IT
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.REPLIES].$('a')
     await tab?.click()
+    await checkLogin(page)
     await checkSomethingWrong(page)
     const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
     // wait for article to load
@@ -86,7 +85,16 @@ export async function checkSomethingWrong(page: Page) {
     if (retry_button) {
         const error = await page.$('nav[role="navigation"] + div > div:first-child')
         throw new Error(
-            `Something wrong on the page, maybe cookies are expired: ${await error?.evaluate((e) => e.textContent)}`,
+            `Something wrong on the page, maybe you have reached the limit or cookies are expired: ${await error?.evaluate((e) => e.textContent)}`,
         )
+    }
+}
+
+export async function checkLogin(page: Page) {
+    const login_button = await page
+        .waitForSelector('a[href="/login"], [href*="/i/flow/login"]', { timeout: 1000 })
+        .catch(() => null)
+    if (login_button) {
+        throw new Error('You need to login first, check your cookies')
     }
 }

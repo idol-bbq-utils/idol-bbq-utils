@@ -1,4 +1,4 @@
-import { ArticleElementTypeEnum } from '@/websites/x/types/types'
+import { ArticleElementTypeEnum } from '@/websites/x/types'
 import { ElementHandle } from 'puppeteer-core'
 
 async function articleElementParser(element: ElementHandle<Element>) {

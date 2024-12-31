@@ -50,6 +50,7 @@ abstract class Forwarder extends BaseForwarder {
             log.warn(`blocked: can not send before ${formatTime(this.block_until_date)}`)
             return Promise.resolve()
         }
+        log.debug(`[forwarder] [${this.name}] trying to send text: ${text}`)
         return this.realSend(this.textFilter(text, this.config?.replace_regex), props, ...rest)
     }
     protected abstract realSend(...args: Parameters<BaseForwarder['send']>): ReturnType<BaseForwarder['send']>

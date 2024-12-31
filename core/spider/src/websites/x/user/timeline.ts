@@ -1,5 +1,5 @@
 import { ElementHandle } from 'puppeteer-core'
-import { TimelineTypeEnum } from '@/websites/x/types/types'
+import { TimelineTypeEnum } from '@/websites/x/types'
 
 const QUERY_DIVIDER_PATTERN = ':scope > div:not(:has(*))'
 const QUERY_DIVIDER_PATTERN_2 = ':scope > div > div:not(:has(*))'
