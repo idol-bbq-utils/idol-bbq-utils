@@ -1,4 +1,4 @@
-import { ArticleTypeEnum } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
+import { ArticleTypeEnum } from '@idol-bbq-utils/spider/types'
 import { Collector } from './base'
 import { X } from '@idol-bbq-utils/spider'
 import { X as X_DB } from '@/db'

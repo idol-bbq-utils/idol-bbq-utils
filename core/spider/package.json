@@ -7,6 +7,16 @@
     "license": "MIT",
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./lib/index.d.ts",
+            "default": "./lib/index.js"
+        },
+        "./types": {
+            "types": "./lib/types.d.ts",
+            "default": "./lib/types.js"
+        }
+    },
     "directories": {
         "lib": "lib"
     },
