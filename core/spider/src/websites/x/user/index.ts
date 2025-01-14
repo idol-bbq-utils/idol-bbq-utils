@@ -30,7 +30,7 @@ export async function grabTweets(
     await tab?.click()
     await checkLogin(page)
     await checkSomethingWrong(page)
-    const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
+    const article_wrapper = await page.waitForSelector('section[role="region"] > div')
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
     const raw_articles = await article_wrapper?.$$('article')
@@ -50,7 +50,7 @@ export async function grabReply(page: Page, url: string): Promise<Array<Array<IT
     await tab?.click()
     await checkLogin(page)
     await checkSomethingWrong(page)
-    const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
+    const article_wrapper = await page.waitForSelector('section[role="region"] > div')
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
 

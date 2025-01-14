@@ -223,7 +223,7 @@ class XCollector extends Collector {
             media?: IWebsiteConfig['media']
         },
     ) {
-        const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
+        const prefix = config?.task_id ? `[${config?.task_id}]` : ''
         /*** prepare ***/
         let raw_article_groups = []
         if (type === 'tweet') {
@@ -274,7 +274,9 @@ class XCollector extends Collector {
                                                     )
                                                 },
                                             })) || DEFAULT_TRANSLATION
-                                        log.debug('translation finished')
+                                        log.debug(
+                                            `${prefix} [${this.bot_name}] [${this.name}] translated text: ${text}`,
+                                        )
                                     } catch (e) {
                                         log.error(`${prefix} [${this.bot_name}] [${this.name}] translate failed: ${e}`)
                                     }
