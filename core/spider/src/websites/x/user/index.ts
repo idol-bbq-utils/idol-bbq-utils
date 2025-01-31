@@ -1,7 +1,7 @@
 import { Page } from 'puppeteer-core'
-import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../../types/types'
-import { tweetArticleParser, tweetReplyParser } from './parser/article'
-import { getTimelineType } from './parser/timeline'
+import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../types'
+import { tweetArticleParser, tweetReplyParser } from './article'
+import { getTimelineType } from './timeline'
 
 /**
  * The URL like https://x.com/username
@@ -21,17 +21,16 @@ export async function grabTweets(
         },
     },
 ): Promise<Array<ITweetArticle>> {
-    // Set screen size
     await page.setViewport(config.viewport ?? { width: 954, height: 1024 })
-    // Navigate the page to a URL
     await page.goto(url)
-
     // Click on the tweets tab
-    const tablist = await page.$('div[role="tablist"]')
+    const tablist = await page.waitForSelector('div[role="tablist"]')
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.TWEETS].$('a')
     await tab?.click()
-    const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
+    await checkLogin(page)
+    await checkSomethingWrong(page)
+    const article_wrapper = await page.waitForSelector('section[role="region"] > div')
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
     const raw_articles = await article_wrapper?.$$('article')
@@ -45,11 +44,13 @@ export async function grabReply(page: Page, url: string): Promise<Array<Array<IT
     await page.setViewport({ width: 873, height: 1500 })
     await page.goto(url)
     // Click on the tweets tab
-    const tablist = await page.$('div[role="tablist"]')
+    const tablist = await page.waitForSelector('div[role="tablist"]')
     const tabs = await tablist?.$$('div[role="presentation"]')
     const tab = await tabs?.[TweetTabsEnum.REPLIES].$('a')
     await tab?.click()
-    const article_wrapper = await page.waitForSelector('nav[role="navigation"] + section > div')
+    await checkLogin(page)
+    await checkSomethingWrong(page)
+    const article_wrapper = await page.waitForSelector('section[role="region"] > div')
     // wait for article to load
     await article_wrapper?.waitForSelector('article')
 
@@ -71,5 +72,29 @@ export async function grabFollowsNumer(page: Page, url: string): Promise<ITweetP
         u_id: `@${profile.mainEntity.additionalName}`,
         follows: follows.userInteractionCount,
         timestamp: Math.floor(Date.now() / 1000),
+    }
+}
+
+/**
+ * Check if there is something wrong on the page of https://x.com/username
+ */
+export async function checkSomethingWrong(page: Page) {
+    const retry_button = await page
+        .waitForSelector('nav[role="navigation"] + div > button', { timeout: 1000 })
+        .catch(() => null)
+    if (retry_button) {
+        const error = await page.$('nav[role="navigation"] + div > div:first-child')
+        throw new Error(
+            `Something wrong on the page, maybe you have reached the limit or cookies are expired: ${await error?.evaluate((e) => e.textContent)}`,
+        )
+    }
+}
+
+export async function checkLogin(page: Page) {
+    const login_button = await page
+        .waitForSelector('a[href="/login"], [href*="/i/flow/login"]', { timeout: 1000 })
+        .catch(() => null)
+    if (login_button) {
+        throw new Error('You need to login first, check your cookies')
     }
 }

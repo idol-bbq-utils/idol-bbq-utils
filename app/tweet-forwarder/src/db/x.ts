@@ -1,4 +1,4 @@
-import { ArticleTypeEnum, ITweetArticle } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
+import { ArticleTypeEnum, ITweetArticle } from '@idol-bbq-utils/spider/types'
 import { prisma, Prisma } from './client'
 import { log } from '@/config'
 

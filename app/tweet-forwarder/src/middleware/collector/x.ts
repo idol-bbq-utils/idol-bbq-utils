@@ -1,4 +1,4 @@
-import { ArticleTypeEnum } from '@idol-bbq-utils/spider/lib/websites/x/types/types'
+import { ArticleTypeEnum } from '@idol-bbq-utils/spider/types'
 import { Collector } from './base'
 import { X } from '@idol-bbq-utils/spider'
 import { X as X_DB } from '@/db'
@@ -6,7 +6,7 @@ import { BaseForwarder } from '../forwarder/base'
 import { getTweets, ITweetDB } from '@/db/x'
 import { log } from '@/config'
 import { Page } from 'puppeteer-core'
-import { orderBy, shuffle, transform } from 'lodash'
+import { orderBy, shuffle } from 'lodash'
 import { delay, formatTime } from '@/utils/time'
 import { BaseTranslator } from '../translator/base'
 import { pRetry } from '@idol-bbq-utils/utils'
@@ -56,7 +56,7 @@ class XCollector extends Collector {
         if (type === 'reply' || type === 'tweet') {
             for (const path of _paths) {
                 try {
-                    const replies = await this.collect(page, `${domain}/${path}/with_replies`, 'reply', {
+                    const replies = await this.collect(page, `${domain}/${path}`, 'reply', {
                         task_id: config.task_id,
                     })
                     log.info(
@@ -87,6 +87,7 @@ class XCollector extends Collector {
                     this.forward(orderBy(items, ['timestamp'], 'asc'), forward_to, 'tweet', {
                         translator: config.translator,
                         task_id: config.task_id,
+                        title: config.title,
                         media: config.media,
                     })
                 } catch (e) {
@@ -136,14 +137,14 @@ class XCollector extends Collector {
             task_id?: string
         },
     ): Promise<Array<TaskResult<T>>> {
-        const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
+        const prefix = config?.task_id ? `[${config?.task_id}]` : ''
         if (type === 'tweet') {
             log.info(`${prefix} [${this.bot_name}] [${this.name}] grab tweets for ${url}`)
-            const res = await pRetry(() => X.TweetGrabber.UserPage.grabTweets(page, url), {
+            const res = await pRetry(() => X.UserPage.grabTweets(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix} [${this.bot_name}] [${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab tweets failed for ${url}. remained retry times: ${e.retriesLeft} ${e.originalError.message}`,
                     )
                 },
             })
@@ -159,11 +160,11 @@ class XCollector extends Collector {
 
         if (type === 'reply') {
             log.info(`${prefix} [${this.bot_name}] [${this.name}] grab replies for ${url}`)
-            const reply_threads = await pRetry(() => X.TweetGrabber.UserPage.grabReply(page, url), {
+            const reply_threads = await pRetry(() => X.UserPage.grabReply(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix} [${this.bot_name}] [${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab replies failed for ${url}. remained retry times: ${e.retriesLeft} ${e.originalError.message}`,
                     )
                 },
             })
@@ -190,11 +191,11 @@ class XCollector extends Collector {
 
         if (type === 'follows') {
             log.info(`${prefix} [${this.bot_name}] [${this.name}] grab follows for ${url}`)
-            const follows = await pRetry(() => X.TweetGrabber.UserPage.grabFollowsNumer(page, url), {
+            const follows = await pRetry(() => X.UserPage.grabFollowsNumer(page, url), {
                 retries: 2,
                 onFailedAttempt: (e) => {
                     log.error(
-                        `${prefix} [${this.bot_name}] [${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.message}`,
+                        `${prefix} [${this.bot_name}] [${this.name}] grab follows failed for ${url}. remained retry times: ${e.retriesLeft} ${e.originalError.message}`,
                     )
                 },
             })
@@ -222,7 +223,7 @@ class XCollector extends Collector {
             media?: IWebsiteConfig['media']
         },
     ) {
-        const prefix = config?.task_id ? `[${config?.task_id}] ` : ''
+        const prefix = config?.task_id ? `[${config?.task_id}]` : ''
         /*** prepare ***/
         let raw_article_groups = []
         if (type === 'tweet') {
@@ -252,6 +253,7 @@ class XCollector extends Collector {
                 const DEFAULT_TRANSLATION = '╮(╯-╰)╭非常抱歉无法翻译'
                 let formated_article = (
                     await Promise.all(
+                        // TODO: extract to function
                         articles.map(async (article) => {
                             let metaline = this.formatMetaline(article)
                             let format_article = `${metaline}\n\n`
@@ -268,10 +270,13 @@ class XCollector extends Collector {
                                                 retries: 2,
                                                 onFailedAttempt: (e) => {
                                                     log.error(
-                                                        `${prefix} [${this.bot_name}] [${this.name}] translate failed. remained retry times: ${e.retriesLeft}: ${e.message}`,
+                                                        `${prefix} [${this.bot_name}] [${this.name}] translate failed. remained retry times: ${e.retriesLeft}: ${e.originalError.message}`,
                                                     )
                                                 },
                                             })) || DEFAULT_TRANSLATION
+                                        log.debug(
+                                            `${prefix} [${this.bot_name}] [${this.name}] translated text: ${text}`,
+                                        )
                                     } catch (e) {
                                         log.error(`${prefix} [${this.bot_name}] [${this.name}] translate failed: ${e}`)
                                     }
@@ -289,6 +294,10 @@ class XCollector extends Collector {
                         }),
                     )
                 ).join(`\n\n${'-'.repeat(12)}\n\n`)
+
+                if (config?.title) {
+                    formated_article = `${config.title}\n${formated_article}`
+                }
 
                 // handle image
                 let images = [] as string[]
@@ -311,12 +320,20 @@ class XCollector extends Collector {
                 // async and send
                 new Promise(async (res) => {
                     try {
+                        log.debug(`${prefix} [${this.bot_name}] [${this.name}] trying to send tweets`)
                         await Promise.all(
                             forward_to.map((forwarder) =>
-                                pRetry(() => forwarder.send(formated_article, images_to_send), { retries: 2 }),
+                                pRetry(
+                                    () =>
+                                        forwarder.send(formated_article, {
+                                            media: images_to_send,
+                                            timestamp: articles[0].timestamp * 1000,
+                                        }),
+                                    { retries: 2 },
+                                ),
                             ),
                         )
-
+                        log.debug(`${prefix} [${this.bot_name}] [${this.name}] send tweets finished`)
                         cleanMediaFiles(images)
                         res('')
                     } catch (e) {

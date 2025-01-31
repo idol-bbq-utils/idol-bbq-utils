@@ -1,7 +1,8 @@
 type ByteDance_LLM = 'doubao-pro-128k'
 type BigModel_LLM = 'glm-4-flash'
 type Google_LLM = 'gemini'
-type TranslatorType = Google_LLM | BigModel_LLM | ByteDance_LLM
+type Deepseek_LLM = 'deepseek-v3'
+type TranslatorType = Google_LLM | BigModel_LLM | ByteDance_LLM | Deepseek_LLM
 
 type MediaStorageType = 'no-storage'
 
@@ -36,6 +37,14 @@ interface IWebsiteConfig {
         // TODO s3 storage
         config?: {}
     }
+    puppeteer?: {
+        timeout?: number
+    }
+}
+
+interface IForwardToConfig {
+    replace_regex?: string | Array<string> | Array<Array<string>>
+    block_until?: number | string
 }
 
 interface IWebsite {
@@ -64,13 +73,18 @@ interface IForwardTo {
     bili_jct?: string
     group_id?: string
     url?: string
+    config?: IForwardToConfig
 }
 
+interface IBotConfig {
+    cfg_websites?: IWebsiteConfig
+    cfg_forward_to?: IForwardToConfig
+}
 interface IBot {
     name: string
     websites: Array<IWebsite>
     forward_to: Array<IForwardTo>
-    config: IWebsiteConfig
+    config: IBotConfig
 }
 export { ForwardPlatformEnum, SourcePlatformEnum }
-export type { IBot, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType }
+export type { IBot, IBotConfig, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType }

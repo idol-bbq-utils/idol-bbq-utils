@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BaseForwarder } from './base'
+import { BaseForwarder, Forwarder } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { log } from '@/config'
 import { SourcePlatformEnum } from '@/types/bot'
@@ -12,25 +12,18 @@ const CHUNK_SPSERATOR_PREV = '----⬆️----\n\n'
 const PADDING_LENGTH = 24
 const TEXT_LIMIT = BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SPSERATOR_PREV.length - PADDING_LENGTH
 
-class BiliForwarder extends BaseForwarder {
+class BiliForwarder extends Forwarder {
     private bili_jct: string
     name = 'bilibili'
-    constructor(token: string, bili_jct: string) {
-        super(token)
+    constructor(bili_jct: string, ...args: [...ConstructorParameters<typeof Forwarder>]) {
+        super(...args)
         if (!bili_jct) {
             throw new Error(`forwarder ${this.name} bili_jct is required`)
         }
         this.bili_jct = bili_jct
     }
-    public async send(
-        text: string,
-        media?: Array<{
-            source: SourcePlatformEnum
-            type: string
-            media_type: string
-            path: string
-        }>,
-    ) {
+    public async realSend(text: string, props: Parameters<BaseForwarder['send']>[1]) {
+        const { media } = props || {}
         const has_media = media && media.length !== 0
         await pRetry(() => (has_media ? this.sendPhotoText(text, media) : this.sendPureText(text)), {
             retries: 2,
@@ -73,7 +66,6 @@ class BiliForwarder extends BaseForwarder {
             path: string
         }>,
     ) {
-        log.debug(`Send text with photos..., media: ${media}`)
         let pics: Array<{
             img_src: string
             img_width: number
@@ -114,6 +106,7 @@ class BiliForwarder extends BaseForwarder {
         if (pics.length === 0) {
             return this.sendPureText(text)
         }
+        log.debug(`Send text with photos..., media: ${media}`)
         let _res = []
         let text_to_be_sent = text
         let i = 0

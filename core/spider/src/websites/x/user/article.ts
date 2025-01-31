@@ -1,5 +1,5 @@
 import { ElementHandle } from 'puppeteer-core'
-import { ArticleTypeEnum, ITweetArticle, TimelineTypeEnum } from '@/websites/x/types/types'
+import { ArticleTypeEnum, ITweetArticle, TimelineTypeEnum } from '@/websites/x/types'
 import { articleElementParser } from './element'
 
 const QUERY_TEXT_PATTERN = 'div[data-testid="tweetText"]'
@@ -97,6 +97,7 @@ async function singleTweetParser(article: ElementHandle<HTMLElement>, article_ty
             article?.$(QUERY_VIDEO_PATTERN_2),
         ])
     ).some((e) => !!e)
+
     const status_link = tweet_links?.[0]?.split('/').slice(0, 4).join('/')
     return {
         ...meta,
