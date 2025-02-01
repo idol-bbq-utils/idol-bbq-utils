@@ -1,4 +1,5 @@
 ARG CHROME_VERSION=130.0.6723.58
+ARG GALLERY_DL_VERSION=v1.28.5
 
 FROM node:20-slim AS base
 
@@ -29,6 +30,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --production
 FROM base AS runner
 
 ARG CHROME_VERSION
+ARG GALLERY_DL_VERSION
 
 RUN apt-get update \
     && apt-get install -y wget gnupg \
@@ -45,6 +47,10 @@ RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/
     && apt install -y /tmp/chrome.deb \
     && rm /tmp/chrome.deb
 
+# Install gallery-dl
+RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSION}/gallery-dl.bin -O /usr/local/bin/gallery-dl \
+    && chmod +x /usr/local/bin/gallery-dl
+ 
 WORKDIR /app
 
 COPY --from=builder /app/ .

@@ -22,10 +22,12 @@ interface IWebsiteConfig {
     }
     media?: {
         type: MediaStorageType
-        gallery_dl: {
-            path: string
-            cookie_file?: string
-        }
+        gallery_dl:
+            | {
+                  path?: string
+                  cookie_file?: string
+              }
+            | boolean
         // TODO
         // ffmpeg?: {
         //     path: string

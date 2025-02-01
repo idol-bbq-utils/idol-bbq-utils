@@ -303,7 +303,7 @@ class XCollector extends Collector {
                 let images = [] as string[]
                 if (config?.media) {
                     for (const article of articles) {
-                        if (article.has_media && article.tweet_link) {
+                        if (article.has_media && article.tweet_link && config.media.gallery_dl) {
                             images = images.concat(
                                 downloadMediaFiles(`https://x.com${article.tweet_link}`, config.media.gallery_dl),
                             )
