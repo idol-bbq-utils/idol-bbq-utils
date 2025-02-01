@@ -25,17 +25,22 @@ function downloadMediaFiles(
     args.push(`--filename {_now:%M%S%m}_{tweet_id}_{num}.{extension}`)
     args.push(url)
     log.debug(`downloading media files with args: ${args}`)
-    const res = execSync(`${exec_path} ${args.join(' ')}`, { encoding: 'utf-8' })
-        .split('\n')
-        .filter((path) => path !== '')
-        .map((path) => {
-            if (path.startsWith('# ')) {
-                return path.slice(2)
-            }
-            return path
-        })
-    log.debug(`downloaded media files: ${res}`)
-    return res
+    try {
+        const res = execSync(`${exec_path} ${args.join(' ')}`, { encoding: 'utf-8' })
+            .split('\n')
+            .filter((path) => path !== '')
+            .map((path) => {
+                if (path.startsWith('# ')) {
+                    return path.slice(2)
+                }
+                return path
+            })
+        log.debug(`downloaded media files: ${res}`)
+        return res
+    } catch (e) {
+        log.error('download media files failed', e)
+        return []
+    }
 }
 
 function cleanMediaFiles(paths: string[]) {

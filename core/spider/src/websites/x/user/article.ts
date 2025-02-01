@@ -1,5 +1,5 @@
 import { ElementHandle } from 'puppeteer-core'
-import { ArticleTypeEnum, ITweetArticle, TimelineTypeEnum } from '@/websites/x/types'
+import { ArticleTypeEnum, ITweetArticle, ITweetCard, TimelineTypeEnum, TweetExtraTypeEnum } from '@/websites/x/types'
 import { articleElementParser } from './element'
 
 const QUERY_TEXT_PATTERN = 'div[data-testid="tweetText"]'
@@ -76,7 +76,10 @@ async function refTweetParser(article: ElementHandle<HTMLElement>, article_type:
     }
 }
 
-async function singleTweetParser(article: ElementHandle<HTMLElement>, article_type: ArticleTypeEnum) {
+async function singleTweetParser(
+    article: ElementHandle<HTMLElement>,
+    article_type: ArticleTypeEnum,
+): Promise<ITweetArticle> {
     const [raw_meta, texts] = await Promise.all([
         await article.$(QUERY_META_PATTERN),
         await (await article.$(`${QUERY_TEXT_PATTERN}`))?.$$(':scope > *'),
@@ -98,6 +101,8 @@ async function singleTweetParser(article: ElementHandle<HTMLElement>, article_ty
         ])
     ).some((e) => !!e)
 
+    const card = await tweetCardParser(article)
+
     const status_link = tweet_links?.[0]?.split('/').slice(0, 4).join('/')
     return {
         ...meta,
@@ -105,6 +110,7 @@ async function singleTweetParser(article: ElementHandle<HTMLElement>, article_ty
         type: article_type,
         has_media: has_media_by_link || !!has_media_by_selector,
         tweet_link: status_link,
+        extra: card ? { type: TweetExtraTypeEnum.CARD, data: card } : undefined,
     }
 }
 
@@ -218,4 +224,26 @@ async function getArticleTypeEnum(article: ElementHandle<Element>): Promise<Arti
     }
     // TODO reply
     return ArticleTypeEnum.TWEET
+}
+
+async function tweetCardParser(article: ElementHandle<HTMLElement>): Promise<ITweetCard | undefined> {
+    const [card, source, link] = await Promise.all([
+        article?.$(`div[aria-labelledby] > ${QUERY_CARD_PATTERN}`),
+        article?.$(`div[aria-labelledby] > ${QUERY_CARD_PATTERN} + a`),
+        article?.$(`div[aria-labelledby] > ${QUERY_CARD_PATTERN} a`),
+    ])
+    const [_texts, _source, _link, _img] = await Promise.all([
+        card?.evaluate((e) => e.textContent),
+        source?.evaluate((e) => e.textContent),
+        link?.evaluate((e) => e.getAttribute('href')),
+        card?.$('img'),
+    ])
+    const img_url = await _img?.evaluate((e) => e.getAttribute('src'))
+    if (card) {
+        return {
+            content: [_texts, _source].filter((e) => e !== undefined).join('\n'),
+            media: img_url || undefined,
+            link: _link || undefined,
+        }
+    }
 }

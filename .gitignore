@@ -136,3 +136,5 @@ lib/
 *.db
 
 !assets/**/*
+
+*.cookies

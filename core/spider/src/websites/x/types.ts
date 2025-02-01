@@ -31,9 +31,18 @@ enum ArticleElementTypeEnum {
     LINK,
 }
 
-enum TweetCardTypeEnum {
-    LAYOUT_SMALL,
-    LAYOUT_LARGE,
+enum TweetExtraTypeEnum {
+    CARD = 'card',
+}
+interface ITweetCard {
+    content: string
+    media?: string
+    link?: string
+}
+
+interface ITweetExtraWrapper<T> {
+    type: TweetExtraTypeEnum
+    data: T
 }
 
 interface ITweetArticle {
@@ -46,6 +55,7 @@ interface ITweetArticle {
     ref?: ITweetArticle | null
     has_media?: boolean | null
     forward_by?: string | null
+    extra?: ITweetExtraWrapper<ITweetCard> | null
 }
 
 interface ITweetProfile {
@@ -57,5 +67,5 @@ interface ITweetProfile {
 
 interface ITweetCard {}
 
-export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum, TimelineTypeEnum }
-export type { ITweetArticle, ITweetProfile }
+export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum, TimelineTypeEnum, TweetExtraTypeEnum }
+export type { ITweetArticle, ITweetProfile, ITweetCard }
