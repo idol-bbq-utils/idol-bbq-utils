@@ -67,5 +67,12 @@ interface ITweetProfile {
 
 interface ITweetCard {}
 
-export { TweetTabsEnum, ArticleElementTypeEnum, ArticleTypeEnum, TimelineTypeEnum, TweetExtraTypeEnum }
+export {
+    TweetTabsEnum,
+    ArticleElementTypeEnum,
+    ArticleTypeEnum,
+    TimelineTypeEnum,
+    TweetExtraTypeEnum,
+    ITweetExtraWrapper,
+}
 export type { ITweetArticle, ITweetProfile, ITweetCard }

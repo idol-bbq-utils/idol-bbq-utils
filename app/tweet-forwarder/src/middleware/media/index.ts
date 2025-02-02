@@ -2,6 +2,41 @@ import fs from 'fs'
 import { execSync } from 'child_process'
 import { CACHE_DIR_ROOT, log } from '@/config'
 import { IWebsiteConfig } from '@/types/bot'
+import https from 'https'
+import { plainUrlConventor } from './x'
+import path from 'path'
+
+function download(url: string, dest: string) {
+    return new Promise((resolve, reject) => {
+        const dir = path.dirname(dest)
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+        }
+        const file = fs.createWriteStream(dest)
+        https
+            .get(url, (response) => {
+                response.pipe(file)
+                file.on('finish', () => {
+                    file.close(() => resolve(true))
+                })
+            })
+            .on('error', (error) => {
+                fs.unlinkSync(dest)
+                reject(error.message)
+            })
+    })
+}
+
+// TODO: use class instead of function
+async function plainDownloadMediaFile(url: string): Promise<string | undefined> {
+    const _ = plainUrlConventor(url)
+    if (_) {
+        const { url, filename } = _
+        const dest = `${CACHE_DIR_ROOT}/gallery-dl/plain/${filename}`
+        await download(url, dest)
+        return dest
+    }
+}
 
 function downloadMediaFiles(
     url: string,
@@ -60,4 +95,4 @@ function getMediaType(path: string) {
     return 'unknown'
 }
 
-export { downloadMediaFiles, cleanMediaFiles, getMediaType }
+export { downloadMediaFiles, cleanMediaFiles, getMediaType, plainDownloadMediaFile }

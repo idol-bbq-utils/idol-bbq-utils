@@ -12,6 +12,10 @@ const QUERY_CARD_VOTE_PATTERN = 'div[data-testid="cardPoll"]'
 const QUERY_VIDEO_PATTERN_2 = 'div[data-testid="videoComponent"]'
 const QUERY_REF_MEDIA_PATTERN = 'div[data-testid="testCondensedMedia"]'
 
+const QUERY_SHOW_MORE_PATTERN = 'div[data-testid="tweet-text-show-more-link"]'
+
+const QUERY_REF_ARTICLE = 'div[aria-labelledby] > div + div div[role="link"][tabindex="0"]'
+
 export async function tweetArticleParser(article: ElementHandle<HTMLElement>): Promise<ITweetArticle | undefined> {
     const article_type = await getArticleTypeEnum(article)
     if ([ArticleTypeEnum.FORWARD, ArticleTypeEnum.TWEET].includes(article_type)) {
@@ -46,13 +50,26 @@ export async function tweetArticleParser(article: ElementHandle<HTMLElement>): P
 
 async function refTweetParser(article: ElementHandle<HTMLElement>, article_type: ArticleTypeEnum) {
     let resolved_article = await singleTweetParser(article, article_type)
+    const { ref: ref_article, cur_has_media: has_media } = await getRefTweet(article)
+    // for ref tweet
+    let ref = ref_article && (await singleTweetParser(ref_article, ArticleTypeEnum.TWEET))
+    return {
+        ...resolved_article,
+        // this is a little tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
+        has_media,
+        ref,
+    }
+}
 
+async function getRefTweet(
+    article: ElementHandle<HTMLElement>,
+): Promise<{ ref: ElementHandle<HTMLElement> | null; cur_has_media: boolean }> {
     const next = await article?.$('div[aria-labelledby] > div')
     const next_has_meta = await next?.$(QUERY_META_PATTERN)
     let ref_article = null
     let has_media = false
-    if (next_has_meta) {
-        ref_article = next
+    if (next && next_has_meta) {
+        ref_article = await next.$('div[role="link"][tabindex="0"]')
     } else {
         has_media = (
             await Promise.all([
@@ -62,17 +79,11 @@ async function refTweetParser(article: ElementHandle<HTMLElement>, article_type:
                 next?.$(QUERY_VIDEO_PATTERN_2),
             ])
         ).some((e) => !!e)
-        ref_article = await article?.$('div[aria-labelledby] > div + div')
+        ref_article = await article?.$(QUERY_REF_ARTICLE)
     }
-
-    // for ref tweet
-    let ref = ref_article && (await singleTweetParser(ref_article, ArticleTypeEnum.TWEET))
-
     return {
-        ...resolved_article,
-        // this is a little tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
-        has_media: has_media && !next_has_meta,
-        ref,
+        ref: ref_article,
+        cur_has_media: has_media && !next_has_meta,
     }
 }
 
@@ -247,3 +258,6 @@ async function tweetCardParser(article: ElementHandle<HTMLElement>): Promise<ITw
         }
     }
 }
+
+export { QUERY_REF_ARTICLE }
+export { getRefTweet }
