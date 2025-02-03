@@ -5,9 +5,7 @@ FROM node:20-slim AS base
 
 FROM base AS builder
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN npm install -g pnpm@9.12.2
 
 RUN apt-get update \
     && apt-get install -y openssl
