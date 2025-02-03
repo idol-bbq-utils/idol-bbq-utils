@@ -1,6 +1,7 @@
 import { log } from '@/config'
 import { ChatSession, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai'
 import { BaseTranslator } from './base'
+import { ITranslatorConfig } from '@/types/bot'
 
 class Gemini extends BaseTranslator {
     private genAI
@@ -8,7 +9,7 @@ class Gemini extends BaseTranslator {
     private prompt: string
     private chat: ChatSession | undefined
     public name = 'Gemini'
-    constructor(api_key: string, prompt?: string) {
+    constructor(api_key: string, config?: ITranslatorConfig) {
         super()
         this.genAI = new GoogleGenerativeAI(api_key)
         this.model = this.genAI.getGenerativeModel({
@@ -32,7 +33,7 @@ class Gemini extends BaseTranslator {
                 },
             ],
         })
-        this.prompt = prompt || this.TRANSLATION_PROMPT
+        this.prompt = config?.prompt || this.TRANSLATION_PROMPT
     }
     public async init() {
         const chat = await this.model.startChat({

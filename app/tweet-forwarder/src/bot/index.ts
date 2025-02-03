@@ -16,6 +16,7 @@ import { QQForwarder } from '@/middleware/forwarder/qq'
 import { BigModelGLM4Flash } from '@/middleware/translator/bigmodel'
 import { Doubao128KPro } from '@/middleware/translator/doubao'
 import { DeepSeekV3 } from '@/middleware/translator/deepseek'
+import { OpenaiLike } from '@/middleware/translator/openai'
 
 export class FWDBot {
     public name: string
@@ -72,16 +73,19 @@ export class FWDBot {
             if (website.config?.translator) {
                 const _translator = website.config.translator
                 if (_translator.type === 'gemini') {
-                    translator = new Gemini(_translator.key, _translator.prompt)
+                    translator = new Gemini(_translator.api_key, _translator.config)
                 }
                 if (_translator.type === 'glm-4-flash') {
-                    translator = new BigModelGLM4Flash(_translator.key, _translator.prompt)
+                    translator = new BigModelGLM4Flash(_translator.api_key, _translator.config)
                 }
                 if (_translator.type === 'doubao-pro-128k') {
-                    translator = new Doubao128KPro(_translator.key, _translator.model_id || '', _translator.prompt)
+                    translator = new Doubao128KPro(_translator.api_key, _translator.config)
                 }
                 if (_translator.type === 'deepseek-v3') {
-                    translator = new DeepSeekV3(_translator.key, _translator.model_id || '', _translator.prompt)
+                    translator = new DeepSeekV3(_translator.api_key, _translator.config)
+                }
+                if (_translator.type === 'openai') {
+                    translator = new OpenaiLike(_translator.api_key, _translator.config)
                 }
             }
             await translator?.init()
