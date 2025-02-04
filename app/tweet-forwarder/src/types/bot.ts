@@ -91,6 +91,7 @@ interface IBotConfig {
     cfg_websites?: IWebsiteConfig
     cfg_forward_to?: IForwardToConfig
     forward_to?: Array<IForwardTo>
+    forward_to_override?: boolean
 }
 interface IBot {
     name: string

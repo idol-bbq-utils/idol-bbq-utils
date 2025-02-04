@@ -13,10 +13,10 @@ import { pRetry } from '@idol-bbq-utils/utils'
 import { IWebsiteConfig, SourcePlatformEnum } from '@/types/bot'
 import { cleanMediaFiles, downloadMediaFiles, getMediaType, plainDownloadMediaFile } from '../media'
 
-type TaskType = 'tweet' | 'reply' | 'follows'
+type TaskType = 'tweet' | 'reply' | 'follows' | 'follows-local'
 type TaskResult<T extends TaskType> = T extends 'tweet'
     ? Exclude<Awaited<ReturnType<typeof X_DB.saveTweet>>, undefined>
-    : T extends 'follows'
+    : T extends 'follows' | 'follows-local'
       ? {
             profile: Awaited<ReturnType<typeof X_DB.saveFollows>>
             recent_profiles: Awaited<ReturnType<typeof X_DB.getPreviousNFollows>>
@@ -107,7 +107,7 @@ class XCollector extends Collector {
             }
         }
 
-        if (type === 'follows') {
+        if (type === 'follows' || type === 'follows-local') {
             let collection = [] as Array<TaskResult<'follows'>>
             for (const path of _paths) {
                 try {
@@ -208,6 +208,13 @@ class XCollector extends Collector {
             )
             const recent_profiles = await X_DB.getPreviousNFollows(saved_profile.u_id, 5)
             return [{ profile: saved_profile, recent_profiles }] as Array<TaskResult<T>>
+        }
+
+        if (type === 'follows-local') {
+            log.info(`${prefix} [${this.bot_name}] [${this.name}] grab follows locally from database for ${url}`)
+            const user_id = `@${url.split('/').pop()}`
+            const follows = await X_DB.getPreviousNFollows(user_id, 5)
+            return [{ profile: follows[0], recent_profiles: follows }] as Array<TaskResult<T>>
         }
 
         return []
@@ -372,7 +379,7 @@ class XCollector extends Collector {
         }
 
         // unique logic
-        if (type === 'follows') {
+        if (type === 'follows' || type === 'follows-local') {
             const collection = items as Array<TaskResult<'follows'>>
             let prepare_to_forward = []
             for (let item of collection) {
