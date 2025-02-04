@@ -17,7 +17,7 @@ async function main() {
             new FWDBot(_b.name, _b.websites, {
                 ...fwd_app.config,
                 ..._b.config,
-                forward_to: (fwd_app.config.forward_to ?? []).concat(_b.config.forward_to ?? []),
+                forward_to: (fwd_app.config.forward_to ?? []).concat(_b.config?.forward_to ?? []),
             }),
     )
     for (const bot of bots) {

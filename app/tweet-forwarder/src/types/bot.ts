@@ -95,7 +95,7 @@ interface IBotConfig {
 interface IBot {
     name: string
     websites: Array<IWebsite>
-    config: IBotConfig
+    config?: IBotConfig
 }
 export { ForwardPlatformEnum, SourcePlatformEnum }
 export type { IBot, IBotConfig, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType, ITranslatorConfig }
