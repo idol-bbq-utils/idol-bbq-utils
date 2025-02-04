@@ -27,11 +27,11 @@ export class FWDBot {
     private collectors: Map<string, Collector> = new Map()
 
     private jobs: Array<CronJob>
-    constructor(name: string, websites: Array<IWebsite>, forward_to: Array<IForwardTo>, config: IBotConfig = {}) {
+    constructor(name: string, websites: Array<IWebsite>, config: IBotConfig = {}) {
         this.name = name
         this.websites = websites
         this.config = config
-        for (const forward of forward_to ?? []) {
+        for (const forward of config.forward_to ?? []) {
             forward.config = {
                 ...this.config.cfg_forward_to,
                 ...forward.config,

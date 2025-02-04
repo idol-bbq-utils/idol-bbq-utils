@@ -90,11 +90,11 @@ interface IForwardTo {
 interface IBotConfig {
     cfg_websites?: IWebsiteConfig
     cfg_forward_to?: IForwardToConfig
+    forward_to?: Array<IForwardTo>
 }
 interface IBot {
     name: string
     websites: Array<IWebsite>
-    forward_to: Array<IForwardTo>
     config: IBotConfig
 }
 export { ForwardPlatformEnum, SourcePlatformEnum }
