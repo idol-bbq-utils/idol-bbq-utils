@@ -102,6 +102,7 @@ async function save(tweet: ITweetArticle, ref?: number) {
             tweet_link: tweet.tweet_link,
             has_media: tweet.has_media,
             ref: ref,
+            extra: tweet.extra ? (tweet.extra as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
         },
     })
     return item

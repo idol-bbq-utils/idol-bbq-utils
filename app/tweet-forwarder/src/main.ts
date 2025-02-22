@@ -14,9 +14,16 @@ async function main() {
     console.log('Browser launched')
     const bots = fwd_app.bots.map(
         (_b) =>
-            new FWDBot(_b.name, _b.websites, _b.forward_to, {
+            new FWDBot(_b.name, _b.websites, {
                 ...fwd_app.config,
                 ..._b.config,
+                // check if we should merge forward_to
+                forward_to: _b.config?.forward_to_merge
+                    ? (fwd_app.config.forward_to ?? []).concat(_b.config?.forward_to ?? [])
+                    : // override if forward_to is set
+                      _b.config?.forward_to
+                      ? _b.config.forward_to
+                      : fwd_app.config.forward_to,
             }),
     )
     for (const bot of bots) {

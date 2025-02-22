@@ -28,6 +28,7 @@ model x_tweet {
   has_media     Boolean?
   ref           Int?
   translation   String?
+  extra         Json?
   x_forward     x_forward[]
   x_tweet       x_tweet?    @relation("x_tweetTox_tweet", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_x_tweet x_tweet[]   @relation("x_tweetTox_tweet")

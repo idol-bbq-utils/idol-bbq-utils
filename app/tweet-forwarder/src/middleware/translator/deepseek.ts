@@ -1,6 +1,7 @@
 import { log } from '@/config'
 import { BaseTranslator } from './base'
 import axios from 'axios'
+import { ITranslatorConfig } from '@/types/bot'
 
 const RECOMMEND_CONFIGURATIONS = {
     temperature: 1.3, // recommended for translation. ref: https://api-docs.deepseek.com/quick_start/parameter_settings
@@ -16,11 +17,11 @@ class DeepSeekV3 extends BaseDeepSeek {
     private prompt: string
     private api_key: string
     private model_id: string
-    constructor(api_key: string, model_id?: string, prompt?: string) {
+    constructor(api_key: string, config?: ITranslatorConfig) {
         super()
         this.api_key = api_key
-        this.model_id = model_id || 'deepseek-chat'
-        this.prompt = prompt || this.TRANSLATION_PROMPT
+        this.model_id = config?.model_id || 'deepseek-chat'
+        this.prompt = config?.prompt || this.TRANSLATION_PROMPT
     }
     public async init() {
         log.info(`[DeepSeek] ${this.name} model loaded with prompt ${this.prompt}`)

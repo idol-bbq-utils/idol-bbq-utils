@@ -2,9 +2,19 @@ type ByteDance_LLM = 'doubao-pro-128k'
 type BigModel_LLM = 'glm-4-flash'
 type Google_LLM = 'gemini'
 type Deepseek_LLM = 'deepseek-v3'
-type TranslatorType = Google_LLM | BigModel_LLM | ByteDance_LLM | Deepseek_LLM
+
+type OpenAI_Like_LLM = 'openai'
+type TranslatorType = Google_LLM | BigModel_LLM | ByteDance_LLM | Deepseek_LLM | OpenAI_Like_LLM
 
 type MediaStorageType = 'no-storage'
+
+interface ITranslatorConfig {
+    prompt?: string
+    base_url?: string
+    name?: string
+    model_id?: string
+    other_config?: Record<string, any>
+}
 
 interface IWebsiteConfig {
     user_agent?: string
@@ -16,16 +26,17 @@ interface IWebsiteConfig {
     }
     translator?: {
         type: TranslatorType
-        key: string
-        prompt?: string
-        model_id?: string
+        api_key: string
+        config?: ITranslatorConfig
     }
     media?: {
         type: MediaStorageType
-        gallery_dl: {
-            path: string
-            cookie_file?: string
-        }
+        gallery_dl:
+            | {
+                  path?: string
+                  cookie_file?: string
+              }
+            | boolean
         // TODO
         // ffmpeg?: {
         //     path: string
@@ -79,12 +90,13 @@ interface IForwardTo {
 interface IBotConfig {
     cfg_websites?: IWebsiteConfig
     cfg_forward_to?: IForwardToConfig
+    forward_to?: Array<IForwardTo>
+    forward_to_merge?: boolean
 }
 interface IBot {
     name: string
     websites: Array<IWebsite>
-    forward_to: Array<IForwardTo>
-    config: IBotConfig
+    config?: IBotConfig
 }
 export { ForwardPlatformEnum, SourcePlatformEnum }
-export type { IBot, IBotConfig, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType }
+export type { IBot, IBotConfig, IWebsite, IWebsiteConfig, IForwardTo, MediaStorageType, ITranslatorConfig }

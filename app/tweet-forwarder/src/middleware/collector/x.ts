@@ -1,4 +1,4 @@
-import { ArticleTypeEnum } from '@idol-bbq-utils/spider/types'
+import { ArticleTypeEnum, ITweetCard, ITweetExtraWrapper, TweetExtraTypeEnum } from '@idol-bbq-utils/spider/types'
 import { Collector } from './base'
 import { X } from '@idol-bbq-utils/spider'
 import { X as X_DB } from '@/db'
@@ -11,12 +11,12 @@ import { delay, formatTime } from '@/utils/time'
 import { BaseTranslator } from '../translator/base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { IWebsiteConfig, SourcePlatformEnum } from '@/types/bot'
-import { cleanMediaFiles, downloadMediaFiles, getMediaType } from '../media'
+import { cleanMediaFiles, downloadMediaFiles, getMediaType, plainDownloadMediaFile } from '../media'
 
-type TaskType = 'tweet' | 'reply' | 'follows'
+type TaskType = 'tweet' | 'reply' | 'follows' | 'follows-local'
 type TaskResult<T extends TaskType> = T extends 'tweet'
     ? Exclude<Awaited<ReturnType<typeof X_DB.saveTweet>>, undefined>
-    : T extends 'follows'
+    : T extends 'follows' | 'follows-local'
       ? {
             profile: Awaited<ReturnType<typeof X_DB.saveFollows>>
             recent_profiles: Awaited<ReturnType<typeof X_DB.getPreviousNFollows>>
@@ -107,7 +107,7 @@ class XCollector extends Collector {
             }
         }
 
-        if (type === 'follows') {
+        if (type === 'follows' || type === 'follows-local') {
             let collection = [] as Array<TaskResult<'follows'>>
             for (const path of _paths) {
                 try {
@@ -210,6 +210,13 @@ class XCollector extends Collector {
             return [{ profile: saved_profile, recent_profiles }] as Array<TaskResult<T>>
         }
 
+        if (type === 'follows-local') {
+            log.info(`${prefix} [${this.bot_name}] [${this.name}] grab follows locally from database for ${url}`)
+            const user_id = `@${url.split('/').pop()}`
+            const follows = await X_DB.getPreviousNFollows(user_id, 5)
+            return [{ profile: follows[0], recent_profiles: follows }] as Array<TaskResult<T>>
+        }
+
         return []
     }
     public async forward<T extends TaskType>(
@@ -257,6 +264,22 @@ class XCollector extends Collector {
                         articles.map(async (article) => {
                             let metaline = this.formatMetaline(article)
                             let format_article = `${metaline}\n\n`
+                            // add extra content for translated
+                            // side effect
+                            if (article.extra) {
+                                if (
+                                    (article.extra as unknown as ITweetExtraWrapper<ITweetCard>).type ===
+                                    TweetExtraTypeEnum.CARD
+                                ) {
+                                    const card = (article.extra as unknown as ITweetExtraWrapper<ITweetCard>).data
+                                    article.text += `\n${'~'.repeat(12)}\n`
+                                    article.text += `${card.content}\n`
+                                    if (card.link) {
+                                        article.text += `${card.link}\n`
+                                    }
+                                }
+                            }
+
                             if (config?.translator) {
                                 let translated_article = await X_DB.getTranslation(article.id)
                                 if (!translated_article?.translation) {
@@ -303,10 +326,17 @@ class XCollector extends Collector {
                 let images = [] as string[]
                 if (config?.media) {
                     for (const article of articles) {
-                        if (article.has_media && article.tweet_link) {
+                        if (article.has_media && article.tweet_link && config.media.gallery_dl) {
                             images = images.concat(
                                 downloadMediaFiles(`https://x.com${article.tweet_link}`, config.media.gallery_dl),
                             )
+                        }
+                        const extra = article.extra as unknown as ITweetExtraWrapper<ITweetCard> | null
+                        if (extra && extra.type === TweetExtraTypeEnum.CARD && extra.data.media) {
+                            const img = await plainDownloadMediaFile(extra.data.media)
+                            if (img) {
+                                images.push(img)
+                            }
                         }
                     }
                 }
@@ -349,7 +379,7 @@ class XCollector extends Collector {
         }
 
         // unique logic
-        if (type === 'follows') {
+        if (type === 'follows' || type === 'follows-local') {
             const collection = items as Array<TaskResult<'follows'>>
             let prepare_to_forward = []
             for (let item of collection) {

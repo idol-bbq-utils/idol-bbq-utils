@@ -1,5 +1,5 @@
 import { ElementHandle } from 'puppeteer-core'
-import { ArticleTypeEnum, ITweetArticle, TimelineTypeEnum } from '@/websites/x/types'
+import { ArticleTypeEnum, ITweetArticle, ITweetCard, TimelineTypeEnum, TweetExtraTypeEnum } from '@/websites/x/types'
 import { articleElementParser } from './element'
 
 const QUERY_TEXT_PATTERN = 'div[data-testid="tweetText"]'
@@ -11,6 +11,10 @@ const QUERY_CARD_VOTE_PATTERN = 'div[data-testid="cardPoll"]'
 
 const QUERY_VIDEO_PATTERN_2 = 'div[data-testid="videoComponent"]'
 const QUERY_REF_MEDIA_PATTERN = 'div[data-testid="testCondensedMedia"]'
+
+const QUERY_SHOW_MORE_PATTERN = 'div[data-testid="tweet-text-show-more-link"]'
+
+const QUERY_REF_ARTICLE = 'div[aria-labelledby] > div + div div[role="link"][tabindex="0"]'
 
 export async function tweetArticleParser(article: ElementHandle<HTMLElement>): Promise<ITweetArticle | undefined> {
     const article_type = await getArticleTypeEnum(article)
@@ -46,13 +50,26 @@ export async function tweetArticleParser(article: ElementHandle<HTMLElement>): P
 
 async function refTweetParser(article: ElementHandle<HTMLElement>, article_type: ArticleTypeEnum) {
     let resolved_article = await singleTweetParser(article, article_type)
+    const { ref: ref_article, cur_has_media: has_media } = await getRefTweet(article)
+    // for ref tweet
+    let ref = ref_article && (await singleTweetParser(ref_article, ArticleTypeEnum.TWEET))
+    return {
+        ...resolved_article,
+        // this is a little tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
+        has_media,
+        ref,
+    }
+}
 
+async function getRefTweet(
+    article: ElementHandle<HTMLElement>,
+): Promise<{ ref: ElementHandle<HTMLElement> | null; cur_has_media: boolean }> {
     const next = await article?.$('div[aria-labelledby] > div')
     const next_has_meta = await next?.$(QUERY_META_PATTERN)
     let ref_article = null
     let has_media = false
-    if (next_has_meta) {
-        ref_article = next
+    if (next && next_has_meta) {
+        ref_article = await next.$('div[role="link"][tabindex="0"]')
     } else {
         has_media = (
             await Promise.all([
@@ -62,21 +79,18 @@ async function refTweetParser(article: ElementHandle<HTMLElement>, article_type:
                 next?.$(QUERY_VIDEO_PATTERN_2),
             ])
         ).some((e) => !!e)
-        ref_article = await article?.$('div[aria-labelledby] > div + div')
+        ref_article = await article?.$(QUERY_REF_ARTICLE)
     }
-
-    // for ref tweet
-    let ref = ref_article && (await singleTweetParser(ref_article, ArticleTypeEnum.TWEET))
-
     return {
-        ...resolved_article,
-        // this is a little tricky, if next has meta, then it is a ref tweet, otherwise it is photo , video or something
-        has_media: has_media && !next_has_meta,
-        ref,
+        ref: ref_article,
+        cur_has_media: has_media && !next_has_meta,
     }
 }
 
-async function singleTweetParser(article: ElementHandle<HTMLElement>, article_type: ArticleTypeEnum) {
+async function singleTweetParser(
+    article: ElementHandle<HTMLElement>,
+    article_type: ArticleTypeEnum,
+): Promise<ITweetArticle> {
     const [raw_meta, texts] = await Promise.all([
         await article.$(QUERY_META_PATTERN),
         await (await article.$(`${QUERY_TEXT_PATTERN}`))?.$$(':scope > *'),
@@ -98,6 +112,8 @@ async function singleTweetParser(article: ElementHandle<HTMLElement>, article_ty
         ])
     ).some((e) => !!e)
 
+    const card = await tweetCardParser(article)
+
     const status_link = tweet_links?.[0]?.split('/').slice(0, 4).join('/')
     return {
         ...meta,
@@ -105,6 +121,7 @@ async function singleTweetParser(article: ElementHandle<HTMLElement>, article_ty
         type: article_type,
         has_media: has_media_by_link || !!has_media_by_selector,
         tweet_link: status_link,
+        extra: card ? { type: TweetExtraTypeEnum.CARD, data: card } : undefined,
     }
 }
 
@@ -219,3 +236,28 @@ async function getArticleTypeEnum(article: ElementHandle<Element>): Promise<Arti
     // TODO reply
     return ArticleTypeEnum.TWEET
 }
+
+async function tweetCardParser(article: ElementHandle<HTMLElement>): Promise<ITweetCard | undefined> {
+    const [card, source, link] = await Promise.all([
+        article?.$(`div[aria-labelledby] > ${QUERY_CARD_PATTERN}`),
+        article?.$(`div[aria-labelledby] > ${QUERY_CARD_PATTERN} + a`),
+        article?.$(`div[aria-labelledby] > ${QUERY_CARD_PATTERN} a`),
+    ])
+    const [_texts, _source, _link, _img] = await Promise.all([
+        card?.evaluate((e) => e.textContent),
+        source?.evaluate((e) => e.textContent),
+        link?.evaluate((e) => e.getAttribute('href')),
+        card?.$('img'),
+    ])
+    const img_url = await _img?.evaluate((e) => e.getAttribute('src'))
+    if (card) {
+        return {
+            content: [_texts, _source].filter((e) => e !== undefined).join('\n'),
+            media: img_url || undefined,
+            link: _link || undefined,
+        }
+    }
+}
+
+export { QUERY_REF_ARTICLE }
+export { getRefTweet }

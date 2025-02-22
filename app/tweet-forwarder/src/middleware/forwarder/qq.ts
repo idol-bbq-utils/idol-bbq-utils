@@ -58,7 +58,7 @@ class QQForwarder extends Forwarder {
             .map((i) => ({
                 type: 'image',
                 data: {
-                    file: `file:///${i.path}`,
+                    file: `file://${i.path}`,
                 },
             }))
         let videos: Array<{
@@ -71,7 +71,7 @@ class QQForwarder extends Forwarder {
             .map((i) => ({
                 type: 'video',
                 data: {
-                    file: `file:///${i.path}`,
+                    file: `file://${i.path}`,
                 },
             }))
         log.debug(`pics: ${pics}`)

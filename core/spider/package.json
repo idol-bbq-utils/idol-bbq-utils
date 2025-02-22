@@ -39,6 +39,10 @@
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
+        "jsonpath": "^1.1.1",
         "puppeteer-core": "^23.6.0"
+    },
+    "devDependencies": {
+        "@types/jsonpath": "^0.2.4"
     }
 }
