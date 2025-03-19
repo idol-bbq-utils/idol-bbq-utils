@@ -1,3 +1,6 @@
+/**
+ * @deprecated
+ */
 enum TweetTabsEnum {
     TWEETS = 0,
     REPLIES,
@@ -76,3 +79,5 @@ export {
     ITweetExtraWrapper,
 }
 export type { ITweetArticle, ITweetProfile, ITweetCard }
+
+/******* graph ql *******/

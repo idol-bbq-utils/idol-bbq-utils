@@ -2,6 +2,7 @@ import { Page } from 'puppeteer-core'
 import { ITweetArticle, ITweetProfile, TweetTabsEnum } from '../types'
 import { tweetArticleParser, tweetReplyParser } from './article'
 import { getTimelineType } from './timeline'
+export * as GraphQL from './graphql'
 
 /**
  * The URL like https://x.com/username
