@@ -5,7 +5,8 @@ import { getTimelineType } from './timeline'
 export * as GraphQL from './graphql'
 
 /**
- * The URL like https://x.com/username
+ * @param url https://x.com/username
+ * @deprecated
  */
 export async function grabTweets(
     page: Page,
@@ -41,6 +42,10 @@ export async function grabTweets(
     return articles?.filter((a) => a !== undefined) || []
 }
 
+/**
+ * @param url https://x.com/username
+ * @deprecated
+ */
 export async function grabReply(page: Page, url: string): Promise<Array<Array<ITweetArticle>>> {
     await page.setViewport({ width: 873, height: 1500 })
     await page.goto(url)
@@ -61,6 +66,10 @@ export async function grabReply(page: Page, url: string): Promise<Array<Array<IT
     return res
 }
 
+/**
+ * @param url https://x.com/username
+ * @deprecated
+ */
 export async function grabFollowsNumer(page: Page, url: string): Promise<ITweetProfile> {
     await page.goto(url)
     await page.setViewport({ width: 1080, height: 1024 })

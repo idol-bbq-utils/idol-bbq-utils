@@ -1,4 +1,5 @@
-import { TaskType } from '@/types'
+import { Platform, TaskType, TaskTypeResult } from '@/types'
+import { Page } from 'puppeteer-core'
 
 interface SpiderConstructor {
     _VALID_URL: RegExp
@@ -7,7 +8,12 @@ interface SpiderConstructor {
 
 abstract class BaseSpider {
     static _VALID_URL: RegExp
-    abstract crawl(url: string, task_type?: TaskType): Promise<any>
+    BASE_URL: string = ''
+    public abstract crawl<T extends TaskType>(
+        url: string,
+        page: Page,
+        task_type?: T,
+    ): Promise<Array<TaskTypeResult<T, Platform>>>
 
     _match_valid_url(url: string, matcher: SpiderConstructor): RegExpExecArray | null {
         return matcher._VALID_URL.exec(url)
