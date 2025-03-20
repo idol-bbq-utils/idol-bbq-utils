@@ -23,5 +23,5 @@ const createLogger = (config: winston.LoggerOptions) =>
         ...config,
     })
 
-export { default_log, createLogger, Logger, winston }
+export { default_log, createLogger, Logger, winston, format }
 export default default_log

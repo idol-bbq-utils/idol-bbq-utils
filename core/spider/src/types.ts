@@ -28,28 +28,38 @@ type TaskTypeResult<T extends TaskType, P extends Platform> = T extends 'article
     : T extends 'follows'
       ? string
       : never
+
+type MeidaType = 'photo' | 'video'
+interface GenericMediaInfo {
+    type: MeidaType
+    /**
+     * best quality url
+     */
+    url: string
+    alt?: string
+}
 interface GenericArticle<T extends Platform> {
     platform: T
     /**
      * article id from the platform
      */
     a_id: string
-    user_id: string
-    user_name: string
-    published_at: number
+    u_id: string
+    username: string
+    created_at: number
     content: string
     url: string
     type: ArticleType<T>
     /**
      * reference to the original article: `a_id`
      */
-    ref: string
-    has_media: boolean
+    ref: GenericArticle<T> | null
+    media: Array<GenericMediaInfo> | null
     /**
      * extra data for the article related to the platform
      */
-    extra: ArticleExtractType<T>
+    extra: ArticleExtractType<T> | null
 }
 
-export { TaskType, Platform }
-export type { GenericArticle, TaskTypeResult }
+export { Platform }
+export type { GenericArticle, TaskTypeResult, TaskType, MeidaType }

@@ -8,6 +8,7 @@ export * from './types'
 
 export class XBaseSpider extends BaseSpider {
     static _BASE_VALID_URL = /(https:\/\/)?(www\.)?x\.com\//
+    BASE_URL: string = 'https://x.com/'
 
     // @ts-ignore
     async crawl() {
@@ -19,6 +20,7 @@ export class XTimeLineSpider extends BaseSpider {
     // extends from XBaseSpider regex
     static _VALID_URL = new RegExp(XBaseSpider._BASE_VALID_URL.source + /(?<id>\w+)/.source)
     BASE_URL: string = 'https://x.com/'
+    NAME: string = 'X TimeLine Spider'
 
     async crawl<T extends TaskType>(
         url: string,
@@ -29,9 +31,17 @@ export class XTimeLineSpider extends BaseSpider {
         if (!result) {
             throw new Error('Invalid URL')
         }
-        const { id } = result
+
         if (task_type === 'article') {
-            return (await GraphQL.grabTweets(page, url)) as Array<TaskTypeResult<T, Platform.X>>
+            let res = []
+            this.log?.info('Trying to grab tweets.')
+            res = await GraphQL.grabTweets(page, url)
+            this.log?.info('Trying to grab replies.')
+            const replies = await GraphQL.grabReplies(
+                page,
+                super._match_valid_url(url, XTimeLineSpider)?.[0] + '/with_replies',
+            )
+            return res.concat(replies) as Array<TaskTypeResult<T, Platform.X>>
         }
         if (task_type === 'follows') {
             return [''] as Array<TaskTypeResult<T, Platform.X>>

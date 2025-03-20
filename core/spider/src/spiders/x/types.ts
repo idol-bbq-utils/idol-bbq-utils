@@ -13,9 +13,9 @@ enum ArticleTypeEnum {
      *
      */
     TWEET = 'tweet',
-    FORWARD = 'forward',
-    REF = 'ref',
-    REPLY = 'reply',
+    RETWEET = 'retweet',
+    QUOTED = 'quoted',
+    CONVERSATION = 'conversation',
 }
 
 enum TimelineTypeEnum {

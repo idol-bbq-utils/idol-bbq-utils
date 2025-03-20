@@ -18,12 +18,12 @@ const QUERY_REF_ARTICLE = 'div[aria-labelledby] > div + div div[role="link"][tab
 
 export async function tweetArticleParser(article: ElementHandle<HTMLElement>): Promise<ITweetArticle | undefined> {
     const article_type = await getArticleTypeEnum(article)
-    if ([ArticleTypeEnum.FORWARD, ArticleTypeEnum.TWEET].includes(article_type)) {
+    if ([ArticleTypeEnum.RETWEET, ArticleTypeEnum.TWEET].includes(article_type)) {
         let resolved_article = await singleTweetParser(article, article_type)
 
         let forward_by = undefined
         let forward_maybe_ref = undefined
-        if (article_type === ArticleTypeEnum.FORWARD) {
+        if (article_type === ArticleTypeEnum.RETWEET) {
             const forwarder = await article.$('span[data-testid="socialContext"] span:not(:has(span)')
             forward_by = (await forwarder?.evaluate((e) => e.textContent)) || undefined
             // maybe also ref
@@ -31,19 +31,19 @@ export async function tweetArticleParser(article: ElementHandle<HTMLElement>): P
             const next_has_meta = await next?.$(QUERY_META_PATTERN)
             if (next_has_meta) {
                 forward_maybe_ref = true
-                resolved_article = await refTweetParser(article, ArticleTypeEnum.REF)
+                resolved_article = await refTweetParser(article, ArticleTypeEnum.QUOTED)
             }
         }
 
         return {
             ...resolved_article,
-            type: forward_maybe_ref ? ArticleTypeEnum.REF : article_type,
+            type: forward_maybe_ref ? ArticleTypeEnum.QUOTED : article_type,
             forward_by,
         }
     }
 
     // ref tweet
-    if (article_type === ArticleTypeEnum.REF) {
+    if (article_type === ArticleTypeEnum.QUOTED) {
         return await refTweetParser(article, article_type)
     }
 }
@@ -176,7 +176,7 @@ export async function tweetReplyParser(
 
                     reply_articles[reply_articles.length - 1].push({
                         ...article,
-                        type: ArticleTypeEnum.REPLY,
+                        type: ArticleTypeEnum.CONVERSATION,
                     })
 
                     const has_line = await item.$('article div[data-testid="Tweet-User-Avatar"] + div')
@@ -226,12 +226,12 @@ async function tweetMetaParser(
 async function getArticleTypeEnum(article: ElementHandle<Element>): Promise<ArticleTypeEnum> {
     const is_forward_tweet = await article.$('span[data-testid="socialContext"]')
     if (is_forward_tweet) {
-        return ArticleTypeEnum.FORWARD
+        return ArticleTypeEnum.RETWEET
     }
 
     const is_ref_tweet = await article.$$(QUERY_TEXT_PATTERN)
     if (is_ref_tweet?.length > 1) {
-        return ArticleTypeEnum.REF
+        return ArticleTypeEnum.QUOTED
     }
     // TODO reply
     return ArticleTypeEnum.TWEET

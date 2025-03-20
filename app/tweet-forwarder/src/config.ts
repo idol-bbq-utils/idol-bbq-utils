@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import YAML from 'yaml'
 import { IBot, IBotConfig } from './types/bot'
-import { createLogger, Logger, winston } from '@idol-bbq-utils/log'
+import { createLogger, Logger, winston, format } from '@idol-bbq-utils/log'
 import dayjs from 'dayjs'
 
 const CACHE_DIR_ROOT = process.env.CACHE_DIR || `${os.tmpdir()}`
@@ -24,6 +24,17 @@ const fwd_app = new FWDApp()
 const log: Logger = createLogger({
     defaultMeta: { service: 'tweet-forwarder' },
     level: 'debug',
+    format: format.combine(
+        format.colorize(),
+        format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
+        format.printf(({ message, timestamp, level, label, service, childService }) => {
+            const metas = [service, childService, label, level]
+                .filter(Boolean)
+                .map((meta) => `[${meta}]`)
+                .join(' ')
+            return `${timestamp} ${metas}: ${message}`
+        }),
+    ),
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({

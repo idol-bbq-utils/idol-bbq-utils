@@ -103,6 +103,9 @@ importers:
 
   core/spider:
     dependencies:
+      '@idol-bbq-utils/log':
+        specifier: workspace:^
+        version: link:../log
       jsonpath-plus:
         specifier: ^10.2.0
         version: 10.2.0
