@@ -6,11 +6,13 @@
         "username": "X",
         "created_at": 1741990266000,
         "content": "https://t.co/UbTr8FtsKP",
-        "url": "/X/status/1900671054097359321",
+        "url": "https://x.com/X/status/1900671054097359321",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -19,11 +21,13 @@
         "username": "X",
         "created_at": 1741381719000,
         "content": "https://t.co/JrJeqk6IQ2",
-        "url": "/X/status/1898118621370437738",
+        "url": "https://x.com/X/status/1898118621370437738",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -32,11 +36,13 @@
         "username": "X",
         "created_at": 1741368575000,
         "content": "you can just d̶o̶ ̶t̶h̶i̶n̶g̶s̶ ask @grok",
-        "url": "/X/status/1898063490314547671",
+        "url": "https://x.com/X/status/1898063490314547671",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -45,11 +51,13 @@
         "username": "X",
         "created_at": 1740779415000,
         "content": "https://t.co/o403NmElun",
-        "url": "/X/status/1895592375830847882",
+        "url": "https://x.com/X/status/1895592375830847882",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -58,7 +66,7 @@
         "username": "X",
         "created_at": 1740670243000,
         "content": "breakfast snack wraps when?",
-        "url": "/X/status/1895134475698262296",
+        "url": "https://x.com/X/status/1895134475698262296",
         "type": "quoted",
         "ref": {
             "platform": 1,
@@ -67,14 +75,18 @@
             "username": "McDonald's",
             "created_at": 1740665026000,
             "content": "breakfast",
-            "url": "/McDonalds/status/1895112594500833662",
+            "url": "https://x.com/McDonalds/status/1895112594500833662",
             "type": "tweet",
             "ref": null,
             "media": null,
-            "extra": null
+            "has_media": false,
+            "extra": null,
+            "u_avatar": "https://pbs.twimg.com/profile_images/1895111998205014016/H07OaGX4.jpg"
         },
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -83,11 +95,13 @@
         "username": "X",
         "created_at": 1740173163000,
         "content": "https://t.co/KxhpadY1qA",
-        "url": "/X/status/1893049568805486621",
+        "url": "https://x.com/X/status/1893049568805486621",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -96,7 +110,7 @@
         "username": "X",
         "created_at": 1740169166000,
         "content": ".@grok",
-        "url": "/X/status/1893032806290272324",
+        "url": "https://x.com/X/status/1893032806290272324",
         "type": "quoted",
         "ref": {
             "platform": 1,
@@ -105,14 +119,18 @@
             "username": "Doritos",
             "created_at": 1740157201000,
             "content": "Tag someone who is a snack",
-            "url": "/Doritos/status/1892982619689677289",
+            "url": "https://x.com/Doritos/status/1892982619689677289",
             "type": "tweet",
             "ref": null,
             "media": null,
-            "extra": null
+            "has_media": false,
+            "extra": null,
+            "u_avatar": "https://pbs.twimg.com/profile_images/1897735344256163841/pbaqrq4f.jpg"
         },
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -121,7 +139,7 @@
         "username": "X",
         "created_at": 1740021634000,
         "content": "Grok 3 🤝 Grok free",
-        "url": "/X/status/1892414013729894507",
+        "url": "https://x.com/X/status/1892414013729894507",
         "type": "quoted",
         "ref": {
             "platform": 1,
@@ -130,7 +148,7 @@
             "username": "xAI",
             "created_at": 1740018324000,
             "content": "This is it: The world’s smartest AI, Grok 3, now available for free (until our servers melt).\n\nTry Grok 3 now: https://t.co/Tj0afLoxEz\n\nX Premium+ and SuperGrok users will have increased access to Grok 3, in addition to early access to advanced features like Voice Mode ",
-            "url": "/xai/status/1892400129719611567",
+            "url": "https://x.com/xai/status/1892400129719611567",
             "type": "tweet",
             "ref": null,
             "media": [
@@ -139,10 +157,14 @@
                     "url": "https://video.twimg.com/ext_tw_video/1892399262706913282/pu/vid/avc1/1156x720/_3eBbHGohdrajxiX.mp4?tag=12"
                 }
             ],
-            "extra": null
+            "has_media": true,
+            "extra": null,
+            "u_avatar": "https://pbs.twimg.com/profile_images/1769430779845611520/lIgjSJGU.jpg"
         },
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -151,7 +173,7 @@
         "username": "X",
         "created_at": 1739906506000,
         "content": "wake up babe, new Grok just dropped",
-        "url": "/X/status/1891931131747930176",
+        "url": "https://x.com/X/status/1891931131747930176",
         "type": "quoted",
         "ref": {
             "platform": 1,
@@ -160,14 +182,18 @@
             "username": "Grok",
             "created_at": 1739873399000,
             "content": "grok 3 is the world’s smartest AI\n\nnow available to all Premium+ subscribers",
-            "url": "/grok/status/1891792269667094530",
+            "url": "https://x.com/grok/status/1891792269667094530",
             "type": "tweet",
             "ref": null,
             "media": null,
-            "extra": null
+            "has_media": false,
+            "extra": null,
+            "u_avatar": "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa.jpg"
         },
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -176,11 +202,13 @@
         "username": "X",
         "created_at": 1739569157000,
         "content": "https://t.co/c6IbRFLdux",
-        "url": "/X/status/1890516186871529767",
+        "url": "https://x.com/X/status/1890516186871529767",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -189,11 +217,18 @@
         "username": "X",
         "created_at": 1739564420000,
         "content": "how it feels to write a community note ",
-        "url": "/X/status/1890496316628693218",
+        "url": "https://x.com/X/status/1890496316628693218",
         "type": "tweet",
         "ref": null,
-        "media": [{ "type": "photo", "url": "https://pbs.twimg.com/media/GjxkYWiWYAAotxW.jpg" }],
-        "extra": null
+        "media": [
+            {
+                "type": "photo",
+                "url": "https://pbs.twimg.com/media/GjxkYWiWYAAotxW.jpg"
+            }
+        ],
+        "has_media": true,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -202,11 +237,13 @@
         "username": "X",
         "created_at": 1739558249000,
         "content": "slide into their DMs and make them your valentine",
-        "url": "/X/status/1890470432685363580",
+        "url": "https://x.com/X/status/1890470432685363580",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -215,11 +252,18 @@
         "username": "X",
         "created_at": 1739550342000,
         "content": "all birds go to heaven ",
-        "url": "/X/status/1890437272077545772",
+        "url": "https://x.com/X/status/1890437272077545772",
         "type": "tweet",
         "ref": null,
-        "media": [{ "type": "photo", "url": "https://pbs.twimg.com/media/Gjwug_2XMAY8Kn2.jpg" }],
-        "extra": null
+        "media": [
+            {
+                "type": "photo",
+                "url": "https://pbs.twimg.com/media/Gjwug_2XMAY8Kn2.jpg"
+            }
+        ],
+        "has_media": true,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -228,7 +272,7 @@
         "username": "X",
         "created_at": 1739150751000,
         "content": "things i ate:\nnachos\nwings\nthe Super Bowl LIX Portal\n\nhttps://t.co/zs77SC43Op",
-        "url": "/X/status/1888761263053767047",
+        "url": "https://x.com/X/status/1888761263053767047",
         "type": "quoted",
         "ref": {
             "platform": 1,
@@ -237,14 +281,23 @@
             "username": "Sports is hosting the #XBracketChallenge",
             "created_at": 1739150281000,
             "content": "At the half - @Eagles lead @Chiefs #SuperBowlLIX ",
-            "url": "/Sports/status/1888759293651939510",
+            "url": "https://x.com/Sports/status/1888759293651939510",
             "type": "tweet",
             "ref": null,
-            "media": [{ "type": "photo", "url": "https://pbs.twimg.com/media/GjY4dDZWAAAteRT.jpg" }],
-            "extra": null
+            "media": [
+                {
+                    "type": "photo",
+                    "url": "https://pbs.twimg.com/media/GjY4dDZWAAAteRT.jpg"
+                }
+            ],
+            "has_media": true,
+            "extra": null,
+            "u_avatar": "https://pbs.twimg.com/profile_images/1901723814037487616/AMVkPu5X.jpg"
         },
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -253,11 +306,13 @@
         "username": "X",
         "created_at": 1739042922000,
         "content": "after posting about it 50 times in a row, telling the group chat and professionally analyzing the situation with all of my mutuals, i’ve now come to the conclusion that it’s ✨ not that deep ✨",
-        "url": "/X/status/1888308994462408808",
+        "url": "https://x.com/X/status/1888308994462408808",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     },
     {
         "platform": 1,
@@ -266,10 +321,12 @@
         "username": "X",
         "created_at": 1738962635000,
         "content": "https://t.co/PNacLbn5ti",
-        "url": "/X/status/1887972249921012124",
+        "url": "https://x.com/X/status/1887972249921012124",
         "type": "tweet",
         "ref": null,
         "media": null,
-        "extra": null
+        "has_media": false,
+        "extra": null,
+        "u_avatar": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs.jpg"
     }
 ]

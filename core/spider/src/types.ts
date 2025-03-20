@@ -1,20 +1,23 @@
+import { Instagram } from '.'
 import * as X from './spiders/x/types'
 
 enum Platform {
     X = 1,
     Twitter = 1,
-    // Instagram,
+    Instagram,
     // TikTok,
 }
 
 type PlatformArticleMap = {
     [Platform.X]: X.ArticleTypeEnum
     [Platform.Twitter]: X.ArticleTypeEnum
+    [Platform.Instagram]: Instagram.ArticleTypeEnum
 }
 
 type PlatformExtractMap = {
     [Platform.X]: any
     [Platform.Twitter]: any
+    [Platform.Instagram]: null
 }
 
 // related to platform
@@ -61,12 +64,21 @@ interface GenericArticle<T extends Platform> {
      * reference to the original article: `a_id`
      */
     ref: GenericArticle<T> | null
+    has_media: boolean
+    /**
+     * media for not using gallery-dl
+     * if has_media is true and this is null, then use gallery-dl
+     */
     media: Array<GenericMediaInfo> | null
     /**
      * extra data for the article related to the platform
      */
     extra: ArticleExtractType<T> | null
+    /**
+     * (optional) user avatar
+     */
+    u_avatar: string | null
 }
 
 export { Platform }
-export type { GenericArticle, GenericFollows, TaskTypeResult, TaskType, MeidaType }
+export type { GenericArticle, GenericMediaInfo, GenericFollows, TaskTypeResult, TaskType, MeidaType }

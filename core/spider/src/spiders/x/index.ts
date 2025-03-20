@@ -1,4 +1,4 @@
-import { GenericArticle, Platform, TaskType, TaskTypeResult } from '@/types'
+import { Platform, TaskType, TaskTypeResult } from '@/types'
 import { BaseSpider } from '../base'
 import { Page } from 'puppeteer-core'
 import { GraphQL } from './user'
@@ -31,22 +31,21 @@ export class XTimeLineSpider extends BaseSpider {
         if (!result) {
             throw new Error('Invalid URL')
         }
+        const { id } = result
+        const _url = `${this.BASE_URL}${id}`
 
         if (task_type === 'article') {
             let res = []
             this.log?.info('Trying to grab tweets.')
-            res = await GraphQL.grabTweets(page, url)
+            res = await GraphQL.XApiJsonParser.grabTweets(page, _url)
             this.log?.info('Trying to grab replies.')
-            const replies = await GraphQL.grabReplies(
-                page,
-                super._match_valid_url(url, XTimeLineSpider)?.[0] + '/with_replies',
-            )
+            const replies = await GraphQL.XApiJsonParser.grabReplies(page, _url + '/with_replies')
             return res.concat(replies) as TaskTypeResult<T, Platform.X>
         }
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return (await GraphQL.grabFollowsNumer(page, url)) as TaskTypeResult<T, Platform.X>
+            return (await GraphQL.XApiJsonParser.grabFollowsNumer(page, _url)) as TaskTypeResult<T, Platform.X>
         }
 
         throw new Error('Invalid task type')

@@ -1,6 +1,6 @@
 import { Platform, TaskType, TaskTypeResult } from '@/types'
-import { createLogger, Logger } from '@idol-bbq-utils/log'
-import { Page } from 'puppeteer-core'
+import { Logger } from '@idol-bbq-utils/log'
+import { Page, PageEvents, PageEvent } from 'puppeteer-core'
 
 interface SpiderConstructor {
     _VALID_URL: RegExp
@@ -38,4 +38,66 @@ abstract class BaseSpider {
     }
 }
 
-export { BaseSpider, SpiderConstructor }
+/**
+ * Wait for an event to be emitted by the page
+ */
+function waitForEvent<T extends PageEvent>(
+    page: Page,
+    eventName: T,
+    handler?: (data: PageEvents[T], control: { resolve: () => void }) => void,
+    timeout: number = 30000,
+): {
+    /**
+     * Cleanup the event listener manually. You shuold execute this function if error occurs.
+     */
+    cleanup: () => void
+    promise: Promise<PageEvents[T]>
+} {
+    let promiseResolve: (value: PageEvents[T]) => void
+    let promiseReject: (reason?: any) => void
+    let eventData: PageEvents[T]
+
+    const promise = new Promise<PageEvents[T]>((resolve, reject) => {
+        promiseResolve = resolve
+        promiseReject = reject
+    })
+
+    const cleanup = () => {
+        clearTimeout(timeoutId)
+        page.off(eventName, wrappedHandler)
+    }
+
+    const control = {
+        resolve: () => {
+            cleanup()
+            promiseResolve(eventData)
+        },
+    }
+
+    const wrappedHandler = (data: PageEvents[T]) => {
+        eventData = data
+        if (handler) {
+            handler(data, control)
+        } else {
+            control.resolve()
+        }
+    }
+
+    const timeoutId = setTimeout(() => {
+        cleanup()
+        promiseReject(new Error(`Timeout waiting for event \'${eventName.toString()}\' after ${timeout}ms`))
+    }, timeout)
+
+    page.on(eventName, wrappedHandler)
+
+    return { promise: promise.finally(cleanup), cleanup }
+}
+
+function waitForResponse(
+    page: Page,
+    handler?: (data: PageEvents[PageEvent.Response], control: { resolve: () => void }) => void,
+) {
+    return waitForEvent(page, PageEvent.Response, handler)
+}
+
+export { BaseSpider, SpiderConstructor, waitForEvent, waitForResponse }
