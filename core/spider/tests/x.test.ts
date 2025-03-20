@@ -18,7 +18,7 @@ test('X Spider', async () => {
 /**
  * require network access & headless browser
  */
-test.skip('X Spider grab tweets', async () => {
+test.skip('spider', async () => {
     const url = 'https://x.com/X'
     const spider = getSpider(url)
     if (spider) {
@@ -53,7 +53,7 @@ test.skip('X Spider grab tweets', async () => {
         })
         const page = await browser.newPage()
         await page.setUserAgent(UserAgent.CHROME)
-        await page.setCookie(...parseNetscapeCookieToPuppeteerCookie('tests/data/x/expire.cookies'))
+        await page.setCookie(...parseNetscapeCookieToPuppeteerCookie('tests/data/expire.cookies'))
         let res = []
         let follows = {} as GenericFollows
         try {

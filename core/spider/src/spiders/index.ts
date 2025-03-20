@@ -1,7 +1,8 @@
 import { SpiderConstructor } from './base'
+import { InstagramSpider } from './instagram'
 import { XTimeLineSpider } from './x'
 
-const spiders: Array<SpiderConstructor> = [XTimeLineSpider]
+const spiders: Array<SpiderConstructor> = [XTimeLineSpider, InstagramSpider]
 
 export function getSpider(url: string): SpiderConstructor | null {
     for (const spider of spiders) {
