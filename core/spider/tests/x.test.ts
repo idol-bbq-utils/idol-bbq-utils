@@ -4,6 +4,7 @@ import { parseNetscapeCookieToPuppeteerCookie, UserAgent } from '../src/utils'
 import { readFileSync } from 'fs'
 import { XApiJsonParser } from '../src/spiders/x/user/graphql'
 import { createLogger, winston, format } from '@idol-bbq-utils/log'
+import { GenericFollows } from '../src/types'
 
 test('X Spider', async () => {
     const url = 'https://x.com/X'
@@ -17,7 +18,7 @@ test('X Spider', async () => {
 /**
  * require network access & headless browser
  */
-test('X Spider grab tweets', async () => {
+test.skip('X Spider grab tweets', async () => {
     const url = 'https://x.com/X'
     const spider = getSpider(url)
     if (spider) {
@@ -54,14 +55,17 @@ test('X Spider grab tweets', async () => {
         await page.setUserAgent(UserAgent.CHROME)
         await page.setCookie(...parseNetscapeCookieToPuppeteerCookie('tests/data/x/expire.cookies'))
         let res = []
+        let follows = {} as GenericFollows
         try {
             res = await spiderInstance.crawl(url, page, 'article')
+            follows = (await spiderInstance.crawl(url, page, 'follows')) as unknown as GenericFollows
         } catch (e) {
             console.error(e)
         } finally {
             await browser.close()
         }
         expect(res.length).toBeGreaterThan(0)
+        expect(follows.followers).toBeGreaterThan(0)
     }
 })
 
@@ -69,8 +73,12 @@ test('X API JSON Parser', async () => {
     const x_json = JSON.parse(readFileSync('tests/data/x/x.json', 'utf-8'))
     const x_result = JSON.parse(readFileSync('tests/data/x/x-result.json', 'utf-8'))
     const x_replies_result = JSON.parse(readFileSync('tests/data/x/x-replies-result.json', 'utf-8'))
+    const x_follows = JSON.parse(readFileSync('tests/data/x/x-follows.json', 'utf-8'))
+    const x_follows_result = JSON.parse(readFileSync('tests/data/x/x-follows-result.json', 'utf-8'))
     const x_response = XApiJsonParser.tweetsArticleParser(x_json)
     const x_replies_response = XApiJsonParser.tweetsRepliesParser(x_json)
+    const x_follows_response = XApiJsonParser.tweetsFollowsParser(x_follows)
     expect(x_response).toEqual(x_result)
     expect(x_replies_response).toEqual(x_replies_result)
+    expect(x_follows_response).toEqual(x_follows_result)
 })

@@ -22,7 +22,7 @@ abstract class BaseSpider {
         url: string,
         page: Page,
         task_type?: T,
-    ): Promise<Array<TaskTypeResult<T, Platform>>>
+    ): Promise<TaskTypeResult<T, Platform>>
 
     constructor(log?: Logger) {
         this.log = log

@@ -26,7 +26,7 @@ export class XTimeLineSpider extends BaseSpider {
         url: string,
         page: Page,
         task_type: T = 'article' as T,
-    ): Promise<Array<TaskTypeResult<T, Platform.X>>> {
+    ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XTimeLineSpider)?.groups
         if (!result) {
             throw new Error('Invalid URL')
@@ -41,11 +41,14 @@ export class XTimeLineSpider extends BaseSpider {
                 page,
                 super._match_valid_url(url, XTimeLineSpider)?.[0] + '/with_replies',
             )
-            return res.concat(replies) as Array<TaskTypeResult<T, Platform.X>>
+            return res.concat(replies) as TaskTypeResult<T, Platform.X>
         }
+
         if (task_type === 'follows') {
-            return [''] as Array<TaskTypeResult<T, Platform.X>>
+            this.log?.info('Trying to grab follows.')
+            return (await GraphQL.grabFollowsNumer(page, url)) as TaskTypeResult<T, Platform.X>
         }
-        return []
+
+        throw new Error('Invalid task type')
     }
 }

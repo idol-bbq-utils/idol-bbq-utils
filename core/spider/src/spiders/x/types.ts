@@ -1,13 +1,3 @@
-/**
- * @deprecated
- */
-enum TweetTabsEnum {
-    TWEETS = 0,
-    REPLIES,
-    HIGH_LIGHTS,
-    MEDIA,
-}
-
 enum ArticleTypeEnum {
     /**
      *
@@ -18,6 +8,19 @@ enum ArticleTypeEnum {
     CONVERSATION = 'conversation',
 }
 
+/**
+ * @deprecated
+ */
+enum TweetTabsEnum {
+    TWEETS = 0,
+    REPLIES,
+    HIGH_LIGHTS,
+    MEDIA,
+}
+
+/**
+ * @deprecated
+ */
 enum TimelineTypeEnum {
     ARTICLE = 'article',
     DIVIDER = 'divider',
@@ -27,6 +30,9 @@ enum TimelineTypeEnum {
     DEFAULT = 'default',
 }
 
+/**
+ * @deprecated
+ */
 enum ArticleElementTypeEnum {
     TEXT,
     EMOJI,
@@ -34,20 +40,9 @@ enum ArticleElementTypeEnum {
     LINK,
 }
 
-enum TweetExtraTypeEnum {
-    CARD = 'card',
-}
-interface ITweetCard {
-    content: string
-    media?: string
-    link?: string
-}
-
-interface ITweetExtraWrapper<T> {
-    type: TweetExtraTypeEnum
-    data: T
-}
-
+/**
+ * @deprecated
+ */
 interface ITweetArticle {
     username: string
     u_id: string
@@ -61,11 +56,31 @@ interface ITweetArticle {
     extra?: ITweetExtraWrapper<ITweetCard> | null
 }
 
+/**
+ * @deprecated
+ */
 interface ITweetProfile {
     username: string
     u_id: string
     follows: number
     timestamp: number
+}
+
+/**
+ * desExtra fields for tweet
+ */
+enum TweetExtraTypeEnum {
+    CARD = 'card',
+}
+interface ITweetCard {
+    content: string
+    media?: string
+    link?: string
+}
+
+interface ITweetExtraWrapper<T> {
+    type: TweetExtraTypeEnum
+    data: T
 }
 
 interface ITweetCard {}

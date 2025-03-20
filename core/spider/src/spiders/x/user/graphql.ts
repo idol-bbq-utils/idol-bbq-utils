@@ -1,7 +1,7 @@
 import { Page, PageEvent, PageEvents } from 'puppeteer-core'
 import { ArticleTypeEnum } from '../types'
 import { checkLogin, checkSomethingWrong } from '.'
-import { GenericArticle, Platform } from '@/types'
+import { GenericArticle, GenericFollows, Platform } from '@/types'
 import { JSONPath } from 'jsonpath-plus'
 
 /**
@@ -148,6 +148,30 @@ export async function grabReplies(
     await waitForTweets
     return XApiJsonParser.tweetsRepliesParser(tweets_json)
 }
+
+/**
+ * @param url https://x.com/username
+ */
+export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
+    let user_json
+    const { cleanup, promise: waitForTweets } = waitForEvent(
+        page,
+        PageEvent.Response,
+        async (response, { resolve }) => {
+            const url = response.url()
+            if (url.includes('UserByScreenName') && response.request().method() === 'GET') {
+                const json = await response.json()
+                user_json = json
+                resolve()
+            }
+        },
+    )
+    await page.setViewport({ width: 1080, height: 2 })
+    await page.goto(url)
+
+    await waitForTweets
+    return XApiJsonParser.tweetsFollowsParser(user_json)
+}
 export namespace XApiJsonParser {
     function santiizeTweetsJson(json: any) {
         let tweets = JSONPath({ path: "$..instructions[?(@.type === 'TimelineAddEntries')].entries", json })[0]
@@ -167,6 +191,7 @@ export namespace XApiJsonParser {
         return Date.parse(dateStr.replace(/( \+0000)/, ' UTC$1'))
     }
 
+    // TODO
     function cardParser(card: any) {
         if (!card) {
             return null
@@ -287,5 +312,18 @@ export namespace XApiJsonParser {
                     return t
                 }, null),
             )
+    }
+
+    export function tweetsFollowsParser(json: any): GenericFollows {
+        const user = JSONPath({ path: '$..user.result.legacy', json })[0]
+        if (!user) {
+            throw new Error('Follows json format may have changed')
+        }
+        return {
+            plattform: Platform.X,
+            username: user?.name,
+            u_id: user?.screen_name,
+            followers: user?.followers_count,
+        }
     }
 }

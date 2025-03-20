@@ -24,9 +24,9 @@ type ArticleExtractType<T extends Platform> = PlatformExtractMap[T]
 type TaskType = 'article' | 'follows'
 
 type TaskTypeResult<T extends TaskType, P extends Platform> = T extends 'article'
-    ? GenericArticle<P>
+    ? Array<GenericArticle<P>>
     : T extends 'follows'
-      ? string
+      ? GenericFollows
       : never
 
 type MeidaType = 'photo' | 'video'
@@ -37,6 +37,13 @@ interface GenericMediaInfo {
      */
     url: string
     alt?: string
+}
+
+interface GenericFollows {
+    plattform: Platform
+    username: string
+    u_id: string
+    followers: number
 }
 interface GenericArticle<T extends Platform> {
     platform: T
@@ -62,4 +69,4 @@ interface GenericArticle<T extends Platform> {
 }
 
 export { Platform }
-export type { GenericArticle, TaskTypeResult, TaskType, MeidaType }
+export type { GenericArticle, GenericFollows, TaskTypeResult, TaskType, MeidaType }
