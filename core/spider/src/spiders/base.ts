@@ -1,11 +1,7 @@
 import { Platform, TaskType, TaskTypeResult } from '@/types'
 import { Logger } from '@idol-bbq-utils/log'
 import { Page, PageEvents, PageEvent } from 'puppeteer-core'
-
-interface SpiderConstructor {
-    _VALID_URL: RegExp
-    new (...args: ConstructorParameters<typeof BaseSpider>): BaseSpider
-}
+import { SpiderConstructor } from '.'
 
 abstract class BaseSpider {
     static _VALID_URL: RegExp
@@ -100,4 +96,4 @@ function waitForResponse(
     return waitForEvent(page, PageEvent.Response, handler)
 }
 
-export { BaseSpider, SpiderConstructor, waitForEvent, waitForResponse }
+export { BaseSpider, waitForEvent, waitForResponse }

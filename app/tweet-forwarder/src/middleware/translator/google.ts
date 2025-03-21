@@ -2,8 +2,10 @@ import { log } from '@/config'
 import { ChatSession, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai'
 import { BaseTranslator } from './base'
 import { ITranslatorConfig } from '@/types/bot'
+import { TranslatorProvider } from '@/types/translator'
 
-class Gemini extends BaseTranslator {
+class GoogleLLMTranslator extends BaseTranslator {
+    static _PROVIDER = TranslatorProvider.Google
     private genAI
     private model
     private prompt: string
@@ -53,4 +55,4 @@ class Gemini extends BaseTranslator {
     }
 }
 
-export { Gemini }
+export { GoogleLLMTranslator }

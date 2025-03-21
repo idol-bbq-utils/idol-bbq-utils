@@ -2,13 +2,11 @@ import { log } from '@/config'
 import { BaseTranslator } from './base'
 import axios from 'axios'
 import { ITranslatorConfig } from '@/types/bot'
+import { TranslatorProvider } from '@/types/translator'
 
-abstract class BaseDoubao extends BaseTranslator {
-    public name = 'base doubao translator'
+class ByteDanceLLMTranslator extends BaseTranslator {
+    static _PROVIDER = TranslatorProvider.ByteDance
     protected BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
-}
-
-class Doubao128KPro extends BaseDoubao {
     public name = 'Doubao-pro-128k'
     private prompt: string
     private api_key: string
@@ -48,4 +46,4 @@ class Doubao128KPro extends BaseDoubao {
     }
 }
 
-export { Doubao128KPro }
+export { ByteDanceLLMTranslator }

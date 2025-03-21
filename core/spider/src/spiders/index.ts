@@ -1,6 +1,11 @@
-import { SpiderConstructor } from './base'
+import { BaseSpider } from './base'
 import { InstagramSpider } from './instagram'
 import { XTimeLineSpider } from './x'
+
+interface SpiderConstructor {
+    _VALID_URL: RegExp
+    new (...args: ConstructorParameters<typeof BaseSpider>): BaseSpider
+}
 
 const spiders: Array<SpiderConstructor> = [XTimeLineSpider, InstagramSpider]
 
@@ -12,3 +17,5 @@ export function getSpider(url: string): SpiderConstructor | null {
     }
     return null
 }
+
+export { SpiderConstructor }

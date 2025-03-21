@@ -1,4 +1,4 @@
-import { IYamlConfig } from './types/config'
+import { IYamlConfig } from './types'
 import fs from 'fs'
 import os from 'os'
 import YAML from 'yaml'
@@ -27,8 +27,8 @@ const log: Logger = createLogger({
     format: format.combine(
         format.colorize(),
         format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
-        format.printf(({ message, timestamp, level, label, service, childService }) => {
-            const metas = [service, childService, label, level]
+        format.printf(({ message, timestamp, level, label, service, subservice }) => {
+            const metas = [service, subservice, label, level]
                 .filter(Boolean)
                 .map((meta) => `[${meta}]`)
                 .join(' ')

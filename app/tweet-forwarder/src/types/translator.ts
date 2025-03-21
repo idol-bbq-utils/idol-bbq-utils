@@ -9,6 +9,10 @@ type OpenA_Like_LLM = 'openai'
 
 enum TranslatorProvider {
     /**
+     *
+     */
+    None = 'None',
+    /**
      * default model id gemini
      */
     Google = 'Google',
