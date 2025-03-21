@@ -236,9 +236,13 @@ namespace InsApiJsonParser {
         }
 
         await waitForTweets
-        return postsParser(reasonable_jsons[PROFILE_POSTS_KEY]).concat(
-            highlightsParser(reasonable_jsons[PROFILE_HIGHLIGHTS_KEY]),
-        )
+        const posts = postsParser(reasonable_jsons[PROFILE_POSTS_KEY])
+        const highlights = highlightsParser(reasonable_jsons[PROFILE_HIGHLIGHTS_KEY]).map((h) => {
+            h.username = posts[0]?.username
+            h.u_avatar = posts[0]?.u_avatar
+            return h
+        })
+        return posts.concat(highlights)
     }
 
     export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
