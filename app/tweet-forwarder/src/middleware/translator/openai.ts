@@ -2,40 +2,33 @@ import { log } from '@/config'
 import { BaseTranslator } from './base'
 import axios from 'axios'
 import { ITranslatorConfig } from '@/types/bot'
+import { TranslatorConfig, TranslatorProvider } from '@/types/translator'
+import { Logger } from '@idol-bbq-utils/log'
 
 abstract class BaseOpenai extends BaseTranslator {
     public name = 'base openai translator'
     protected BASE_URL = 'https://api.openai.com/v1/chat/completions'
 }
 
-class OpenaiLike extends BaseOpenai {
-    public name = 'Openai-like'
-    private prompt: string
-    private api_key: string
-    private model_id: string
-    private other_config: Record<string, any>
-    constructor(api_key: string, config?: ITranslatorConfig) {
-        super()
+class OpenaiLikeLLMTranslator extends BaseOpenai {
+    static _PROVIDER: TranslatorProvider.OpenAI
+    NAME: string
+    constructor(api_key: string, log: Logger, config?: TranslatorConfig) {
+        super(api_key, log, config)
         this.api_key = api_key
-        this.model_id = config?.model_id || 'deepseek-chat'
-        this.prompt = config?.prompt || this.TRANSLATION_PROMPT
-        this.name = config?.name || 'Openai-like'
+        this.NAME = config?.name || 'Openai-like'
         this.BASE_URL = config?.base_url || this.BASE_URL
-        this.other_config = config?.other_config || {}
-    }
-    public async init() {
-        log.info(`[Openai] ${this.name} model loaded with prompt ${this.prompt}`)
     }
     public async translate(text: string) {
         const res = await axios.post(
             this.BASE_URL,
             {
-                ...this.other_config,
-                model: this.model_id,
+                ...this.config?.extended_payload,
+                model: this.config?.model_id || 'openai',
                 messages: [
                     {
                         role: 'system',
-                        content: this.prompt,
+                        content: this.config?.prompt || this.TRANSLATION_PROMPT,
                     },
                     {
                         role: 'user',
@@ -53,4 +46,4 @@ class OpenaiLike extends BaseOpenai {
     }
 }
 
-export { OpenaiLike }
+export { OpenaiLikeLLMTranslator }

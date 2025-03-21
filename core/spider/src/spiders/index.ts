@@ -9,7 +9,7 @@ interface SpiderConstructor {
 
 const spiders: Array<SpiderConstructor> = [XTimeLineSpider, InstagramSpider]
 
-export function getSpider(url: string): SpiderConstructor | null {
+function getSpider(url: string): SpiderConstructor | null {
     for (const spider of spiders) {
         if (spider._VALID_URL.test(url)) {
             return spider
@@ -18,4 +18,4 @@ export function getSpider(url: string): SpiderConstructor | null {
     return null
 }
 
-export { SpiderConstructor }
+export { SpiderConstructor, getSpider }

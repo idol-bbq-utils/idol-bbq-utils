@@ -31,12 +31,18 @@ enum TranslatorProvider {
     /**
      * default model id openai
      */
-    OpenA = 'openai',
+    OpenAI = 'openai',
 }
 
 interface TranslatorConfig extends CommonCfgConfig {
     prompt?: string
+    /**
+     * Customize api url
+     */
     base_url?: string
+    /**
+     * Name shown in logger
+     */
     name?: string
     model_id?: string
     /**
