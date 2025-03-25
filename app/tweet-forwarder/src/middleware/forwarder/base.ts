@@ -1,14 +1,19 @@
 import { log } from '@/config'
 import { IForwardTo, MediaStorageType, SourcePlatformEnum } from '@/types/bot'
+import { ForwardToPlatformEnum } from '@/types/forwarder'
+import { BaseCompatibleModel } from '@/utils/base'
 import { formatTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
+import { Logger } from '@idol-bbq-utils/log'
 
 const DATE_OFFSET = 1
-abstract class BaseForwarder {
-    protected token: string
-    protected name: string = 'base-forwarder'
-    constructor(token: string) {
-        this.token = token
+abstract class BaseForwarder extends BaseCompatibleModel {
+    static _PLATFORM = ForwardToPlatformEnum.None
+    NAME: string = 'base-forwarder'
+    log?: Logger
+    constructor(log?: Logger, ...args: any[]) {
+        super()
+        this.log = log?.child({ label: this.NAME, subservice: 'forwarder' })
     }
     public abstract send(
         text: string,

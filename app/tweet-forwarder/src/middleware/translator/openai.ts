@@ -1,7 +1,5 @@
-import { log } from '@/config'
 import { BaseTranslator } from './base'
 import axios from 'axios'
-import { ITranslatorConfig } from '@/types/bot'
 import { TranslatorConfig, TranslatorProvider } from '@/types/translator'
 import { Logger } from '@idol-bbq-utils/log'
 

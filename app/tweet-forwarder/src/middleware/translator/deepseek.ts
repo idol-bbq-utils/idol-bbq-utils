@@ -1,4 +1,3 @@
-import { log } from '@/config'
 import { BaseTranslator } from './base'
 import axios from 'axios'
 import { TranslatorConfig, TranslatorProvider } from '@/types/translator'

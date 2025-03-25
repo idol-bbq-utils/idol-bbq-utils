@@ -1,4 +1,3 @@
-import { log } from '@/config'
 import { ChatSession, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai'
 import { BaseTranslator } from './base'
 import { TranslatorConfig, TranslatorProvider } from '@/types/translator'

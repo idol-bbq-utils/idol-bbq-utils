@@ -1,29 +1,31 @@
 import { CommonCfgConfig } from './common'
 import { Media } from './media'
 
+enum ForwardToPlatformEnum {
+    None = 'none',
+    Telegram = 'telegram',
+    Bilibili = 'bilibili',
+    QQ = 'qq',
+}
+
 type PlatformConfigMap = {
-    [ForwardToPlatfrom.Telegram]: {
+    [ForwardToPlatformEnum.None]: {}
+    [ForwardToPlatformEnum.Telegram]: {
         token: string
         chat_id: string
     }
-    [ForwardToPlatfrom.Bilibili]: {
+    [ForwardToPlatformEnum.Bilibili]: {
         bili_jct: string
         sessdata: string
     }
     /**
      * one11 bot protocol
      */
-    [ForwardToPlatfrom.QQ]: {
+    [ForwardToPlatformEnum.QQ]: {
         url: string
         group_id: string
         token: string
     }
-}
-
-enum ForwardToPlatfrom {
-    Telegram = 'telegram',
-    Bilibili = 'bilibili',
-    QQ = 'qq',
 }
 
 interface ForwardToPlatformCommonConfig {
@@ -31,14 +33,15 @@ interface ForwardToPlatformCommonConfig {
     block_until?: number | string
 }
 
-type ForwardToPlatformConfig<T extends ForwardToPlatfrom> = PlatformConfigMap[T] & ForwardToPlatformCommonConfig
+type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> = PlatformConfigMap[T] &
+    ForwardToPlatformCommonConfig
 
 interface ForwarderConfig extends ForwardToPlatformCommonConfig, CommonCfgConfig {
     cron?: string
     media: Media
 }
 
-interface ForwarderTarget<T extends ForwardToPlatfrom = ForwardToPlatfrom> {
+interface ForwarderTarget<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
     platform: T
     /**
      * unique id for the target
@@ -81,4 +84,4 @@ interface Forwarder {
     cfg_forwarder?: ForwarderConfig
 }
 
-export { ForwarderTarget, Forwarder, ForwarderConfig, ForwardTo }
+export { ForwarderTarget, Forwarder, ForwarderConfig, ForwardTo, ForwardToPlatformEnum }
