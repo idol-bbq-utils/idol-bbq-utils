@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer'
 
-import { fwd_app } from './config'
+import { CONFIG, fwd_app } from './config'
 import { FWDBot } from './bot'
 
 async function main() {
@@ -12,6 +12,7 @@ async function main() {
         args: [process.env.NO_SANDBOX ? '--no-sandbox' : ''],
     })
     console.log('Browser launched')
+
     const bots = fwd_app.bots.map(
         (_b) =>
             new FWDBot(_b.name, _b.websites, {

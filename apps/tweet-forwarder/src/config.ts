@@ -1,4 +1,4 @@
-import { IYamlConfig } from './types'
+import { AppConfig, IYamlConfig } from './types'
 import fs from 'fs'
 import os from 'os'
 import YAML from 'yaml'
@@ -43,4 +43,12 @@ const log: Logger = createLogger({
     ],
 })
 
-export { FWDApp, fwd_app, log, CACHE_DIR_ROOT }
+function config_parser(config_path: string) {
+    const yaml = fs.readFileSync(config_path, 'utf8')
+    const yaml_cfg = YAML.parse(yaml) as AppConfig
+    return yaml_cfg
+}
+
+const CONFIG = config_parser('./config.yaml')
+
+export { fwd_app, log, CONFIG, CACHE_DIR_ROOT }

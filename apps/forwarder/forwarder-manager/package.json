@@ -1,0 +1,25 @@
+{
+    "name": "@idol-bbq-utils/forwarder-manager",
+    "version": "0.1.0",
+    "description": "Manager entry for forwarder",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "main": "lib/main.js",
+    "directories": {
+        "lib": "lib"
+    },
+    "files": [
+        "lib"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
+    },
+    "scripts": {
+        "test": "node ./__tests__/forwarder-manager.test.js"
+    },
+    "bugs": {
+        "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+    }
+}
