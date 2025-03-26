@@ -51,14 +51,20 @@ export namespace XApiJsonParser {
         }
         return media.map((m: any) => {
             const { media_url_https, video_info, type, ext_alt_text } = m
-            return {
-                type,
-                url:
-                    type === 'photo'
-                        ? media_url_https
-                        : // @ts-ignore
-                          video_info?.variants?.filter((i) => i.bitrate).sort((a, b) => b.bitrate - a.bitrate)[0].url,
-                alt: ext_alt_text,
+            if (type === 'photo') {
+                return {
+                    type,
+                    url: media_url_https,
+                    alt: ext_alt_text,
+                }
+            }
+            if (type === 'video') {
+                return {
+                    type,
+                    url: video_info?.variants
+                        ?.filter((i: { bitrate?: number }) => i.bitrate !== undefined)
+                        .sort((a: { bitrate: number }, b: { bitrate: number }) => b.bitrate - a.bitrate)[0].url,
+                }
             }
         })
     }

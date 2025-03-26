@@ -2,7 +2,7 @@
 module.exports = {
     transform: { '^.+\\.ts?$': 'ts-jest' },
     testEnvironment: 'node',
-    testRegex: '/tests/.*\\.(test|spec)?\\.(ts|tsx)$',
+    testRegex: '/__tests__/.*\\.(test|spec)?\\.(ts|tsx)$',
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
     },
