@@ -1,6 +1,6 @@
 {
     "name": "@idol-bbq-utils/forwarder-pool",
-    "private": true,
+    "version": "0.1.0",
     "license": "MIT",
     "main": "lib/main.js",
     "directories": {
@@ -10,17 +10,21 @@
     "files": [
         "lib"
     ],
-    "publishConfig": {
-        "registry": "http://mirrors.byr.ink/npm"
-    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
     },
     "scripts": {
-        "test": "node ./__tests__/forwarder-pool.test.js"
+        "build": "tsc && tsc-alias",
+        "dev": "pnpm build && node lib/main.js",
+        "test": "jest --testPathIgnorePatterns \"playground/*\" --",
+        "test:playground": "jest --testPathPattern \"playground/*\" --"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+    },
+    "dependencies": {
+        "bullmq": "^5.44.4",
+        "dotenv": "^16.4.5"
     }
 }
