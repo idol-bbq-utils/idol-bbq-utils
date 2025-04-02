@@ -9,6 +9,8 @@ type Article = Omit<GenericArticle<Platform>, 'media' | 'ref'> & {
     ref: Article | null
 }
 
+type ArticleWithId = Article & { id: number }
+
 type DBArticle = Prisma.crawler_articleGetPayload<{}>
 
 namespace DB {
@@ -72,7 +74,7 @@ namespace DB {
             })
         }
 
-        export async function getSingleArticle(id: number): Promise<Article | undefined> {
+        export async function getSingleArticle(id: number) {
             const article = await prisma.crawler_article.findUnique({
                 where: {
                     id: id,
@@ -84,10 +86,7 @@ namespace DB {
             return await getFullChainArticle(article)
         }
 
-        export async function getSingleArticleByArticleCode(
-            a_id: string,
-            platform: Platform,
-        ): Promise<Article | undefined> {
+        export async function getSingleArticleByArticleCode(a_id: string, platform: Platform) {
             const article = await prisma.crawler_article.findUnique({
                 where: {
                     a_id_platform: {
@@ -102,9 +101,9 @@ namespace DB {
             return await getFullChainArticle(article)
         }
 
-        async function getFullChainArticle(article: DBArticle): Promise<Article> {
+        async function getFullChainArticle(article: DBArticle) {
             let currentRefId = article.ref
-            let currentArticle = article as Article
+            let currentArticle = article as ArticleWithId
             while (currentRefId) {
                 const foundArticle = await prisma.crawler_article.findUnique({
                     where: {
@@ -112,13 +111,13 @@ namespace DB {
                     },
                 })
                 currentRefId = foundArticle?.ref || null
-                currentArticle.ref = foundArticle as Article
-                currentArticle = foundArticle as Article
+                currentArticle.ref = foundArticle as ArticleWithId
+                currentArticle = foundArticle as ArticleWithId
             }
-            return article as Article
+            return article as ArticleWithId
         }
 
-        export async function getArticlesByName(u_id: string, platform: Platform, count = 10): Promise<Article[]> {
+        export async function getArticlesByName(u_id: string, platform: Platform, count = 10) {
             const res = await prisma.crawler_article.findMany({
                 where: {
                     platform: platform,
@@ -130,7 +129,7 @@ namespace DB {
                 take: count,
             })
             const articles = await Promise.all(res.map(async ({ id }) => getSingleArticle(id)))
-            return articles.filter((item) => item) as Article[]
+            return articles.filter((item) => item) as ArticleWithId[]
         }
     }
 
@@ -144,7 +143,35 @@ namespace DB {
             })
         }
     }
+
+    export namespace ForwardBy {
+        export async function checkExist(ref_id: number, bot_id: string, task_type: string) {
+            return await prisma.forward_by.findUnique({
+                where: {
+                    ref_id_bot_id_task_type: {
+                        ref_id,
+                        bot_id,
+                        task_type,
+                    },
+                },
+            })
+        }
+
+        export async function save(ref_id: number, bot_id: string, task_type: string) {
+            let exist_one = await checkExist(ref_id, bot_id, task_type)
+            if (exist_one) {
+                return exist_one
+            }
+            return await prisma.forward_by.create({
+                data: {
+                    ref_id,
+                    bot_id,
+                    task_type,
+                },
+            })
+        }
+    }
 }
 
 export default DB
-export type { Article, MediaInfo }
+export type { Article, ArticleWithId, MediaInfo }

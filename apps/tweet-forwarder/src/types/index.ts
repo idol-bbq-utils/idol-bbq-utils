@@ -1,12 +1,5 @@
 import { Crawler, CrawlerConfig } from './crawler'
-import {
-    Forwarder,
-    ForwarderConfig,
-    ForwarderTarget,
-    ForwardTo,
-    ForwardToPlatformConfig,
-    ForwardToPlatformEnum,
-} from './forwarder'
+import { Forwarder, ForwarderConfig, ForwardTo, ForwardToPlatformConfig, ForwardToPlatformEnum } from './forwarder'
 
 /**
  * only crawling or forwarding or both
@@ -14,7 +7,7 @@ import {
 interface AppConfig {
     crawlers?: Array<Crawler>
     cfg_crawler?: CrawlerConfig
-    forward_targets?: Array<ForwarderTarget>
+    forward_targets?: Array<ForwardTo>
     cfg_forward_target?: ForwardToPlatformConfig<ForwardToPlatformEnum>
     forwarders?: Array<Forwarder>
     cfg_forwarder?: ForwarderConfig

@@ -1,23 +1,29 @@
 import fs from 'fs'
 import { execSync } from 'child_process'
 import { CACHE_DIR_ROOT, log } from '@/config'
-import { IWebsiteConfig } from '@/types/bot'
 import https from 'https'
-import { plainUrlConventor } from './x'
 import path from 'path'
+import { MediaToolConfigMap } from '@/types/media'
 
-function download(url: string, dest: string) {
+const MATCH_FILE_NAME = /(?<filename>[^/]+)\.(?<ext>[^.]+)$/
+
+function download(url: string, dest: string): Promise<string> {
     return new Promise((resolve, reject) => {
         const dir = path.dirname(dest)
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true })
         }
-        const file = fs.createWriteStream(dest)
         https
             .get(url, (response) => {
+                const contentType = response.headers['content-type']
+                const ext = contentType ? mimeToExt[contentType as keyof typeof mimeToExt] : undefined
+                if (ext) {
+                    dest += `.${ext}`
+                }
+                const file = fs.createWriteStream(dest)
                 response.pipe(file)
                 file.on('finish', () => {
-                    file.close(() => resolve(true))
+                    file.close(() => resolve(dest))
                 })
             })
             .on('error', (error) => {
@@ -27,37 +33,30 @@ function download(url: string, dest: string) {
     })
 }
 
-// TODO: use class instead of function
-async function plainDownloadMediaFile(url: string): Promise<string | undefined> {
-    const _ = plainUrlConventor(url)
-    if (_) {
-        const { url, filename } = _
-        const dest = `${CACHE_DIR_ROOT}/gallery-dl/plain/${filename}`
-        await download(url, dest)
-        return dest
+async function plainDownloadMediaFile(url: string): Promise<string> {
+    const _url = new URL(url)
+    let filename = MATCH_FILE_NAME.exec(_url.pathname)?.groups?.filename
+    if (!filename) {
+        filename = Math.random().toString(36).slice(2, 10)
     }
+    const dest = `${CACHE_DIR_ROOT}/gallery-dl/plain/${filename}`
+    return await download(url, dest)
 }
 
-function downloadMediaFiles(
-    url: string,
-    gallery_dl: Extract<IWebsiteConfig['media'], { gallery_dl: any }>['gallery_dl'],
-) {
+function galleryDownloadMediaFile(url: string, gallery_dl: MediaToolConfigMap['gallery-dl']) {
     if (!gallery_dl) {
         return []
     }
     let args = []
     let exec_path = 'gallery-dl'
-    if (typeof gallery_dl === 'object') {
-        if (gallery_dl.cookie_file) {
-            args.push(`--cookies ${gallery_dl.cookie_file}`)
-        }
-        if (gallery_dl.path) {
-            exec_path = gallery_dl.path
-        }
+    if (gallery_dl.cookie_file) {
+        args.push(`--cookies ${gallery_dl.cookie_file}`)
+    }
+    if (gallery_dl.path) {
+        exec_path = gallery_dl.path
     }
 
     args.push(`--directory ${CACHE_DIR_ROOT}/gallery-dl`)
-    args.push(`--filename {_now:%M%S%m}_{tweet_id}_{num}.{extension}`)
     args.push(url)
     log.debug(`downloading media files with args: ${args}`)
     try {
@@ -89,10 +88,22 @@ function getMediaType(path: string) {
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
         return 'photo'
     }
-    if (['mp4', 'webm'].includes(ext)) {
+    if (['mp4', 'webm', 'mkv', 'mov', 'flv'].includes(ext)) {
         return 'video'
     }
     return 'unknown'
 }
 
-export { downloadMediaFiles, cleanMediaFiles, getMediaType, plainDownloadMediaFile }
+const mimeToExt = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'image/webp': 'webp',
+    'video/x-matroska': 'mkv',
+    'video/quicktime': 'mov',
+    'video/x-flv': 'flv',
+}
+
+export { cleanMediaFiles, getMediaType, plainDownloadMediaFile, galleryDownloadMediaFile }

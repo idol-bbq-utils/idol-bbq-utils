@@ -46,10 +46,9 @@ model crawler_follows {
 
 model forward_by {
   ref_id    Int
-  platform  Int
   bot_id    String
   task_type String
 
-  @@id([ref_id, platform, bot_id, task_type])
+  @@id([ref_id, bot_id, task_type])
   @@index([bot_id], map: "bot_id_index")
 }

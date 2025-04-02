@@ -24,6 +24,7 @@ enum ArticleTypeEnum {
 class InstagramSpider extends BaseSpider {
     // extends from XBaseSpider regex
     static _VALID_URL = /(https:\/\/)?(www\.)?instagram\.com\/(?<id>\w+)/
+    static _PLATFORM = Platform.Instagram
     BASE_URL: string = 'https://www.instagram.com/'
     NAME: string = 'Instagram Generic Spider'
 

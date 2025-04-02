@@ -1,6 +1,7 @@
 import { Logger } from '@idol-bbq-utils/log'
 import { CronJob } from 'cron'
 import { EventEmitter } from 'events'
+import crypto from 'crypto'
 
 abstract class BaseCompatibleModel {
     abstract NAME: string

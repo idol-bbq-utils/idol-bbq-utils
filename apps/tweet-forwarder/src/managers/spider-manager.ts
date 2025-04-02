@@ -1,5 +1,5 @@
 import { Logger } from '@idol-bbq-utils/log'
-import { getSpider, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
+import { Spider, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
 import { Page } from 'puppeteer-core'
 import { Browser } from 'puppeteer-core'
 import { CronJob } from 'cron'
@@ -35,18 +35,18 @@ interface CrawlerTaskResult {
 class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
     NAME: string = 'SpiderTaskScheduler'
     protected log?: Logger
-    private config: Pick<AppConfig, 'crawlers' | 'cfg_crawler'>
+    private props: Pick<AppConfig, 'crawlers' | 'cfg_crawler'>
 
-    constructor(config: Pick<AppConfig, 'crawlers' | 'cfg_crawler'>, emitter: EventEmitter, log?: Logger) {
+    constructor(props: Pick<AppConfig, 'crawlers' | 'cfg_crawler'>, emitter: EventEmitter, log?: Logger) {
         super(emitter)
-        this.config = config
+        this.props = props
         this.log = log?.child({ label: this.NAME })
     }
 
     async init() {
         this.log?.info('Manager initializing...')
 
-        if (!this.config.crawlers) {
+        if (!this.props.crawlers) {
             this.log?.warn('Crawler not found, skipping...')
             return
         }
@@ -57,10 +57,10 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
         }
 
         // 遍历爬虫配置，为每个爬虫创建定时任务
-        for (const crawler of this.config.crawlers) {
+        for (const crawler of this.props.crawlers) {
             crawler.cfg_crawler = {
                 cron: '*/30 * * * *',
-                ...this.config.cfg_crawler,
+                ...this.props.cfg_crawler,
                 ...crawler.cfg_crawler,
             }
             const { cron } = crawler.cfg_crawler
@@ -211,7 +211,7 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
                 let wrap = this.spiders.get(url.hostname)
                 if (!wrap) {
                     // 需要用详细的网页地址匹配
-                    const spiderBuilder = await getSpider(url.href)
+                    const spiderBuilder = await Spider.getSpider(url.href)
                     if (!spiderBuilder) {
                         this.log?.warn(`[${taskId}] Spider not found for ${url.href}`)
                         continue
@@ -367,6 +367,10 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
                         media.translated_by = translator.NAME
                     }
                 }
+            }
+
+            // TODO
+            if (currentArticle.extra) {
             }
             currentArticle = currentArticle.ref
         }

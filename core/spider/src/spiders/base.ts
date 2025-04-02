@@ -1,7 +1,7 @@
 import { Platform, TaskType, TaskTypeResult } from '@/types'
 import { Logger } from '@idol-bbq-utils/log'
 import { Page, PageEvents, PageEvent } from 'puppeteer-core'
-import { SpiderConstructor } from '.'
+import { Spider } from '.'
 
 abstract class BaseSpider {
     static _VALID_URL: RegExp
@@ -29,7 +29,7 @@ abstract class BaseSpider {
         return this
     }
 
-    _match_valid_url(url: string, matcher: SpiderConstructor): RegExpExecArray | null {
+    _match_valid_url(url: string, matcher: Spider.SpiderConstructor): RegExpExecArray | null {
         return matcher._VALID_URL.exec(url)
     }
 }

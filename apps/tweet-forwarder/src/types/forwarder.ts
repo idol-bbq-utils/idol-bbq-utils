@@ -36,12 +36,12 @@ interface ForwardToPlatformCommonConfig {
 type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> = PlatformConfigMap[T] &
     ForwardToPlatformCommonConfig
 
-interface ForwarderConfig extends ForwardToPlatformCommonConfig, CommonCfgConfig {
+interface ForwarderConfig extends CommonCfgConfig {
     cron?: string
-    media: Media
+    media?: Media
 }
 
-interface ForwarderTarget<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
+interface ForwardTo<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
     platform: T
     /**
      * unique id for the target
@@ -50,11 +50,6 @@ interface ForwarderTarget<T extends ForwardToPlatformEnum = ForwardToPlatformEnu
     id?: string
     cfg_platform: ForwardToPlatformConfig<T>
 }
-
-/**
- * Array of forwarder target's id
- */
-type ForwardTo = Array<string | ForwarderTarget>
 
 interface Forwarder {
     /**
@@ -74,14 +69,14 @@ interface Forwarder {
      */
     task_type?: string
     /**
-     * Array of forwarder target's id
+     * Task type like follows need this
      */
-    forward_to?: ForwardTo
+    task_title?: string
     /**
-     * Allow merging the forwarder target's from root, default is false and will override the forward_to
+     * Array of forwarder target's id, if empty will use all targets
      */
-    merge_forward_to?: boolean
+    subscribers?: Array<string>
     cfg_forwarder?: ForwarderConfig
 }
 
-export { ForwarderTarget, Forwarder, ForwarderConfig, ForwardTo, ForwardToPlatformEnum, ForwardToPlatformConfig }
+export { ForwardTo, Forwarder, ForwarderConfig, ForwardToPlatformEnum, ForwardToPlatformConfig }

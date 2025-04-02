@@ -10,6 +10,7 @@ const X_BASE_VALID_URL = /(https:\/\/)?(www\.)?x\.com\//
 export class XTimeLineSpider extends BaseSpider {
     // extends from XBaseSpider regex
     static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /(?<id>\w+)/.source)
+    static _PLATFORM = Platform.X
     BASE_URL: string = 'https://x.com/'
     NAME: string = 'X TimeLine Spider'
 
