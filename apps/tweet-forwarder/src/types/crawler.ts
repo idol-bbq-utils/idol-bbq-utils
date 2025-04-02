@@ -1,3 +1,4 @@
+import { TaskType } from '@idol-bbq-utils/spider/types'
 import { CommonCfgConfig } from './common'
 import { Translator } from './translator'
 
@@ -46,7 +47,7 @@ interface Crawler {
     /**
      * Task type defined in `@idol-bbq-utils/spider`
      */
-    task_type?: string
+    task_type?: TaskType
     /**
      *
      */

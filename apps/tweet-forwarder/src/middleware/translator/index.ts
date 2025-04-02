@@ -8,7 +8,7 @@ import { OpenaiLikeLLMTranslator } from './openai'
 
 interface TranslatorConstructor {
     _PROVIDER: TranslatorProvider
-    new (...args: ConstructorParameters<typeof BaseTranslator> & any): BaseTranslator
+    new (...args: ConstructorParameters<typeof BaseTranslator>): BaseTranslator
 }
 
 const translators: Array<TranslatorConstructor> = [

@@ -24,7 +24,7 @@
         "generate": "pnpm prisma migrate dev --name init",
         "build": "tsc && tsc-alias",
         "dev": "pnpm build && node lib/main.js",
-        "test": "pnpm build && node lib/test.js",
+        "test": "jest --testPathIgnorePatterns \"playground/*\" --",
         "run": "node lib/main.js"
     },
     "bugs": {

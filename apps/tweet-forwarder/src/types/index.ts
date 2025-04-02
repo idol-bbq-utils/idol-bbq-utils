@@ -1,22 +1,23 @@
-import { IBot, IBotConfig } from './bot'
 import { Crawler, CrawlerConfig } from './crawler'
-import { Forwarder, ForwarderConfig, ForwarderTarget, ForwardTo } from './forwarder'
-
-interface IYamlConfig {
-    bots: Array<IBot>
-    config?: IBotConfig
-}
+import {
+    Forwarder,
+    ForwarderConfig,
+    ForwarderTarget,
+    ForwardTo,
+    ForwardToPlatformConfig,
+    ForwardToPlatformEnum,
+} from './forwarder'
 
 /**
  * only crawling or forwarding or both
  */
 interface AppConfig {
-    crawlers?: Array<Crawler> | Crawler
+    crawlers?: Array<Crawler>
     cfg_crawler?: CrawlerConfig
     forward_targets?: Array<ForwarderTarget>
+    cfg_forward_target?: ForwardToPlatformConfig<ForwardToPlatformEnum>
     forwarders?: Array<Forwarder>
     cfg_forwarder?: ForwarderConfig
-    forward_to?: ForwardTo
 }
 
-export { IYamlConfig, AppConfig }
+export { AppConfig }

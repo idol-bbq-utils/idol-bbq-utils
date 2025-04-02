@@ -5,7 +5,7 @@ import { GenericArticle, GenericFollows, Platform } from '@/types'
 import { JSONPath } from 'jsonpath-plus'
 import { waitForEvent, waitForResponse } from '@/spiders/base'
 export namespace XApiJsonParser {
-    function santiizeTweetsJson(json: any) {
+    function sanitizeTweetsJson(json: any) {
         let tweets = JSONPath({ path: "$..instructions[?(@.type === 'TimelineAddEntries')].entries", json })[0]
         let pin_tweet = JSONPath({ path: "$..instructions[?(@.type === 'TimelinePinEntry')].entry", json })[0]
         if (!tweets) {
@@ -83,7 +83,7 @@ export namespace XApiJsonParser {
             a_id: legacy?.id_str,
             u_id: userLegacy?.screen_name,
             username: userLegacy?.name,
-            created_at: parseTwitterDate(legacy?.created_at),
+            created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
             content: legacy?.full_text,
             url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
             type: result.quoted_status_result?.result ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET,
@@ -114,7 +114,7 @@ export namespace XApiJsonParser {
     }
 
     export function tweetsArticleParser(json: any) {
-        let tweets = santiizeTweetsJson(json)
+        let tweets = sanitizeTweetsJson(json)
         tweets = tweets
             .filter((t: { entryId: string }) => t.entryId.startsWith('tweet-'))
             .map((t: { content: any }) => t.content?.itemContent?.tweet_results?.result)
@@ -123,7 +123,7 @@ export namespace XApiJsonParser {
     }
 
     export function tweetsRepliesParser(json: any) {
-        const tweets = santiizeTweetsJson(json)
+        const tweets = sanitizeTweetsJson(json)
         const conversations = tweets
             .filter((t: { entryId: string }) => t.entryId.startsWith('profile-conversation'))
             .map((t: { content: { items: any } }) => t.content.items)
@@ -159,7 +159,7 @@ export namespace XApiJsonParser {
             throw new Error('Follows json format may have changed')
         }
         return {
-            plattform: Platform.X,
+            platform: Platform.X,
             username: user?.name,
             u_id: user?.screen_name,
             followers: user?.followers_count,

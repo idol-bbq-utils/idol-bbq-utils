@@ -9,9 +9,9 @@ abstract class BaseOpenai extends BaseTranslator {
 }
 
 class OpenaiLikeLLMTranslator extends BaseOpenai {
-    static _PROVIDER: TranslatorProvider.OpenAI
+    static _PROVIDER = TranslatorProvider.OpenAI
     NAME: string
-    constructor(api_key: string, log: Logger, config?: TranslatorConfig) {
+    constructor(api_key: string, log?: Logger, config?: TranslatorConfig) {
         super(api_key, log, config)
         this.api_key = api_key
         this.NAME = config?.name || 'Openai-like'

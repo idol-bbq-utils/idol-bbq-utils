@@ -13,9 +13,9 @@ abstract class BaseBigModel extends BaseTranslator {
 }
 
 class BigModelLLMTranslator extends BaseBigModel {
-    static _PROVIDER: TranslatorProvider.BigModel
+    static _PROVIDER = TranslatorProvider.BigModel
     NAME: string
-    constructor(api_key: string, log: Logger, config?: TranslatorConfig) {
+    constructor(api_key: string, log?: Logger, config?: TranslatorConfig) {
         super(api_key, log, config)
         this.NAME = this.config?.name || 'glm-4-flash'
         this.BASE_URL = this.config?.base_url || this.BASE_URL

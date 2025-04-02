@@ -179,7 +179,7 @@ namespace InsApiJsonParser {
         }
         let user = json?.data?.user
         return {
-            plattform: Platform.Instagram,
+            platform: Platform.Instagram,
             username: user?.full_name,
             u_id: user?.username,
             followers: user?.follower_count,

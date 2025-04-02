@@ -6,19 +6,10 @@ import { GraphQL } from './user'
 export * as UserPage from './user'
 export * from './types'
 
-export class XBaseSpider extends BaseSpider {
-    static _BASE_VALID_URL = /(https:\/\/)?(www\.)?x\.com\//
-    BASE_URL: string = 'https://x.com/'
-
-    // @ts-ignore
-    async crawl() {
-        throw new Error('Not implemented')
-    }
-}
-
+const X_BASE_VALID_URL = /(https:\/\/)?(www\.)?x\.com\//
 export class XTimeLineSpider extends BaseSpider {
     // extends from XBaseSpider regex
-    static _VALID_URL = new RegExp(XBaseSpider._BASE_VALID_URL.source + /(?<id>\w+)/.source)
+    static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /(?<id>\w+)/.source)
     BASE_URL: string = 'https://x.com/'
     NAME: string = 'X TimeLine Spider'
 

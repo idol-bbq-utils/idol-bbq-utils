@@ -48,7 +48,7 @@ interface ForwarderTarget<T extends ForwardToPlatformEnum = ForwardToPlatformEnu
      * default is UUID
      */
     id?: string
-    cfg_platform?: ForwardToPlatformConfig<T>
+    cfg_platform: ForwardToPlatformConfig<T>
 }
 
 /**
@@ -84,4 +84,4 @@ interface Forwarder {
     cfg_forwarder?: ForwarderConfig
 }
 
-export { ForwarderTarget, Forwarder, ForwarderConfig, ForwardTo, ForwardToPlatformEnum }
+export { ForwarderTarget, Forwarder, ForwarderConfig, ForwardTo, ForwardToPlatformEnum, ForwardToPlatformConfig }
