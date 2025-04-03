@@ -15,7 +15,7 @@ import { getTranslator } from '@/middleware/translator'
 import { pRetry } from '@idol-bbq-utils/utils'
 import DB, { Article } from '@/db'
 import { RETRY_LIMIT } from '@/config'
-import crypto from 'crypto'
+import { delay } from '@/utils/time'
 
 interface TaskResult {
     taskId: string
@@ -64,10 +64,22 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
                 ...this.props.cfg_crawler,
                 ...crawler.cfg_crawler,
             }
-            const { cron } = crawler.cfg_crawler
+            let { cron, interval_time } = crawler.cfg_crawler
             // 定时dispatch任务
             const job = new CronJob(cron as string, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
+                if (interval_time) {
+                    interval_time = {
+                        ...{
+                            max: 0,
+                            min: 0,
+                        },
+                        ...interval_time,
+                    }
+                    const time = Math.floor(Math.random() * (interval_time.max - interval_time.min) + interval_time.min)
+                    this.log?.info(`cron triggered but wait for ${time}ms`)
+                    await delay(time)
+                }
                 this.log?.info(`[${taskId}] starting to dispatch task`)
                 const task: TaskScheduler.Task = {
                     id: taskId,
@@ -314,7 +326,10 @@ class SpiderPools extends BaseCompatibleModel {
                 new_articles.push(article)
             }
         }
-
+        if (new_articles.length === 0) {
+            ctx.log?.info(`[${url.href}] No new articles found.`)
+            return []
+        }
         new_articles = await Promise.all(new_articles.map((article) => this.doTranslate(ctx, article, translator)))
 
         // 串行，防止create unique的问题
@@ -322,6 +337,7 @@ class SpiderPools extends BaseCompatibleModel {
             const res = await DB.Article.trySave(article)
             saved_article_ids.push(res)
         }
+        ctx.log?.info(`[${url.href}] ${saved_article_ids.length} articles saved.`)
         return saved_article_ids.filter((i) => i !== undefined).map((i) => i.id) as Array<number>
     }
 
