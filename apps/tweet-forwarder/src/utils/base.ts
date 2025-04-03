@@ -63,25 +63,25 @@ namespace TaskScheduler {
 }
 
 /**
- * Sanitize websites, domain and paths to a list of websites.
+ * Sanitize websites, origin and paths to a list of websites.
  *
- * return websites if provided, otherwise return a list of websites constructed from domain and paths.
+ * return websites if provided, otherwise return a list of websites constructed from origin and paths.
  */
 function sanitizeWebsites({
     websites,
-    domain,
+    origin,
     paths,
 }: {
     websites?: Array<string>
-    domain?: string
+    origin?: string
     paths?: Array<string>
 }): Array<string> {
     if (websites) {
         return websites
     }
-    if (domain) {
+    if (origin) {
         if (paths && paths.length > 0) {
-            return paths.map((p) => `https://${domain.replace(/\/$/, '')}/${p.replace(/^\//, '')}`)
+            return paths.map((p) => `${origin.replace(/\/$/, '')}/${p.replace(/^\//, '')}`)
         }
     }
     return []

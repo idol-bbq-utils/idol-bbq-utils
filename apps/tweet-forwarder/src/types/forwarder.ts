@@ -74,15 +74,15 @@ interface ForwardTo<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
 
 interface Forwarder<T extends TaskType> {
     /**
-     * will override the domain and paths
+     * will override the origin and paths
      */
     websites?: Array<string>
     /**
      * should work with paths
      */
-    domain?: string
+    origin?: string
     /**
-     * should work with domain
+     * should work with origin
      */
     paths?: Array<string>
     /**

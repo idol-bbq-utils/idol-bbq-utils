@@ -1,22 +1,22 @@
 bots:
   - name: 'test-bot'
     websites:                                 # (required) websites to forward tweets from
-      - domain: 'https://x.com'               # (required) website domain, notice the slash at the end
+      - origin: 'https://x.com'               # (required) website origin, notice the slash at the end
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/day.cookies
         config:
           cron: '0-59/10 0-11 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/night.cookies
         config:
           cron: '0-59/10 12-22 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine','kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/night.cookies
         config:
           cron: '0-59/10 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【莲团声优推特粉丝变化情况】'
         paths: ['hanamiya_nina', 'NozomiNirei', 'ssk_ktk828', 'cocona_nonaka', 'KonaTsukine', 'kannkannna', 'sakuraihi_na', 'Hayama_Fuka', 'kurusurindesu']
@@ -54,25 +54,25 @@ bots:
         key: 'glm-token'
   - name: 'all-follows-bot'
     websites:
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【星团声优推特粉丝变化情况】'
         paths: ['SayuriDate', 'Liyu0109', '_Naomi_Payton_', 'AoyamaNagisa', 'MisakiNako_', 'NozomiSuzuhara', 'AyaEmori_BOX', 'a_yabushima', '0927_yuina', 'Sakakura_Sakura']
         config:
           cron: '14 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【虹团声优推特粉丝变化情况】'
         paths: ['yano_hinaki35', 'aguri_onishi', 'tomori_kusunoki', 'cocohayashi515', 'kaor1n_n', 'MayuSgr',  'kitoakari_1016', 'sashide_m', 't_chiemi1006', 'natyaaaaaaan07', 'iRis_k_miyu', 'k_moeka_', 'uchida_shu0524', 'homoto_akina']
         config:
           cron: '16 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【水团声优推特粉丝变化情况】'
         paths: ['anju_inami', 'Rikako_Aida', 'suwananaka', 'box_komiyaarisa', 'Saito_Shuka', 'aikyan_', 'Kanako_tktk', 'aina_suzuki723', 'furihata_ai']
         config:
           cron: '24 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【缪斯声优推特粉丝变化情况】'
         paths: ['nittaemi85', 'nanjolno', 'aya_uchida', 'mimori_suzuko', 'rippialoha', 'pile_eric', 'kusudaaina', 'INFO_shikaco', 'tokui_sorangley']

@@ -1,7 +1,7 @@
 bots:
   - name: 'test-bot'
     websites:
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'                  # (not required) task type
         task_title: '【Follows】'             # (not required) task title
         paths: ['hasunosora_SIC']             # (required) users to forward tweets from
@@ -10,7 +10,7 @@ bots:
           interval_time:
             max: 0
             min: 0                                 # (required) websites to forward tweets from
-      - domain: 'https://x.com'     # (not required) task title
+      - origin: 'https://x.com'     # (not required) task title
         paths: ['hasunosora_SIC']            # (required) users to forward tweets from
         config:
           cron: '*/2 * * * *'

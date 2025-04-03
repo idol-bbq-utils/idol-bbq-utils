@@ -237,7 +237,7 @@ class ForwarderPools extends BaseCompatibleModel {
         ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
         let {
             websites,
-            domain,
+            origin,
             paths,
             task_type = 'article' as TaskType,
             task_title,
@@ -245,8 +245,8 @@ class ForwarderPools extends BaseCompatibleModel {
             cfg_task,
             subscribers,
         } = task.data as Forwarder
-        if (!websites && !domain && !paths) {
-            ctx.log?.error(`No websites or domain or paths found`)
+        if (!websites && !origin && !paths) {
+            ctx.log?.error(`No websites or origin or paths found`)
             this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
                 taskId,
                 status: TaskScheduler.TaskStatus.CANCELLED,
@@ -255,7 +255,7 @@ class ForwarderPools extends BaseCompatibleModel {
         }
         websites = sanitizeWebsites({
             websites,
-            domain,
+            origin,
             paths,
         })
 

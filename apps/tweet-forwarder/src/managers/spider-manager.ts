@@ -147,7 +147,7 @@ class SpiderPools extends BaseCompatibleModel {
     private translators: Map<TranslatorProvider, BaseTranslator> = new Map()
     private browser: Browser
     /**
-     * batch id =  md5hash( `websites` or `domain + paths`)
+     * batch id =  md5hash( `websites` or `origin + paths`)
      */
     private pools: Map<
         string,
@@ -183,13 +183,13 @@ class SpiderPools extends BaseCompatibleModel {
             status: TaskScheduler.TaskStatus.RUNNING,
         })
         ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
-        let { websites, domain, paths, task_type = 'article', cfg_crawler } = task.data as Crawler
+        let { websites, origin, paths, task_type = 'article', cfg_crawler } = task.data as Crawler
         let { one_time: one_time_task } = cfg_crawler || {}
         if (['follows'].includes(task_type) && one_time_task !== false) {
             one_time_task = true
         }
-        if (!websites && !domain && !paths) {
-            ctx.log?.error(`No websites or domain or paths found`)
+        if (!websites && !origin && !paths) {
+            ctx.log?.error(`No websites or origin or paths found`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
                 taskId,
                 status: TaskScheduler.TaskStatus.CANCELLED,
@@ -198,7 +198,7 @@ class SpiderPools extends BaseCompatibleModel {
         }
         websites = sanitizeWebsites({
             websites,
-            domain,
+            origin,
             paths,
         })
         // try to get translation
@@ -310,10 +310,10 @@ class SpiderPools extends BaseCompatibleModel {
         this.log?.info('Dropping Spider Pools...')
         // close all pages
         for (const [id, spiders] of this.pools.entries()) {
-            for (const [domain, wrap] of spiders.entries()) {
+            for (const [origin, wrap] of spiders.entries()) {
                 const { page } = wrap
                 await page.close()
-                this.log?.info(`Page closed for ${domain}`)
+                this.log?.info(`Page closed for ${origin}`)
             }
         }
         this.pools.clear()

@@ -43,15 +43,15 @@ interface CrawlerConfig extends CommonCfgConfig {
 
 interface Crawler {
     /**
-     * will override the domain and paths
+     * will override the origin and paths
      */
     websites?: Array<string>
     /**
      * should work with paths
      */
-    domain?: string
+    origin?: string
     /**
-     * should work with domain
+     * should work with origin
      */
     paths?: Array<string>
     /**
