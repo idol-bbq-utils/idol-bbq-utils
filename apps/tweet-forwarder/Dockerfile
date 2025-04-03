@@ -12,7 +12,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml lerna.json tsconfig.json ./
-COPY ./app/tweet-forwarder ./app/tweet-forwarder
+COPY ./apps/tweet-forwarder ./app/tweet-forwarder
 COPY ./core ./core
 
 ENV PUPPETEER_SKIP_DOWNLOAD true
