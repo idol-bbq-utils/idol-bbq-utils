@@ -15,7 +15,6 @@ function formatTime(time: number | string) {
 function getSubtractTime(time: number, offset: string) {
     const match = offset.match(/(\d+)([a-zA-Z]+)/)
     if (!match) throw new Error('Invalid offset format')
-    console.log(match)
     return dayjs
         .unix(time)
         .subtract(parseInt(match[1], 10), match[2] as ManipulateType)

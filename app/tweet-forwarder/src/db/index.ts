@@ -163,7 +163,6 @@ namespace DB {
             }
             const latestTime = latest.created_at
             const subtractTime = getSubtractTime(latestTime, window)
-            console.log(latestTime, subtractTime)
             const comparison = await prisma.crawler_follows.findFirst({
                 where: {
                     platform: platform,
@@ -176,7 +175,6 @@ namespace DB {
                     created_at: 'desc',
                 },
             })
-            console.log('latest', latest, 'comparison', comparison)
             return [latest, comparison]
         }
     }

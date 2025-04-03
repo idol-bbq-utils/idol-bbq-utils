@@ -39,7 +39,7 @@ async function plainDownloadMediaFile(url: string): Promise<string> {
     if (!filename) {
         filename = Math.random().toString(36).slice(2, 10)
     }
-    const dest = `${CACHE_DIR_ROOT}/gallery-dl/plain/${filename}`
+    const dest = `${CACHE_DIR_ROOT}/media/plain/${filename}`
     return download(url, dest)
 }
 
@@ -56,7 +56,7 @@ function galleryDownloadMediaFile(url: string, gallery_dl: MediaToolConfigMap['g
         exec_path = gallery_dl.path
     }
 
-    args.push(`--directory ${CACHE_DIR_ROOT}/gallery-dl`)
+    args.push(`--directory ${CACHE_DIR_ROOT}/media/gallery-dl`)
     args.push(url)
     log.debug(`downloading media files with args: ${args}`)
     try {

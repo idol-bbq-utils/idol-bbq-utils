@@ -13,7 +13,7 @@ import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
 import { cleanMediaFiles, galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
 import { formatTime } from '@/utils/time'
-import { platformArticleMapToActionText } from '@idol-bbq-utils/spider/const'
+import { platformArticleMapToActionText, platformNameMap } from '@idol-bbq-utils/spider/const'
 
 type Forwarder = RealForwarder<TaskType>
 
@@ -42,12 +42,12 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
 
     constructor(props: Pick<AppConfig, 'cfg_forwarder' | 'forwarders'>, emitter: EventEmitter, log?: Logger) {
         super(emitter)
-        this.log = log?.child({ subservice: 'Forwarder Manager' })
+        this.log = log?.child({ subservice: this.NAME })
         this.props = props
     }
 
     async init() {
-        this.log?.info('Forwarder Manager initializing...')
+        this.log?.info('initializing...')
 
         if (!this.props.forwarders) {
             this.log?.warn('Forwarder not found, skipping...')
@@ -613,7 +613,9 @@ class ForwarderPools extends BaseCompatibleModel {
     }
 
     private formatMetaline(article: Article) {
-        let metaline = [article.username, article.u_id].join(TAB) + '\n'
+        let metaline =
+            [article.username, article.u_id, `来自${platformNameMap[article.platform]}`].filter(Boolean).join(TAB) +
+            '\n'
         metaline += [formatTime(article.created_at * 1000), ``].join(TAB)
         const action = platformArticleMapToActionText[article.platform][article.type]
         metaline += [formatTime(article.created_at * 1000), `${action}：`].join(TAB)

@@ -13,7 +13,7 @@ const forwarders: Array<ForwarderConstructor> = [BiliForwarder, QQForwarder, TgF
 
 function getForwarder(platform: ForwardToPlatformEnum): ForwarderConstructor | null {
     for (const forwarder of forwarders) {
-        if (forwarder._PLATFORM === platform) {
+        if (forwarder._PLATFORM.toLowerCase() === platform.toLowerCase()) {
             return forwarder
         }
     }

@@ -149,16 +149,7 @@ class SpiderPools extends BaseCompatibleModel {
     /**
      * batch id =  md5hash( `websites` or `origin + paths`)
      */
-    private pools: Map<
-        string,
-        Map<
-            string,
-            {
-                spider: BaseSpider
-                page: Page
-            }
-        >
-    > = new Map()
+    private spiders: Map<string, BaseSpider> = new Map()
     // private workers:
     constructor(browser: Browser, emitter: EventEmitter, log?: Logger) {
         super()
@@ -174,9 +165,8 @@ class SpiderPools extends BaseCompatibleModel {
 
     // handle task received
     async onTaskReceived(ctx: TaskScheduler.TaskCtx) {
-        const { taskId, task, log } = ctx
+        const { taskId, task } = ctx
         let { websites, origin, paths, task_type = 'article', cfg_crawler, name } = task.data as Crawler
-        let { one_time: one_time_task } = cfg_crawler || {}
         ctx.log = this.log?.child({ label: name, trace_id: taskId })
         // prepare
         // maybe we will use workers in the future
@@ -185,9 +175,6 @@ class SpiderPools extends BaseCompatibleModel {
             status: TaskScheduler.TaskStatus.RUNNING,
         })
         ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
-        if (['follows'].includes(task_type) && one_time_task !== false) {
-            one_time_task = true
-        }
         if (!websites && !origin && !paths) {
             ctx.log?.error(`No websites or origin or paths found`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
@@ -201,6 +188,14 @@ class SpiderPools extends BaseCompatibleModel {
             origin,
             paths,
         })
+        if (websites.length === 0) {
+            ctx.log?.error(`No websites found after sanitizing`)
+            this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
+                taskId,
+                status: TaskScheduler.TaskStatus.CANCELLED,
+            })
+            return
+        }
         // try to get translation
         let translator = undefined
         if (cfg_crawler?.translator) {
@@ -218,46 +213,32 @@ class SpiderPools extends BaseCompatibleModel {
                 }
             }
         }
+
+        // 如果未来对每个网页地址单独设置了cookie，需要移动至下方逻辑设置cookie
+        const page = await this.browser.newPage()
+        const cookie_file = cfg_crawler?.cookie_file
+        const user_agent = cfg_crawler?.user_agent
+        cookie_file && (await page.setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
+        await page.setUserAgent(user_agent || UserAgent.CHROME)
+
         try {
             let result: Array<CrawlerTaskResult> = []
-            // 准备任务
-            const batchId = crypto
-                .createHash('md5')
-                .update(`${task_type}:${websites.join(',')}`)
-                .digest('hex')
-            let pool = this.pools.get(batchId)
-            if (!pool) {
-                pool = new Map()
-                this.pools.set(batchId, pool)
-            }
-
             // 开始任务
             for (const website of websites) {
                 // 单次系列爬虫任务
                 const url = new URL(website)
-                let wrap = pool.get(url.hostname)
-                if (!wrap) {
+                let spider = this.spiders.get(url.hostname)
+                if (!spider) {
                     // 需要用详细的网页地址匹配
                     const spiderBuilder = await Spider.getSpider(url.href)
                     if (!spiderBuilder) {
                         ctx.log?.warn(`Spider not found for ${url.href}`)
                         continue
                     }
-                    const spider = new spiderBuilder(this.log).init()
-                    const page = await this.browser.newPage()
-                    wrap = {
-                        spider,
-                        page,
-                    }
-                    pool.set(url.hostname, wrap)
+                    spider = new spiderBuilder(this.log).init()
+                    this.spiders.set(url.hostname, spider)
                     ctx.log?.info(`Spider instance created for ${url.hostname}`)
                 }
-                const { spider, page } = wrap
-                // 动态设置，因为cookie可能会变
-                const cookie_file = cfg_crawler?.cookie_file
-                const user_agent = cfg_crawler?.user_agent
-                cookie_file && (await page.setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
-                await page.setUserAgent(user_agent || UserAgent.CHROME)
 
                 if (task_type === 'article') {
                     let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, translator)
@@ -282,16 +263,6 @@ class SpiderPools extends BaseCompatibleModel {
                 }
             }
 
-            // 任务收尾
-            // 一次性任务
-            if (one_time_task) {
-                ctx.log?.info(`One time task finished, closing all pages...`)
-                pool.forEach(async (wrap) => {
-                    const { page } = wrap
-                    await page.close()
-                })
-                this.pools.delete(batchId)
-            }
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.FINISHED}`, {
                 taskId,
                 result,
@@ -303,20 +274,16 @@ class SpiderPools extends BaseCompatibleModel {
                 taskId,
                 status: TaskScheduler.TaskStatus.FAILED,
             })
+        } finally {
+            // close page
+            await page.close()
+            ctx.log?.info(`Page closed.`)
         }
     }
 
     async drop(...args: any[]): Promise<void> {
         this.log?.info('Dropping Spider Pools...')
-        // close all pages
-        for (const [id, spiders] of this.pools.entries()) {
-            for (const [origin, wrap] of spiders.entries()) {
-                const { page } = wrap
-                await page.close()
-                this.log?.info(`Page closed for ${origin}`)
-            }
-        }
-        this.pools.clear()
+        this.spiders.clear()
         this.translators.clear()
         this.emitter.removeAllListeners()
         await this.browser.close()

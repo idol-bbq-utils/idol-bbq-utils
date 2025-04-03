@@ -132,7 +132,7 @@ namespace InsApiJsonParser {
             a_id: node?.code,
             u_id: node?.user?.username,
             username: node?.user?.full_name,
-            created_at: node?.caption?.created_at,
+            created_at: node?.taken_at,
             content: node?.caption?.text,
             url: `https://www.instagram.com/p/${node?.code}/`,
             type: ArticleTypeEnum.POST,

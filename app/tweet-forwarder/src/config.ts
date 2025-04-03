@@ -5,7 +5,7 @@ import YAML from 'yaml'
 import { createLogger, Logger, winston, format } from '@idol-bbq-utils/log'
 import dayjs from 'dayjs'
 
-const CACHE_DIR_ROOT = process.env.CACHE_DIR || `${os.tmpdir()}`
+const CACHE_DIR_ROOT = process.env.CACHE_DIR || `${os.tmpdir()}/tweet-forwarder`
 const RETRY_LIMIT = 2
 
 const log: Logger = createLogger({

@@ -21,7 +21,7 @@ const translators: Array<TranslatorConstructor> = [
 
 function getTranslator(provider: TranslatorProvider): TranslatorConstructor | null {
     for (const translator of translators) {
-        if (translator._PROVIDER === provider) {
+        if (translator._PROVIDER.toLowerCase() === provider.toLowerCase()) {
             return translator
         }
     }
