@@ -6,7 +6,7 @@ import { createLogger, Logger, winston, format } from '@idol-bbq-utils/log'
 import dayjs from 'dayjs'
 
 const CACHE_DIR_ROOT = process.env.CACHE_DIR || `${os.tmpdir()}`
-const RETRY_LIMIT = 3
+const RETRY_LIMIT = 2
 
 const log: Logger = createLogger({
     defaultMeta: { service: 'tweet-forwarder' },

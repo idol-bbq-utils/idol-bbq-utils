@@ -4,7 +4,7 @@ import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, Droppable, TaskScheduler } from '@/utils/base'
 import { AppConfig } from '@/types'
-import { platformArticleMapToActionText, TaskType } from '@idol-bbq-utils/spider/types'
+import { TaskType } from '@idol-bbq-utils/spider/types'
 import DB, { Article, ArticleWithId } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { MediaTool, MediaToolEnum } from '@/types/media'
@@ -13,6 +13,7 @@ import { getForwarder } from '@/middleware/forwarder'
 import { createHash } from 'crypto'
 import { cleanMediaFiles, galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
 import { formatTime } from '@/utils/time'
+import { platformArticleMapToActionText } from '@idol-bbq-utils/spider/const'
 
 const TAB = ' '.repeat(4)
 
@@ -183,7 +184,7 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
     > = new Map()
     private props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>
     // private workers:
-    constructor(emitter: EventEmitter, props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>, log?: Logger) {
+    constructor(props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>, emitter: EventEmitter, log?: Logger) {
         super()
         this.log = log?.child({ label: this.NAME })
         this.emitter = emitter
@@ -252,6 +253,7 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                     websites,
                     cfg_forwarder,
                     subscribers,
+                    taskId,
                 })
             }
 
@@ -273,7 +275,7 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                 result,
             } as TaskResult)
         } catch (error) {
-            this.log?.error(`[${taskId}] Error while crawling: ${error}`)
+            this.log?.error(`[${taskId}] Error while sending: ${error}`)
             this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
                 taskId,
                 status: TaskScheduler.TaskStatus.FAILED,
@@ -291,20 +293,22 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
         websites,
         subscribers,
         cfg_forwarder,
+        taskId,
     }: {
         websites: Array<string>
-        subscribers?: Forwarder['subscribers']
+        subscribers: Forwarder['subscribers']
         cfg_forwarder: Forwarder['cfg_forwarder']
+        taskId?: string
     }) {
         for (const website of websites) {
             // 单次爬虫任务
             const url = new URL(website)
             const forwarders = this.getOrInitForwarders(url.href, subscribers, cfg_forwarder)
             if (forwarders.length === 0) {
-                this.log?.warn(`No forwarders found for ${url.href}`)
+                this.log?.warn(`[${taskId || ''}] No forwarders found for ${url.href}`)
                 continue
             }
-            await this.processSingleArticleTask(url.href, forwarders, cfg_forwarder)
+            await this.processSingleArticleTask(url.href, forwarders, cfg_forwarder, taskId)
         }
     }
 
@@ -312,15 +316,16 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
         url: string,
         forwarders: Array<BaseForwarder>,
         cfg_forwarder: Forwarder['cfg_forwarder'],
+        taskId?: string,
     ) {
         const { u_id, platform } = Spider.extractBasicInfo(url) ?? {}
         if (!u_id || !platform) {
-            this.log?.error(`Invalid url: ${url}`)
+            this.log?.error(`[${taskId || ''}] Invalid url: ${url}`)
             return
         }
         const articles = await DB.Article.getArticlesByName(u_id, platform)
         if (articles.length <= 0) {
-            this.log?.warn(`No articles found for ${url}`)
+            this.log?.warn(`[${taskId || ''}] No articles found for ${url}`)
             return
         }
         // 一篇文章可能需要被转发至多个平台，先获取一篇文章与forwarder的对应关系
@@ -330,13 +335,13 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
         }>
         for (const article of articles) {
             const to = [] as Array<BaseForwarder>
-            forwarders.forEach(async (f) => {
+            for (const f of forwarders) {
                 const id = f.id
                 const exist = await DB.ForwardBy.checkExist(article.id, id, 'article')
                 if (!exist) {
                     to.push(f)
                 }
-            })
+            }
             if (to.length > 0) {
                 articles_forwarders.push({
                     article,
@@ -346,12 +351,14 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
         }
 
         if (articles_forwarders.length === 0) {
-            this.log?.info(`No articles need to be sent for ${url}`)
+            this.log?.info(`[${taskId || ''}] No articles need to be sent for ${url}`)
             return
         }
-
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
+            this.log?.debug(
+                `[${taskId || ''}] Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`,
+            )
             let maybe_media_files = [] as Array<{
                 path: string
                 media_type: string
@@ -359,19 +366,35 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
             // article to photo
 
             // 下载媒体文件
-            if (cfg_forwarder?.media && article.media) {
-                // handle media
+            if (cfg_forwarder?.media) {
                 const media = cfg_forwarder.media
                 let paths = [] as Array<string>
-                article.media
-                if (media.use.tool === MediaToolEnum.DEFAULT) {
-                    paths = await Promise.all(article.media?.map(({ url }) => plainDownloadMediaFile(url)))
-                }
-                if (media.use.tool === MediaToolEnum.GALLERY_DL) {
-                    paths = await galleryDownloadMediaFile(
-                        article.url,
-                        media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
-                    )
+
+                let currentArticle: Article | null = article
+                while (currentArticle) {
+                    let new_files = [] as Array<string>
+                    if (currentArticle.has_media) {
+                        this.log?.debug(`[${taskId || ''}] Downloading media files for ${currentArticle.a_id}`)
+                        // handle media
+                        if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
+                            this.log?.debug(`[${taskId || ''}] Downloading media with http downloader`)
+                            new_files = await Promise.all(
+                                currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url)),
+                            )
+                        }
+                        if (media.use.tool === MediaToolEnum.GALLERY_DL) {
+                            this.log?.debug(`[${taskId || ''}] Downloading media with gallery-dl`)
+                            new_files = await galleryDownloadMediaFile(
+                                currentArticle.url,
+                                media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
+                            )
+                        }
+                        if (new_files.length > 0) {
+                            this.log?.debug(`[${taskId || ''}] Downloaded media files: ${new_files.join(', ')}`)
+                            paths = paths.concat(new_files)
+                        }
+                    }
+                    currentArticle = currentArticle.ref
                 }
                 // maybe fallback to default
                 maybe_media_files = paths.map((path) => ({
@@ -379,19 +402,19 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                     media_type: getMediaType(path),
                 }))
             }
-
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
             const text = this.articleToText(article)
             // 对所有订阅者进行转发
             for (const target of to) {
                 try {
+                    this.log?.debug(`[${taskId || ''}] ${text.length} characters to be sent to ${target.id}`)
                     await target.send(text, {
                         media: maybe_media_files,
                         timestamp: article.created_at * 1000,
                     })
                     await DB.ForwardBy.save(article.id, target.id, 'article')
                 } catch (e) {
-                    this.log?.error(`Error while sending to ${target.id}: ${e}`)
+                    this.log?.error(`[${taskId || ''}] Error while sending to ${target.id}: ${e}`)
                 }
             }
             /**
@@ -452,19 +475,22 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
      * 原文 -> 媒体文件alt -> extra
      */
     private articleToText(article: Article) {
-        let currentArticle = article
+        let currentArticle: Article | null = article
         let format_article = ''
         while (currentArticle) {
-            const metaline = this.formatMetaline(article)
-            format_article += `${metaline}\n\n`
-            if (article.translated_by) {
+            const metaline = this.formatMetaline(currentArticle)
+            format_article += `${metaline}`
+            if (currentArticle.content) {
+                format_article += '\n\n'
+            }
+            if (currentArticle.translated_by) {
                 /***** 翻译原文 *****/
-                let translation = article.translation || ''
+                let translation = currentArticle.translation || ''
                 /***** 翻译原文结束 *****/
 
                 /***** 图片描述翻译 *****/
                 let media_translations: Array<string> = []
-                for (const [idx, media] of (article.media || []).entries()) {
+                for (const [idx, media] of (currentArticle.media || []).entries()) {
                     if (media.type === 'photo' && media.translation) {
                         media_translations.push(`图片${idx + 1} alt: ${media.translation as string}`)
                     }
@@ -475,17 +501,17 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                 /***** 图片描述结束 *****/
 
                 /***** extra描述 *****/
-                if (article.extra) {
+                if (currentArticle.extra) {
                 }
                 /***** extra描述结束 *****/
 
-                format_article += `${translation}\n${'-'.repeat(6)}↑${article.translated_by || '大模型' + '渣翻'}--↓原文${'-'.repeat(6)}\n`
+                format_article += `${translation}\n${'-'.repeat(6)}↑${currentArticle.translated_by || '大模型' + '渣翻'}--↓原文${'-'.repeat(6)}\n`
             }
 
             /* 原文 */
-            let raw_article = article.content
+            let raw_article = currentArticle.content
             let raw_alts = []
-            for (const [idx, media] of (article.media || []).entries()) {
+            for (const [idx, media] of (currentArticle.media || []).entries()) {
                 if (media.type === 'photo' && media.alt) {
                     raw_alts.push(`photo${idx + 1} alt: ${media.alt as string}`)
                 }
@@ -493,14 +519,15 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
             if (raw_alts.length > 0) {
                 raw_article = `${raw_article}\n\n${raw_alts.join('\n')}`
             }
-            if (article.extra) {
+            if (currentArticle.extra) {
                 // card parser
             }
             format_article += `${raw_article}`
-            if (article.ref) {
-                currentArticle = article.ref
+            if (currentArticle.ref) {
                 format_article += `\n\n${'-'.repeat(12)}\n\n`
             }
+            // get ready for next run
+            currentArticle = currentArticle.ref
         }
         return format_article
     }

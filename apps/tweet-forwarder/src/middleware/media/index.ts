@@ -40,7 +40,7 @@ async function plainDownloadMediaFile(url: string): Promise<string> {
         filename = Math.random().toString(36).slice(2, 10)
     }
     const dest = `${CACHE_DIR_ROOT}/gallery-dl/plain/${filename}`
-    return await download(url, dest)
+    return download(url, dest)
 }
 
 function galleryDownloadMediaFile(url: string, gallery_dl: MediaToolConfigMap['gallery-dl']) {

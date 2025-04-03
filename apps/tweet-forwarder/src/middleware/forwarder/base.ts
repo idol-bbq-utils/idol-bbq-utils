@@ -25,7 +25,7 @@ abstract class BaseForwarder extends BaseCompatibleModel {
     }
 
     async init(): Promise<void> {
-        this.log = this.log?.child({ label: this.NAME, subservice: this.id })
+        this.log = this.log?.child({ service: 'Forwarder', subservice: this.NAME, label: this.id })
         this.log?.debug(`loaded with config ${this.config}`)
     }
 

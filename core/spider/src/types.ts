@@ -1,25 +1,10 @@
-import { Instagram } from '.'
-import * as X from './spiders/x/types'
+import { X, Instagram } from './spiders'
 
 enum Platform {
     X = 1,
     Twitter = 1,
     Instagram,
     // TikTok,
-}
-
-const platformArticleMapToActionText: Record<Platform, Record<string, string>> = {
-    [Platform.X]: {
-        [X.ArticleTypeEnum.TWEET]: '发布推文',
-        [X.ArticleTypeEnum.RETWEET]: '转发推文',
-        [X.ArticleTypeEnum.CONVERSATION]: '回复推文',
-        [X.ArticleTypeEnum.QUOTED]: '引用推文',
-    },
-    [Platform.Instagram]: {
-        [Instagram.ArticleTypeEnum.POST]: '发布帖子',
-        [Instagram.ArticleTypeEnum.STORIES]: '发布故事',
-        [Instagram.ArticleTypeEnum.REEL]: '发布视频',
-    },
 }
 
 type PlatformArticleMap = {
@@ -97,5 +82,5 @@ interface GenericArticle<T extends Platform> {
     u_avatar: string | null
 }
 
-export { Platform, platformArticleMapToActionText }
+export { Platform }
 export type { GenericArticle, GenericMediaInfo, GenericFollows, TaskTypeResult, TaskType, MediaType }
