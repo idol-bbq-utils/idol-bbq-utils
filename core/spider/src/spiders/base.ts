@@ -40,7 +40,7 @@ abstract class BaseSpider {
 function waitForEvent<T extends PageEvent>(
     page: Page,
     eventName: T,
-    handler?: (data: PageEvents[T], control: { resolve: () => void }) => void,
+    handler?: (data: PageEvents[T], control: { resolve: () => void; reject: (reason?: any) => void }) => void,
     timeout: number = 30000,
 ): {
     /**
@@ -68,6 +68,10 @@ function waitForEvent<T extends PageEvent>(
             cleanup()
             promiseResolve(eventData)
         },
+        reject: (e: any) => {
+            cleanup()
+            promiseReject(e)
+        },
     }
 
     const wrappedHandler = (data: PageEvents[T]) => {
@@ -91,7 +95,10 @@ function waitForEvent<T extends PageEvent>(
 
 function waitForResponse(
     page: Page,
-    handler?: (data: PageEvents[PageEvent.Response], control: { resolve: () => void }) => void,
+    handler?: (
+        data: PageEvents[PageEvent.Response],
+        control: { resolve: () => void; reject: (reason: any) => void },
+    ) => void,
 ) {
     return waitForEvent(page, PageEvent.Response, handler)
 }

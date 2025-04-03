@@ -263,8 +263,13 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (task_type === 'follows') {
-                    const follows = await pRetry(async () => spider.crawl(url.href, page, 'follows'), {
+                    const follows = await pRetry(() => spider.crawl(url.href, page, 'follows'), {
                         retries: RETRY_LIMIT,
+                        onFailedAttempt: (error) => {
+                            ctx.log?.error(
+                                `[${url.href}] Crawl follows failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                            )
+                        },
                     })
                     let saved_follows_id = (await DB.Follow.save(follows)).id
                     result.push({
@@ -310,7 +315,7 @@ class SpiderPools extends BaseCompatibleModel {
         page: Page,
         translator?: BaseTranslator,
     ): Promise<Array<number>> {
-        const articles = await pRetry(async () => spider.crawl(url.href, page, 'article'), {
+        const articles = await pRetry(() => spider.crawl(url.href, page, 'article'), {
             retries: RETRY_LIMIT,
             onFailedAttempt: (error) => {
                 ctx.log?.error(
@@ -330,6 +335,9 @@ class SpiderPools extends BaseCompatibleModel {
             ctx.log?.info(`[${url.href}] No new articles found.`)
             return []
         }
+        /**
+         * 非常耗时，如何解决
+         */
         new_articles = await Promise.all(new_articles.map((article) => this.doTranslate(ctx, article, translator)))
 
         // 串行，防止create unique的问题
@@ -351,6 +359,11 @@ class SpiderPools extends BaseCompatibleModel {
         }
         ctx.log?.info(`[${article.a_id}] Translating article...`)
         let currentArticle: Article | null = article
+        /**
+         * TODO: 串行改为并行
+         * 先获取所有引用文章的指针，flat为数组，对数组进行await Promise.all操作
+         * 再根据是否需要更新翻译进行更新
+         */
         while (currentArticle) {
             const { a_id, platform } = currentArticle
             // maybe the ref article translated failed

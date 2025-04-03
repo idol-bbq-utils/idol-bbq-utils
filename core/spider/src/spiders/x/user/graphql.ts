@@ -189,18 +189,20 @@ export namespace XApiJsonParser {
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         let tweets_json
-        const { cleanup, promise: waitForTweets } = waitForEvent(
-            page,
-            PageEvent.Response,
-            async (response, { resolve }) => {
-                const url = response.url()
-                if (url.includes('UserTweets') && response.request().method() === 'GET') {
-                    const json = await response.json()
-                    tweets_json = json
-                    resolve()
-                }
-            },
-        )
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
+            const url = response.url()
+            if (url.includes('UserTweets') && response.request().method() === 'GET') {
+                response
+                    .json()
+                    .then((json) => {
+                        tweets_json = json
+                        resolve()
+                    })
+                    .catch((error) => {
+                        reject(error)
+                    })
+            }
+        })
         await page.setViewport(config.viewport ?? { width: 954, height: 2 })
         await page.goto(url)
         try {
@@ -234,12 +236,18 @@ export namespace XApiJsonParser {
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         let tweets_json
-        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve }) => {
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
             const url = response.url()
             if (url.includes('UserTweetsAndReplies') && response.request().method() === 'GET') {
-                const json = await response.json()
-                tweets_json = json
-                resolve()
+                response
+                    .json()
+                    .then((json) => {
+                        tweets_json = json
+                        resolve()
+                    })
+                    .catch((error) => {
+                        reject(error)
+                    })
             }
         })
         await page.setViewport(config.viewport ?? { width: 954, height: 2 })
@@ -260,18 +268,20 @@ export namespace XApiJsonParser {
      */
     export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
         let user_json
-        const { cleanup, promise: waitForTweets } = waitForEvent(
-            page,
-            PageEvent.Response,
-            async (response, { resolve }) => {
-                const url = response.url()
-                if (url.includes('UserByScreenName') && response.request().method() === 'GET') {
-                    const json = await response.json()
-                    user_json = json
-                    resolve()
-                }
-            },
-        )
+        const { promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
+            const url = response.url()
+            if (url.includes('UserByScreenName') && response.request().method() === 'GET') {
+                response
+                    .json()
+                    .then((json) => {
+                        user_json = json
+                        resolve()
+                    })
+                    .catch((error) => {
+                        reject(error)
+                    })
+            }
+        })
         await page.setViewport({ width: 1080, height: 2 })
         await page.goto(url)
 

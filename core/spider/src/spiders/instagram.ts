@@ -210,19 +210,23 @@ namespace InsApiJsonParser {
             [PROFILE_POSTS_KEY]: {},
             [PROFILE_HIGHLIGHTS_KEY]: {},
         }
-        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve }) => {
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
             const url = response.url()
             const request = response.request()
             if (/graphql\/query$/.test(url) && request.method() === 'POST') {
-                const postData = request.postData()
-                if (postData?.includes(`${GRAPHQL_FORM_QUERY_KEY}=${PROFILE_POSTS_KEY}`)) {
-                    reasonable_jsons[PROFILE_POSTS_KEY] = await response.json()
-                }
-                if (postData?.includes(`${GRAPHQL_FORM_QUERY_KEY}=${PROFILE_HIGHLIGHTS_KEY}`)) {
-                    reasonable_jsons[PROFILE_HIGHLIGHTS_KEY] = await response.json()
-                }
-                if (Object.values(reasonable_jsons).every((e: any) => Object.keys(e).length > 0)) {
-                    resolve()
+                try {
+                    const postData = request.postData()
+                    if (postData?.includes(`${GRAPHQL_FORM_QUERY_KEY}=${PROFILE_POSTS_KEY}`)) {
+                        reasonable_jsons[PROFILE_POSTS_KEY] = await response.json()
+                    }
+                    if (postData?.includes(`${GRAPHQL_FORM_QUERY_KEY}=${PROFILE_HIGHLIGHTS_KEY}`)) {
+                        reasonable_jsons[PROFILE_HIGHLIGHTS_KEY] = await response.json()
+                    }
+                    if (Object.values(reasonable_jsons).every((e: any) => Object.keys(e).length > 0)) {
+                        resolve()
+                    }
+                } catch (e) {
+                    reject(e)
                 }
             }
         })
@@ -248,14 +252,19 @@ namespace InsApiJsonParser {
 
     export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
         let follows_json: any
-        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve }) => {
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
             const url = response.url()
             if (url.includes('graphql/query') && response.request().method() === 'POST') {
                 const postData = response.request().postData()
                 if (postData?.includes(`${GRAPHQL_FORM_QUERY_KEY}=${PROFILE_USER_KEY}`)) {
-                    const json = await response.json()
-                    follows_json = json
-                    resolve()
+                    await response
+                        .json()
+                        .then((json) => {
+                            follows_json = json
+                        })
+                        .catch((e) => {
+                            reject(e)
+                        })
                 }
             }
         })
