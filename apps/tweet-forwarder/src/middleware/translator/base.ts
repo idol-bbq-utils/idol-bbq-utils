@@ -1,6 +1,7 @@
 import { TranslatorConfig, TranslatorProvider } from '@/types/translator'
 import { BaseCompatibleModel } from '@/utils/base'
 import { Logger } from '@idol-bbq-utils/log'
+import { noop } from 'lodash'
 
 const TRANSLATION_ERROR_FALLBACK = '╮(╯-╰)╭非常抱歉无法翻译'
 abstract class BaseTranslator extends BaseCompatibleModel {
@@ -16,10 +17,13 @@ abstract class BaseTranslator extends BaseCompatibleModel {
         this.log = log
         this.config = config
     }
-    public async init(): Promise<void> {
+    async init(): Promise<void> {
         this.log = this.log?.child({ label: this.NAME, subservice: 'translator' })
         this.log?.info(`loaded with prompt ${this.config?.prompt || this.TRANSLATION_PROMPT}`)
         this.log?.debug(`loaded with config ${this.config}`)
+    }
+    async drop(...args: any[]): Promise<void> {
+        noop()
     }
     public abstract translate(text: string): Promise<string>
 

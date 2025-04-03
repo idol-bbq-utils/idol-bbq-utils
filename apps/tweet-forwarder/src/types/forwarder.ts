@@ -79,4 +79,11 @@ interface Forwarder {
     cfg_forwarder?: ForwarderConfig
 }
 
-export { ForwardTo, Forwarder, ForwarderConfig, ForwardToPlatformEnum, ForwardToPlatformConfig }
+export {
+    ForwardTo,
+    Forwarder,
+    ForwarderConfig,
+    ForwardToPlatformEnum,
+    ForwardToPlatformConfig,
+    ForwardToPlatformCommonConfig,
+}

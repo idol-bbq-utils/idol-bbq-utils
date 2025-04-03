@@ -5,7 +5,7 @@ import { Browser } from 'puppeteer-core'
 import { CronJob } from 'cron'
 import { BaseTranslator, TRANSLATION_ERROR_FALLBACK } from '@/middleware/translator/base'
 import EventEmitter from 'events'
-import { BaseCompatibleModel, Droppable, TaskScheduler } from '@/utils/base'
+import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import { Crawler } from '@/types/crawler'
 import { AppConfig } from '@/types'
 import { TaskType } from '@idol-bbq-utils/spider/types'
@@ -15,6 +15,7 @@ import { getTranslator } from '@/middleware/translator'
 import { pRetry } from '@idol-bbq-utils/utils'
 import DB, { Article } from '@/db'
 import { RETRY_LIMIT } from '@/config'
+import crypto from 'crypto'
 
 interface TaskResult {
     taskId: string
@@ -132,26 +133,32 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
             taskId,
             status: TaskScheduler.TaskStatus.COMPLETED,
         })
-        this.log?.debug(`[${taskId}] Task finished: ${JSON.stringify(result)}`)
+        this.log?.info(`[${taskId}] Task finished.`)
         if (result.length > 0 && immediate_notify) {
             // TODO: notify forwarders by emitter
         }
     }
 }
 
-class SpiderPools extends BaseCompatibleModel implements Droppable {
+class SpiderPools extends BaseCompatibleModel {
     NAME = 'SpiderPools'
     log?: Logger
     private emitter: EventEmitter
-    private spiders: Map<
-        string,
-        {
-            spider: BaseSpider
-            page: Page
-        }
-    > = new Map()
     private translators: Map<TranslatorProvider, BaseTranslator> = new Map()
     private browser: Browser
+    /**
+     * batch id =  md5hash( `websites` or `domain + paths`)
+     */
+    private pools: Map<
+        string,
+        Map<
+            string,
+            {
+                spider: BaseSpider
+                page: Page
+            }
+        >
+    > = new Map()
     // private workers:
     constructor(browser: Browser, emitter: EventEmitter, log?: Logger) {
         super()
@@ -166,26 +173,30 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
     }
 
     // handle task received
-    async onTaskReceived({ taskId, task }: { taskId: string; task: TaskScheduler.Task }) {
+    async onTaskReceived(ctx: TaskScheduler.TaskCtx) {
+        const { taskId, task, log } = ctx
+        ctx.log = this.log?.child({ trace_id: taskId })
         // prepare
         // maybe we will use workers in the future
         this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
             taskId,
             status: TaskScheduler.TaskStatus.RUNNING,
         })
-        this.log?.debug(`[${taskId}] Task received: ${JSON.stringify(task)}`)
+        ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
         let { websites, domain, paths, task_type = 'article', cfg_crawler } = task.data as Crawler
         if (!websites && !domain && !paths) {
-            this.log?.error(`[${taskId}] No websites or domain or paths found`)
+            ctx.log?.error(`No websites or domain or paths found`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
                 taskId,
                 status: TaskScheduler.TaskStatus.CANCELLED,
             })
             return
         }
-        if (!websites) {
-            websites = paths?.map((path) => `${domain}${path}`) || []
-        }
+        websites = sanitizeWebsites({
+            websites,
+            domain,
+            paths,
+        })
         // try to get translation
         let translator = undefined
         if (cfg_crawler?.translator) {
@@ -197,23 +208,30 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
                     translator = new translatorBuilder(translator_cfg.api_key, this.log, translator_cfg.cfg_translator)
                     await translator.init()
                     this.translators.set(translator_cfg.provider, translator)
-                    this.log?.info(`[${taskId}] Translator instance created for ${translator_cfg.provider}`)
+                    ctx.log?.info(`Translator instance created for ${translator_cfg.provider}`)
                 } else {
-                    this.log?.warn(`[${taskId}] Translator not found for ${translator_cfg.provider}`)
+                    ctx.log?.warn(`Translator not found for ${translator_cfg.provider}`)
                 }
             }
         }
         try {
             let result: Array<CrawlerTaskResult> = []
+            const batch_id = crypto.createHash('md5').update(websites.join(',')).digest('hex')
+            let pool = this.pools.get(batch_id)
+            if (!pool) {
+                pool = new Map()
+                this.pools.set(batch_id, pool)
+            }
+
             for (const website of websites) {
                 // 单次系列爬虫任务
                 const url = new URL(website)
-                let wrap = this.spiders.get(url.hostname)
+                let wrap = pool.get(url.hostname)
                 if (!wrap) {
                     // 需要用详细的网页地址匹配
                     const spiderBuilder = await Spider.getSpider(url.href)
                     if (!spiderBuilder) {
-                        this.log?.warn(`[${taskId}] Spider not found for ${url.href}`)
+                        ctx.log?.warn(`Spider not found for ${url.href}`)
                         continue
                     }
                     const spider = new spiderBuilder(this.log).init()
@@ -226,17 +244,15 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
                         spider,
                         page,
                     }
-                    this.spiders.set(url.hostname, wrap)
-                    this.log?.info(`[${taskId}] Spider instance created for ${url.hostname}`)
+                    pool.set(url.hostname, wrap)
+                    ctx.log?.info(`Spider instance created for ${url.hostname}`)
                 }
-
+                // dynamically setting cookie_file and user_agent
                 const { spider, page } = wrap
+
                 if (task_type === 'article') {
-                    let articles = await this.crawlArticle(spider, url, page, translator)
-                    // do save, error handler?
-                    let saved_article_ids = (await Promise.all(articles.map((article) => DB.Article.trySave(article))))
-                        .filter((res) => res! !== undefined)
-                        .map((res) => res.id)
+                    let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, translator)
+
                     result.push({
                         task_type: 'article',
                         url: url.href,
@@ -262,7 +278,7 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
                 immediate_notify: cfg_crawler?.immediate_notify,
             } as TaskResult)
         } catch (error) {
-            this.log?.error(`[${taskId}] Error while crawling: ${error}`)
+            ctx.log?.error(`Error while crawling: ${error}`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
                 taskId,
                 status: TaskScheduler.TaskStatus.FAILED,
@@ -273,48 +289,64 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
     async drop(...args: any[]): Promise<void> {
         this.log?.info('Dropping Spider Pools...')
         // close all pages
-        for (const [hostname, { page }] of this.spiders.entries()) {
-            await page.close()
-            this.log?.info(`[${hostname}] Page closed`)
+        for (const [id, spiders] of this.pools.entries()) {
+            for (const [domain, wrap] of spiders.entries()) {
+                const { page } = wrap
+                await page.close()
+                this.log?.info(`Page closed for ${domain}`)
+            }
         }
-        this.spiders.clear()
+        this.pools.clear()
         this.translators.clear()
         this.emitter.removeAllListeners()
+        await this.browser.close()
+        this.log?.info('Browser closed')
         this.log?.info('Spider Pools dropped')
     }
 
     private async crawlArticle(
+        ctx: TaskScheduler.TaskCtx,
         spider: BaseSpider,
         url: URL,
         page: Page,
         translator?: BaseTranslator,
-    ): Promise<Array<Article>> {
+    ): Promise<Array<number>> {
         const articles = await pRetry(async () => spider.crawl(url.href, page, 'article'), {
             retries: RETRY_LIMIT,
             onFailedAttempt: (error) => {
-                this.log?.warn(
+                ctx.log?.error(
                     `[${url.href}] Crawl article failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
                 )
             },
         })
         let new_articles: Array<Article> = []
+        let saved_article_ids = []
         for (const article of articles) {
             const isExist = await DB.Article.checkExist(article)
             if (!isExist) {
                 new_articles.push(article)
             }
         }
-        new_articles = await Promise.all(new_articles.map((article) => this.doTranslate(article, translator)))
 
-        return new_articles
+        new_articles = await Promise.all(new_articles.map((article) => this.doTranslate(ctx, article, translator)))
+
+        // 串行，防止create unique的问题
+        for (const article of new_articles) {
+            const res = await DB.Article.trySave(article)
+            saved_article_ids.push(res)
+        }
+        return saved_article_ids.filter((i) => i !== undefined).map((i) => i.id) as Array<number>
     }
 
-    private async doTranslate(article: Article, translator?: BaseTranslator): Promise<Article> {
+    private async doTranslate(
+        ctx: TaskScheduler.TaskCtx,
+        article: Article,
+        translator?: BaseTranslator,
+    ): Promise<Article> {
         if (!translator) {
             return article
         }
-        const _log = this.log
-        _log?.info(`[${article.a_id}] Translating article...`)
+        ctx.log?.info(`[${article.a_id}] Translating article...`)
         let currentArticle: Article | null = article
         while (currentArticle) {
             const { a_id, platform } = currentArticle
@@ -325,17 +357,17 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
                 const content_translation = await pRetry(() => translator.translate(content), {
                     retries: RETRY_LIMIT,
                     onFailedAttempt: (error) => {
-                        _log?.warn(
+                        ctx.log?.warn(
                             `[${a_id}] Translation content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
                         )
                     },
                 })
                     .then((res) => res)
                     .catch((err) => {
-                        _log?.error(`[${a_id}] Error while translating content: ${err}`)
+                        ctx.log?.error(`[${a_id}] Error while translating content: ${err}`)
                         return TRANSLATION_ERROR_FALLBACK
                     })
-                _log?.debug(`[${a_id}] Translation content: ${content_translation}`)
+                ctx.log?.debug(`[${a_id}] Translation content: ${content_translation}`)
                 currentArticle.translation = content_translation
                 currentArticle.translated_by = translator.NAME
             }
@@ -353,14 +385,14 @@ class SpiderPools extends BaseCompatibleModel implements Droppable {
                         const caption_translation = await await pRetry(() => translator.translate(alt), {
                             retries: RETRY_LIMIT,
                             onFailedAttempt: (error) => {
-                                _log?.warn(
+                                ctx.log?.warn(
                                     `[${a_id}] Translation media alt failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
                                 )
                             },
                         })
                             .then((res) => res)
                             .catch((err) => {
-                                _log?.error(`[${a_id}] Error while translating media alt: ${err}`)
+                                ctx.log?.error(`[${a_id}] Error while translating media alt: ${err}`)
                                 return TRANSLATION_ERROR_FALLBACK
                             })
                         media.translation = caption_translation

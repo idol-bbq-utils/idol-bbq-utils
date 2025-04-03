@@ -1,17 +1,17 @@
 import { Logger } from '@idol-bbq-utils/log'
 import { CronJob } from 'cron'
 import { EventEmitter } from 'events'
-import crypto from 'crypto'
 
-abstract class BaseCompatibleModel {
+interface Droppable {
+    drop(...args: any[]): Promise<void>
+}
+
+abstract class BaseCompatibleModel implements Droppable {
     abstract NAME: string
     protected abstract log?: Logger
 
     abstract init(...args: any[]): Promise<void>
-}
-
-interface Droppable {
-    drop(...args: any[]): Promise<void>
+    abstract drop(...args: any[]): Promise<void>
 }
 
 namespace TaskScheduler {
@@ -29,12 +29,18 @@ namespace TaskScheduler {
         data: any
     }
 
+    export interface TaskCtx {
+        taskId: string
+        task: Task
+        log?: Logger
+    }
+
     export enum TaskEvent {
         DISPATCH = 'task:dispatch',
         UPDATE_STATUS = 'task:update-status',
         FINISHED = 'task:finished',
     }
-    export abstract class TaskScheduler extends BaseCompatibleModel implements Droppable {
+    export abstract class TaskScheduler extends BaseCompatibleModel {
         protected emitter: EventEmitter
         protected tasks: Map<string, Task> = new Map()
         protected cronJobs: Array<CronJob> = []
@@ -56,5 +62,29 @@ namespace TaskScheduler {
     }
 }
 
-export { TaskScheduler, BaseCompatibleModel }
-export type { Droppable }
+/**
+ * Sanitize websites, domain and paths to a list of websites.
+ *
+ * return websites if provided, otherwise return a list of websites constructed from domain and paths.
+ */
+function sanitizeWebsites({
+    websites,
+    domain,
+    paths,
+}: {
+    websites?: Array<string>
+    domain?: string
+    paths?: Array<string>
+}): Array<string> {
+    if (websites) {
+        return websites
+    }
+    if (domain) {
+        if (paths && paths.length > 0) {
+            return paths.map((p) => `https://${domain.replace(/\/$/, '')}/${p.replace(/^\//, '')}`)
+        }
+    }
+    return []
+}
+
+export { TaskScheduler, BaseCompatibleModel, sanitizeWebsites }

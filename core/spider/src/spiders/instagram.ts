@@ -35,7 +35,7 @@ class InstagramSpider extends BaseSpider {
     ): Promise<TaskTypeResult<T, Platform.Instagram>> {
         const result = super._match_valid_url(url, InstagramSpider)?.groups
         if (!result) {
-            throw new Error('Invalid URL')
+            throw new Error(`Invalid URL: ${url}`)
         }
         const { id } = result
         const _url = `${this.BASE_URL}${id}`

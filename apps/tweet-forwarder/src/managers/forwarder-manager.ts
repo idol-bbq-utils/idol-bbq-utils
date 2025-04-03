@@ -2,7 +2,7 @@ import { Logger } from '@idol-bbq-utils/log'
 import { Spider } from '@idol-bbq-utils/spider'
 import { CronJob } from 'cron'
 import EventEmitter from 'events'
-import { BaseCompatibleModel, Droppable, TaskScheduler } from '@/utils/base'
+import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import { AppConfig } from '@/types'
 import { TaskType } from '@idol-bbq-utils/spider/types'
 import DB, { Article, ArticleWithId } from '@/db'
@@ -74,7 +74,7 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
             // 定时dispatch任务
             const job = new CronJob(cron as string, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
-                this.log?.info(`[${taskId}] starting to dispatch task`)
+                this.log?.info(`starting to dispatch task`)
                 const task: TaskScheduler.Task = {
                     id: taskId,
                     status: TaskScheduler.TaskStatus.PENDING,
@@ -138,7 +138,7 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
             taskId,
             status: TaskScheduler.TaskStatus.COMPLETED,
         })
-        this.log?.debug(`[${taskId}] Task finished: ${JSON.stringify(result)}`)
+        this.log?.info(`[${taskId}] Task finished.`)
         if (result.length > 0 && immediate_notify) {
             // TODO: notify forwarders by emitter
         }
@@ -148,7 +148,7 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
 /**
  * Forward Target 会订阅
  */
-class ForwarderPools extends BaseCompatibleModel implements Droppable {
+class ForwarderPools extends BaseCompatibleModel {
     NAME = 'ForwarderPools'
     log?: Logger
     private emitter: EventEmitter
@@ -195,11 +195,16 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
         this.log?.info('Forwarder Pools initializing...')
         this.emitter.on(`forwarder:${TaskScheduler.TaskEvent.DISPATCH}`, this.onTaskReceived.bind(this))
         // create targets
+        const { cfg_forward_target } = this.props
         this.props.forward_targets?.forEach(async (t) => {
             const forwarderBuilder = getForwarder(t.platform)
             if (!forwarderBuilder) {
                 this.log?.warn(`Forwarder not found for ${t.platform}`)
                 return
+            }
+            t.cfg_platform = {
+                ...cfg_forward_target,
+                ...t.cfg_platform,
             }
             const { block_until, replace_regex, ...restToBeHashed } = t.cfg_platform
             const forwarderToBeHashed = {
@@ -217,14 +222,16 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
     }
 
     // handle task received
-    async onTaskReceived({ taskId, task }: { taskId: string; task: TaskScheduler.Task }) {
+    async onTaskReceived(ctx: TaskScheduler.TaskCtx) {
+        const { taskId, task } = ctx
+        ctx.log = this.log?.child({ trace_id: taskId })
         // prepare
         // maybe we will use workers in the future
         this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
             taskId,
             status: TaskScheduler.TaskStatus.RUNNING,
         })
-        this.log?.debug(`[${taskId}] Task received: ${JSON.stringify(task)}`)
+        ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
         let {
             websites,
             domain,
@@ -235,25 +242,33 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
             subscribers,
         } = task.data as Forwarder
         if (!websites && !domain && !paths) {
-            this.log?.error(`[${taskId}] No websites or domain or paths found`)
+            ctx.log?.error(`No websites or domain or paths found`)
             this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
                 taskId,
                 status: TaskScheduler.TaskStatus.CANCELLED,
             })
             return
         }
-        if (!websites) {
-            websites = paths?.map((path) => `${domain}${path}`) || []
-        }
+        websites = sanitizeWebsites({
+            websites,
+            domain,
+            paths,
+        })
 
         try {
             let result: Array<CrawlerTaskResult> = []
             if (task_type === 'article') {
                 await this.processArticleTask({
-                    websites,
-                    cfg_forwarder,
-                    subscribers,
                     taskId,
+                    log: ctx.log,
+                    task: {
+                        ...ctx.task,
+                        data: {
+                            websites,
+                            cfg_forwarder,
+                            subscribers,
+                        },
+                    },
                 })
             }
 
@@ -264,7 +279,7 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                 const batchId = `${task_type}-${createHash('md5').update(JSON.stringify(task.data)).digest('hex')}`
                 const forwarders = this.getOrInitForwarders(batchId, subscribers, cfg_forwarder)
                 if (forwarders.length === 0) {
-                    this.log?.warn(`[${taskId}] No forwarders found for ${task_title || batchId}`)
+                    ctx.log?.warn(`No forwarders found for ${task_title || batchId}`)
                     return
                 }
                 await this.processFollowsTask(websites, forwarders, cfg_forwarder)
@@ -275,7 +290,7 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                 result,
             } as TaskResult)
         } catch (error) {
-            this.log?.error(`[${taskId}] Error while sending: ${error}`)
+            ctx.log?.error(`Error while sending: ${error}`)
             this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
                 taskId,
                 status: TaskScheduler.TaskStatus.FAILED,
@@ -289,46 +304,45 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
         this.log?.info('Pools dropped')
     }
 
-    async processArticleTask({
-        websites,
-        subscribers,
-        cfg_forwarder,
-        taskId,
-    }: {
-        websites: Array<string>
-        subscribers: Forwarder['subscribers']
-        cfg_forwarder: Forwarder['cfg_forwarder']
-        taskId?: string
-    }) {
+    async processArticleTask(ctx: TaskScheduler.TaskCtx) {
+        const { websites, subscribers, cfg_forwarder } = ctx.task.data as {
+            websites: Array<string>
+            subscribers: Forwarder['subscribers']
+            cfg_forwarder: Forwarder['cfg_forwarder']
+        }
         for (const website of websites) {
             // 单次爬虫任务
             const url = new URL(website)
             const forwarders = this.getOrInitForwarders(url.href, subscribers, cfg_forwarder)
             if (forwarders.length === 0) {
-                this.log?.warn(`[${taskId || ''}] No forwarders found for ${url.href}`)
                 continue
             }
-            await this.processSingleArticleTask(url.href, forwarders, cfg_forwarder, taskId)
+            /**
+             * 查询当前网站下的近10篇文章并查询转发
+             */
+            await this.processSingleArticleTask(ctx, url.href, forwarders, cfg_forwarder)
         }
     }
 
     async processSingleArticleTask(
+        ctx: TaskScheduler.TaskCtx,
         url: string,
         forwarders: Array<BaseForwarder>,
         cfg_forwarder: Forwarder['cfg_forwarder'],
-        taskId?: string,
     ) {
         const { u_id, platform } = Spider.extractBasicInfo(url) ?? {}
         if (!u_id || !platform) {
-            this.log?.error(`[${taskId || ''}] Invalid url: ${url}`)
+            ctx.log?.error(`Invalid url: ${url}`)
             return
         }
         const articles = await DB.Article.getArticlesByName(u_id, platform)
         if (articles.length <= 0) {
-            this.log?.warn(`[${taskId || ''}] No articles found for ${url}`)
+            ctx.log?.warn(`No articles found for ${url}`)
             return
         }
-        // 一篇文章可能需要被转发至多个平台，先获取一篇文章与forwarder的对应关系
+        /**
+         * 一篇文章可能需要被转发至多个平台，先获取一篇文章与forwarder的对应关系
+         */
         const articles_forwarders = [] as Array<{
             article: ArticleWithId
             to: Array<BaseForwarder>
@@ -351,14 +365,12 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
         }
 
         if (articles_forwarders.length === 0) {
-            this.log?.info(`[${taskId || ''}] No articles need to be sent for ${url}`)
+            ctx.log?.info(`No articles need to be sent for ${url}`)
             return
         }
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
-            this.log?.debug(
-                `[${taskId || ''}] Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`,
-            )
+            ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`)
             let maybe_media_files = [] as Array<{
                 path: string
                 media_type: string
@@ -374,23 +386,23 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                 while (currentArticle) {
                     let new_files = [] as Array<string>
                     if (currentArticle.has_media) {
-                        this.log?.debug(`[${taskId || ''}] Downloading media files for ${currentArticle.a_id}`)
+                        ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
                         // handle media
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
-                            this.log?.debug(`[${taskId || ''}] Downloading media with http downloader`)
+                            ctx.log?.debug(`Downloading media with http downloader`)
                             new_files = await Promise.all(
                                 currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url)),
                             )
                         }
                         if (media.use.tool === MediaToolEnum.GALLERY_DL) {
-                            this.log?.debug(`[${taskId || ''}] Downloading media with gallery-dl`)
+                            ctx.log?.debug(`Downloading media with gallery-dl`)
                             new_files = await galleryDownloadMediaFile(
                                 currentArticle.url,
                                 media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
                             )
                         }
                         if (new_files.length > 0) {
-                            this.log?.debug(`[${taskId || ''}] Downloaded media files: ${new_files.join(', ')}`)
+                            ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
                             paths = paths.concat(new_files)
                         }
                     }
@@ -407,14 +419,13 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
             // 对所有订阅者进行转发
             for (const target of to) {
                 try {
-                    this.log?.debug(`[${taskId || ''}] ${text.length} characters to be sent to ${target.id}`)
                     await target.send(text, {
                         media: maybe_media_files,
                         timestamp: article.created_at * 1000,
                     })
                     await DB.ForwardBy.save(article.id, target.id, 'article')
                 } catch (e) {
-                    this.log?.error(`[${taskId || ''}] Error while sending to ${target.id}: ${e}`)
+                    ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                 }
             }
             /**
@@ -496,7 +507,7 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                     }
                 }
                 if (media_translations.length > 0) {
-                    translation = `${translation}\n\n${media_translations.join('\n')}`
+                    translation = `${translation}\n\n${media_translations.join(`\n---\n`)}`
                 }
                 /***** 图片描述结束 *****/
 
@@ -517,7 +528,7 @@ class ForwarderPools extends BaseCompatibleModel implements Droppable {
                 }
             }
             if (raw_alts.length > 0) {
-                raw_article = `${raw_article}\n\n${raw_alts.join('\n')}`
+                raw_article = `${raw_article}\n\n${raw_alts.join(`\n---\n`)}`
             }
             if (currentArticle.extra) {
                 // card parser

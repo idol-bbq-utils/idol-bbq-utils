@@ -70,8 +70,9 @@ export namespace XApiJsonParser {
     }
 
     function tweetParser(result: any): GenericArticle<Platform> {
-        const legacy = result.legacy
-        const userLegacy = result.core?.user_results?.result?.legacy
+        // TweetWithVisibilityResults --> result.tweet
+        const legacy = result.legacy || result.tweet?.legacy
+        const userLegacy = (result.core || result.tweet?.core)?.user_results?.result?.legacy
         let content = legacy?.full_text
         for (const { url } of legacy?.entities?.media || []) {
             content = content.replace(url, '')
@@ -103,6 +104,8 @@ export namespace XApiJsonParser {
             tweet.type = ArticleTypeEnum.RETWEET
             tweet.content = ''
             tweet.ref = tweetParser(legacy.retweeted_status_result.result)
+            // 转发类型推文media按照ref为准
+            tweet.media = null
         }
 
         if (tweet.media) {

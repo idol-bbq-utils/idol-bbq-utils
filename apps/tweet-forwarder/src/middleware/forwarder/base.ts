@@ -5,6 +5,7 @@ import { formatTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
 import { Logger } from '@idol-bbq-utils/log'
 import { pRetry } from '@idol-bbq-utils/utils'
+import { noop } from 'lodash'
 
 const DATE_OFFSET = 1
 
@@ -21,12 +22,16 @@ abstract class BaseForwarder extends BaseCompatibleModel {
         super()
         this.log = log
         this.config = config
-        this.id = id
+        this.id = String(id)
     }
 
     async init(): Promise<void> {
         this.log = this.log?.child({ service: 'Forwarder', subservice: this.NAME, label: this.id })
         this.log?.debug(`loaded with config ${this.config}`)
+    }
+
+    async drop(...args: any[]): Promise<void> {
+        noop()
     }
 
     public abstract send(
@@ -72,7 +77,7 @@ abstract class Forwarder extends BaseForwarder {
             return Promise.resolve()
         }
         const _log = this.log
-        _log?.debug(`trying to send text`)
+        _log?.debug(`trying to send text with length ${text.length}`)
         return new Promise(async (resolve, reject) => {
             let text_to_be_sent = text
             let i = 0
@@ -86,11 +91,11 @@ abstract class Forwarder extends BaseForwarder {
             texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${text_to_be_sent}`)
             await pRetry(() => this.realSend(texts, props), {
                 retries: RETRY_LIMIT,
-                onFailedAttempt() {
-                    _log?.error(`send texts failed, retrying...`)
+                onFailedAttempt(e) {
+                    _log?.error(`send texts failed, retrying...: ${e.originalError.message}`)
                 },
             }).catch((e) => {
-                reject(e)
+                _log?.error(`send texts failed: ${e.message}`)
             })
             resolve(true)
         })

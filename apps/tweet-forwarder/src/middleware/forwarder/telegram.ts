@@ -5,7 +5,7 @@ import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarde
 
 class TgForwarder extends Forwarder {
     static _PLATFORM = ForwardToPlatformEnum.Telegram
-    BASIC_TEXT_LIMIT = 65536
+    BASIC_TEXT_LIMIT = 1024
     NAME = 'telegram'
     private chat_id: string
     private bot: Telegraf
@@ -21,34 +21,34 @@ class TgForwarder extends Forwarder {
     }
     public async realSend(...[texts, props]: [...Parameters<Forwarder['realSend']>]) {
         const { media } = props || {}
-        const text = texts[0]
-        if (media && media.length !== 0) {
-            await this.bot.telegram.sendMediaGroup(
-                this.chat_id,
-                media
-                    .map((i, idx) => {
-                        if (i.media_type === 'photo') {
-                            return {
-                                media: Input.fromLocalFile(i.path),
-                                type: 'photo' as InputMediaPhoto['type'],
-                                caption: idx === 0 ? text : undefined,
+        for (const text of texts) {
+            if (media && media.length !== 0) {
+                await this.bot.telegram.sendMediaGroup(
+                    this.chat_id,
+                    media
+                        .map((i, idx) => {
+                            if (i.media_type === 'photo') {
+                                return {
+                                    media: Input.fromLocalFile(i.path),
+                                    type: 'photo' as InputMediaPhoto['type'],
+                                    caption: idx === 0 ? text : undefined,
+                                }
                             }
-                        }
-                        if (i.media_type === 'video') {
-                            return {
-                                media: Input.fromLocalFile(i.path),
-                                type: 'video' as InputMediaVideo['type'],
-                                caption: idx === 0 ? text : undefined,
+                            if (i.media_type === 'video') {
+                                return {
+                                    media: Input.fromLocalFile(i.path),
+                                    type: 'video' as InputMediaVideo['type'],
+                                    caption: idx === 0 ? text : undefined,
+                                }
                             }
-                        }
-                        return
-                    })
-                    .filter((i) => i !== undefined),
-            )
-        } else {
-            await this.bot.telegram.sendMessage(this.chat_id, text)
+                            return
+                        })
+                        .filter((i) => i !== undefined),
+                )
+            } else {
+                await this.bot.telegram.sendMessage(this.chat_id, text)
+            }
         }
-
         return
     }
 }

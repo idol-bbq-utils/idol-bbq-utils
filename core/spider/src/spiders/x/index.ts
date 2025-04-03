@@ -21,22 +21,22 @@ export class XTimeLineSpider extends BaseSpider {
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XTimeLineSpider)?.groups
         if (!result) {
-            throw new Error('Invalid URL')
+            throw new Error(`Invalid URL: ${url}`)
         }
         const { id } = result
         const _url = `${this.BASE_URL}${id}`
 
         if (task_type === 'article') {
             let res = []
-            this.log?.info('Trying to grab tweets.')
+            this.log?.info(`Trying to grab tweets for ${id}.`)
             res = await GraphQL.XApiJsonParser.grabTweets(page, _url)
-            this.log?.info('Trying to grab replies.')
+            this.log?.info(`Trying to grab replies for ${id}.`)
             const replies = await GraphQL.XApiJsonParser.grabReplies(page, _url + '/with_replies')
             return res.concat(replies) as TaskTypeResult<T, Platform.X>
         }
 
         if (task_type === 'follows') {
-            this.log?.info('Trying to grab follows.')
+            this.log?.info(`Trying to grab follows for ${id}.`)
             return (await GraphQL.XApiJsonParser.grabFollowsNumer(page, _url)) as TaskTypeResult<T, Platform.X>
         }
 

@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer-core'
-import { getSpider } from '../src'
+import { Spider } from '../src'
 import { parseNetscapeCookieToPuppeteerCookie, UserAgent } from '../src/utils'
 import { readFileSync } from 'fs'
 import { XApiJsonParser } from '../src/spiders/x/user/graphql'
@@ -8,7 +8,7 @@ import { GenericFollows } from '../src/types'
 
 test('X Spider', async () => {
     const url = 'https://x.com/X'
-    const spider = getSpider(url)
+    const spider = Spider.getSpider(url)
     if (spider) {
         let id = await new spider()._match_valid_url(url, spider)?.groups?.id
         expect(id).toBe('X')
@@ -20,7 +20,7 @@ test('X Spider', async () => {
  */
 test.skip('spider', async () => {
     const url = 'https://x.com/X'
-    const spider = getSpider(url)
+    const spider = Spider.getSpider(url)
     if (spider) {
         const spiderInstance = new spider(
             createLogger({

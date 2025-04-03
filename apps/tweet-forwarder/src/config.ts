@@ -14,8 +14,8 @@ const log: Logger = createLogger({
     format: format.combine(
         format.colorize(),
         format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
-        format.printf(({ message, timestamp, level, label, service, subservice }) => {
-            const metas = [service, subservice, label, level]
+        format.printf(({ message, timestamp, level, label, service, subservice, trace_id }) => {
+            const metas = [service, subservice, label, level, trace_id]
                 .filter(Boolean)
                 .map((meta) => `[${meta}]`)
                 .join(' ')
@@ -30,12 +30,17 @@ const log: Logger = createLogger({
     ],
 })
 
-function config_parser(config_path: string) {
-    const yaml = fs.readFileSync(config_path, 'utf8')
-    const yaml_cfg = YAML.parse(yaml) as AppConfig
-    return yaml_cfg
+function configParser(config_path: string) {
+    try {
+        const yaml = fs.readFileSync(config_path, 'utf8')
+        const yaml_cfg = YAML.parse(yaml) as AppConfig
+        return yaml_cfg
+    } catch (e) {
+        log.error(`Error parsing config file: ${e}`)
+        return
+    }
 }
 
 const CONFIG = {}
 
-export { log, CONFIG, CACHE_DIR_ROOT, RETRY_LIMIT }
+export { log, configParser, CONFIG, CACHE_DIR_ROOT, RETRY_LIMIT }
