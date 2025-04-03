@@ -34,7 +34,7 @@ importers:
         specifier: ^5.5.3
         version: 5.5.3
 
-  apps/tweet-forwarder:
+  app/tweet-forwarder:
     dependencies:
       '@google/generative-ai':
         specifier: ^0.14.1
