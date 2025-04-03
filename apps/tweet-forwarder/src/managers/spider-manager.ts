@@ -184,6 +184,10 @@ class SpiderPools extends BaseCompatibleModel {
         })
         ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
         let { websites, domain, paths, task_type = 'article', cfg_crawler } = task.data as Crawler
+        let { one_time: one_time_task } = cfg_crawler || {}
+        if (['follows'].includes(task_type) && one_time_task !== false) {
+            one_time_task = true
+        }
         if (!websites && !domain && !paths) {
             ctx.log?.error(`No websites or domain or paths found`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
@@ -216,13 +220,18 @@ class SpiderPools extends BaseCompatibleModel {
         }
         try {
             let result: Array<CrawlerTaskResult> = []
-            const batch_id = crypto.createHash('md5').update(websites.join(',')).digest('hex')
-            let pool = this.pools.get(batch_id)
+            // 准备任务
+            const batchId = crypto
+                .createHash('md5')
+                .update(`${task_type}:${websites.join(',')}`)
+                .digest('hex')
+            let pool = this.pools.get(batchId)
             if (!pool) {
                 pool = new Map()
-                this.pools.set(batch_id, pool)
+                this.pools.set(batchId, pool)
             }
 
+            // 开始任务
             for (const website of websites) {
                 // 单次系列爬虫任务
                 const url = new URL(website)
@@ -271,6 +280,17 @@ class SpiderPools extends BaseCompatibleModel {
                         data: [saved_follows_id],
                     })
                 }
+            }
+
+            // 任务收尾
+            // 一次性任务
+            if (one_time_task) {
+                ctx.log?.info(`One time task finished, closing all pages...`)
+                pool.forEach(async (wrap) => {
+                    const { page } = wrap
+                    await page.close()
+                })
+                this.pools.delete(batchId)
             }
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.FINISHED}`, {
                 taskId,
@@ -374,7 +394,7 @@ class SpiderPools extends BaseCompatibleModel {
 
             if (currentArticle.media) {
                 for (const [idx, media] of currentArticle.media.entries()) {
-                    // we supposed the media image array is consistent
+                    // 假设图片与描述的顺序是一致的
                     if (
                         media.alt &&
                         !BaseTranslator.isValidTranslation(

@@ -30,6 +30,14 @@ interface CrawlerConfig extends CommonCfgConfig {
      */
     immediate_notify?: boolean
     user_agent?: string
+    /**
+     * if true, scheduler will destroy the page after the crawling
+     *
+     * if false, scheduler will keep the page alive for the whole time
+     *
+     * for some (`follows`) task type, the one_time default is true
+     */
+    one_time?: boolean
     translator?: Translator
 }
 

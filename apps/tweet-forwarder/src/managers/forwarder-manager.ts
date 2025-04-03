@@ -4,16 +4,18 @@ import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import { AppConfig } from '@/types'
-import { TaskType } from '@idol-bbq-utils/spider/types'
-import DB, { Article, ArticleWithId } from '@/db'
+import { Platform, TaskType } from '@idol-bbq-utils/spider/types'
+import DB, { Article, ArticleWithId, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { MediaTool, MediaToolEnum } from '@/types/media'
-import { Forwarder } from '@/types/forwarder'
+import { Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
-import { createHash } from 'crypto'
+import crypto from 'crypto'
 import { cleanMediaFiles, galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
 import { formatTime } from '@/utils/time'
 import { platformArticleMapToActionText } from '@idol-bbq-utils/spider/const'
+
+type Forwarder = RealForwarder<TaskType>
 
 const TAB = ' '.repeat(4)
 
@@ -214,7 +216,8 @@ class ForwarderPools extends BaseCompatibleModel {
                 },
             }
             const id =
-                t.id || `${t.platform}-${createHash('md5').update(JSON.stringify(forwarderToBeHashed)).digest('hex')}`
+                t.id ||
+                `${t.platform}-${crypto.createHash('md5').update(JSON.stringify(forwarderToBeHashed)).digest('hex')}`
             const forwarder = new forwarderBuilder(t.cfg_platform, id, this.log)
             await forwarder.init()
             this.forward_to.set(id, forwarder)
@@ -239,6 +242,7 @@ class ForwarderPools extends BaseCompatibleModel {
             task_type = 'article' as TaskType,
             task_title,
             cfg_forwarder,
+            cfg_task,
             subscribers,
         } = task.data as Forwarder
         if (!websites && !domain && !paths) {
@@ -276,13 +280,16 @@ class ForwarderPools extends BaseCompatibleModel {
                 /**
                  * one time task id, so we basic needn't care about the collision next run
                  */
-                const batchId = `${task_type}-${createHash('md5').update(JSON.stringify(task.data)).digest('hex')}`
+                const batchId = crypto
+                    .createHash('md5')
+                    .update(`${task_type}:${websites.join(',')}`)
+                    .digest('hex')
                 const forwarders = this.getOrInitForwarders(batchId, subscribers, cfg_forwarder)
                 if (forwarders.length === 0) {
                     ctx.log?.warn(`No forwarders found for ${task_title || batchId}`)
                     return
                 }
-                await this.processFollowsTask(websites, forwarders, cfg_forwarder)
+                await this.processFollowsTask(ctx, websites, forwarders)
             }
 
             this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.FINISHED}`, {
@@ -435,30 +442,91 @@ class ForwarderPools extends BaseCompatibleModel {
         }
     }
 
-    async processFollowsTask(
-        websites: Array<string>,
-        forwarders: Array<BaseForwarder>,
-        cfg_forwarder: Forwarder['cfg_forwarder'],
-    ) {
+    /**
+     * 一次性任务，并不需要保存转发状态
+     */
+    async processFollowsTask(ctx: TaskScheduler.TaskCtx, websites: Array<string>, forwarders: Array<BaseForwarder>) {
         if (websites.length === 0) {
-            this.log?.error(`No websites found`)
+            ctx.log?.error(`No websites found`)
             return
         }
-        const base_url = new URL(websites[0])
-        let _websites = websites.map((i) => new URL(i)).filter((i) => i.hostname === base_url.hostname)
+        const { task_title, cfg_task } = ctx.task.data as RealForwarder<'follows'>
+        const { comparison_window = '1d' } = cfg_task || {}
+        const results = new Map<Platform, Array<[DBFollows, DBFollows | null]>>()
+        // 我们假设websites的网页并不完全相同，所以我们需要分类
+        for (const website of websites) {
+            const url = new URL(website)
+            const { platform, u_id } = Spider.extractBasicInfo(url.href) ?? {}
+            if (!platform || !u_id) {
+                ctx.log?.error(`Invalid url: ${url.href}`)
+                continue
+            }
+            const follows = await DB.Follow.getLatestAndComparisonFollowsByName(u_id, platform, comparison_window)
+            if (!follows) {
+                ctx.log?.warn(`No follows found for ${url.href}`)
+                continue
+            }
+            let result = results.get(platform)
+            if (!result) {
+                result = []
+                results.set(platform, result)
+            }
+            result.push(follows)
+        }
 
-        // const follows = await this.getFollows(websites, cfg_forwarder)
-        // if (follows.length === 0) {
-        //     this.log?.warn(`No follows found for ${websites[0]}`)
-        //     return
-        // }
-        // for (const forwarder of forwarders) {
-        //     await forwarder.realSend(follows, {
-        //         media: [],
-        //         task_type: 'follows',
-        //         task_title: `Follows from ${websites[0]}`,
-        //     })
-        // }
+        if (results.size === 0) {
+            ctx.log?.warn(`No follows need to be sent ${task_title}`)
+            return
+        }
+
+        // 开始转发
+        // follows to texts
+        const texts = [] as Array<string>
+        // convert to string
+        for (const [platform, follows] of results.entries()) {
+            const [cur, pre] = follows[0]
+            let text_to_send =
+                `${
+                    pre?.created_at ? `${formatTime(pre.created_at * 1000)}\n⬇️\n` : ''
+                }${formatTime(cur.created_at * 1000)}\n\n` +
+                follows
+                    .map(([cur, pre]) => {
+                        let text = `${cur.username}\n${' '.repeat(4)}`
+                        if (pre?.followers) {
+                            text += `${pre.followers.toString().padStart(2)}  --->  `
+                        }
+                        if (cur.followers) {
+                            text += `${cur.followers.toString().padEnd(2)}`
+                        }
+                        const offset = (cur.followers || 0) - (pre?.followers || 0)
+                        text += `${TAB}${offset >= 0 ? '+' : ''}${offset.toString()}`
+                        return text
+                    })
+                    .join('\n')
+            if (task_title) {
+                text_to_send = `${task_title}\n${text_to_send}`
+            }
+            texts.push(text_to_send)
+        }
+        // 对所有订阅者进行转发
+        const texts_to_send = texts.join('\n\n')
+        for (const target of forwarders) {
+            try {
+                await target.send(texts_to_send, {
+                    timestamp: Date.now(),
+                })
+                /**
+                 * 假设follows并不需要保存转发状态，因为任务基本上是一天一次
+                 */
+                // for (const [_, follows] of results.entries()) {
+                //     for (const [cur, _] of follows) {
+                //         await DB.ForwardBy.save(cur.id, target.id, 'follows')
+                //     }
+                // }
+            } catch (e) {
+                ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
+            }
+        }
     }
 
     getOrInitForwarders(id: string, subscribers: Forwarder['subscribers'], cfg: Forwarder['cfg_forwarder']) {

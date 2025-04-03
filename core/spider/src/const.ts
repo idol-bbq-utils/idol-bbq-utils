@@ -21,4 +21,9 @@ const platformArticleMapToActionText: Record<Platform, Record<string, string>> =
     },
 }
 
-export { platformArticleMapToActionText }
+const platformNameMap: Record<Platform, string> = {
+    [Platform.X]: 'X',
+    [Platform.Instagram]: 'Instagram',
+}
+
+export { platformArticleMapToActionText, platformNameMap }

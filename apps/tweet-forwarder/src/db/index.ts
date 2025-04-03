@@ -1,5 +1,6 @@
 import { GenericArticle, GenericFollows, GenericMediaInfo, Platform } from '@idol-bbq-utils/spider/types'
 import { prisma, Prisma } from './client'
+import { getSubtractTime } from '@/utils/time'
 
 type MediaInfo = GenericMediaInfo & { translation?: string; translated_by?: string }
 type Article = Omit<GenericArticle<Platform>, 'media' | 'ref'> & {
@@ -12,7 +13,7 @@ type Article = Omit<GenericArticle<Platform>, 'media' | 'ref'> & {
 type ArticleWithId = Article & { id: number }
 
 type DBArticle = Prisma.crawler_articleGetPayload<{}>
-
+type DBFollows = Prisma.crawler_followsGetPayload<{}>
 namespace DB {
     export namespace Article {
         export async function checkExist(article: Article) {
@@ -142,6 +143,42 @@ namespace DB {
                 },
             })
         }
+
+        export async function getLatestAndComparisonFollowsByName(
+            u_id: string,
+            platform: Platform,
+            window: string,
+        ): Promise<[DBFollows, DBFollows | null] | null> {
+            const latest = await prisma.crawler_follows.findFirst({
+                where: {
+                    platform: platform,
+                    u_id: u_id,
+                },
+                orderBy: {
+                    created_at: 'desc',
+                },
+            })
+            if (!latest) {
+                return null
+            }
+            const latestTime = latest.created_at
+            const subtractTime = getSubtractTime(latestTime, window)
+            console.log(latestTime, subtractTime)
+            const comparison = await prisma.crawler_follows.findFirst({
+                where: {
+                    platform: platform,
+                    u_id: u_id,
+                    created_at: {
+                        lte: subtractTime,
+                    },
+                },
+                orderBy: {
+                    created_at: 'desc',
+                },
+            })
+            console.log('latest', latest, 'comparison', comparison)
+            return [latest, comparison]
+        }
     }
 
     export namespace ForwardBy {
@@ -174,4 +211,4 @@ namespace DB {
 }
 
 export default DB
-export type { Article, ArticleWithId, MediaInfo }
+export type { Article, ArticleWithId, MediaInfo, DBFollows }

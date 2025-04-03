@@ -1,3 +1,4 @@
+import { TaskType } from '@idol-bbq-utils/spider/types'
 import { CommonCfgConfig } from './common'
 import { Media } from './media'
 
@@ -28,6 +29,26 @@ type PlatformConfigMap = {
     }
 }
 
+type TaskConfigMap = {
+    article: {}
+    follows: {
+        /**
+         *
+         * "7d", "1w", "30d", "2h"...
+         *
+         * default is `1d`
+         * ```
+         * export type UnitTypeShort = 'd' | 'D' | 'M' | 'y' | 'h' | 'm' | 's' | 'ms'
+         * export type UnitTypeLong = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'month' | 'year' | 'date'
+         * export type UnitTypeLongPlural = 'milliseconds' | 'seconds' | 'minutes' | 'hours' | 'days' | 'months' | 'years' | 'dates'
+         * ```
+         */
+        comparison_window?: string
+    }
+}
+
+type TaskConfig<T extends TaskType> = TaskConfigMap[T]
+
 interface ForwardToPlatformCommonConfig {
     replace_regex?: string | Array<string> | Array<Array<string>>
     block_until?: number | string
@@ -51,7 +72,7 @@ interface ForwardTo<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
     cfg_platform: ForwardToPlatformConfig<T>
 }
 
-interface Forwarder {
+interface Forwarder<T extends TaskType> {
     /**
      * will override the domain and paths
      */
@@ -67,11 +88,15 @@ interface Forwarder {
     /**
      * Task type defined in `@idol-bbq-utils/spider`
      */
-    task_type?: string
+    task_type?: T
     /**
      * Task type like follows need this
      */
     task_title?: string
+    /**
+     *
+     */
+    cfg_task?: TaskConfig<T>
     /**
      * Array of forwarder target's id, if empty will use all targets
      */
