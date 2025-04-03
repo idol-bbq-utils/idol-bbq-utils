@@ -41,7 +41,7 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
     constructor(props: Pick<AppConfig, 'crawlers' | 'cfg_crawler'>, emitter: EventEmitter, log?: Logger) {
         super(emitter)
         this.props = props
-        this.log = log?.child({ label: this.NAME })
+        this.log = log?.child({ subservice: this.NAME })
     }
 
     async init() {
@@ -163,7 +163,7 @@ class SpiderPools extends BaseCompatibleModel {
     constructor(browser: Browser, emitter: EventEmitter, log?: Logger) {
         super()
         this.browser = browser
-        this.log = log?.child({ label: 'Spider Pools' })
+        this.log = log?.child({ subservice: this.NAME })
         this.emitter = emitter
     }
 
@@ -175,7 +175,9 @@ class SpiderPools extends BaseCompatibleModel {
     // handle task received
     async onTaskReceived(ctx: TaskScheduler.TaskCtx) {
         const { taskId, task, log } = ctx
-        ctx.log = this.log?.child({ trace_id: taskId })
+        let { websites, origin, paths, task_type = 'article', cfg_crawler, name } = task.data as Crawler
+        let { one_time: one_time_task } = cfg_crawler || {}
+        ctx.log = this.log?.child({ label: name, trace_id: taskId })
         // prepare
         // maybe we will use workers in the future
         this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
@@ -183,8 +185,6 @@ class SpiderPools extends BaseCompatibleModel {
             status: TaskScheduler.TaskStatus.RUNNING,
         })
         ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
-        let { websites, origin, paths, task_type = 'article', cfg_crawler } = task.data as Crawler
-        let { one_time: one_time_task } = cfg_crawler || {}
         if (['follows'].includes(task_type) && one_time_task !== false) {
             one_time_task = true
         }
@@ -245,10 +245,6 @@ class SpiderPools extends BaseCompatibleModel {
                     }
                     const spider = new spiderBuilder(this.log).init()
                     const page = await this.browser.newPage()
-                    const cookie_file = cfg_crawler?.cookie_file
-                    const user_agent = cfg_crawler?.user_agent
-                    cookie_file && (await page.setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
-                    await page.setUserAgent(user_agent || UserAgent.CHROME)
                     wrap = {
                         spider,
                         page,
@@ -256,8 +252,12 @@ class SpiderPools extends BaseCompatibleModel {
                     pool.set(url.hostname, wrap)
                     ctx.log?.info(`Spider instance created for ${url.hostname}`)
                 }
-                // dynamically setting cookie_file and user_agent
                 const { spider, page } = wrap
+                // 动态设置，因为cookie可能会变
+                const cookie_file = cfg_crawler?.cookie_file
+                const user_agent = cfg_crawler?.user_agent
+                cookie_file && (await page.setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
+                await page.setUserAgent(user_agent || UserAgent.CHROME)
 
                 if (task_type === 'article') {
                     let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, translator)

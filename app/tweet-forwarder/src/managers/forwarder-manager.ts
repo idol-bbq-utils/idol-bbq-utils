@@ -42,7 +42,7 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
 
     constructor(props: Pick<AppConfig, 'cfg_forwarder' | 'forwarders'>, emitter: EventEmitter, log?: Logger) {
         super(emitter)
-        this.log = log?.child({ label: 'Forwarder Manager' })
+        this.log = log?.child({ subservice: 'Forwarder Manager' })
         this.props = props
     }
 
@@ -188,7 +188,7 @@ class ForwarderPools extends BaseCompatibleModel {
     // private workers:
     constructor(props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>, emitter: EventEmitter, log?: Logger) {
         super()
-        this.log = log?.child({ label: this.NAME })
+        this.log = log?.child({ subservice: this.NAME })
         this.emitter = emitter
         this.props = props
     }
@@ -227,14 +227,6 @@ class ForwarderPools extends BaseCompatibleModel {
     // handle task received
     async onTaskReceived(ctx: TaskScheduler.TaskCtx) {
         const { taskId, task } = ctx
-        ctx.log = this.log?.child({ trace_id: taskId })
-        // prepare
-        // maybe we will use workers in the future
-        this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
-            taskId,
-            status: TaskScheduler.TaskStatus.RUNNING,
-        })
-        ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
         let {
             websites,
             origin,
@@ -242,9 +234,18 @@ class ForwarderPools extends BaseCompatibleModel {
             task_type = 'article' as TaskType,
             task_title,
             cfg_forwarder,
-            cfg_task,
+            name,
             subscribers,
         } = task.data as Forwarder
+        ctx.log = this.log?.child({ label: name, trace_id: taskId })
+        // prepare
+        // maybe we will use workers in the future
+        this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
+            taskId,
+            status: TaskScheduler.TaskStatus.RUNNING,
+        })
+        ctx.log?.debug(`Task received: ${JSON.stringify(task)}`)
+
         if (!websites && !origin && !paths) {
             ctx.log?.error(`No websites or origin or paths found`)
             this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
