@@ -378,6 +378,7 @@ class ForwarderPools extends BaseCompatibleModel {
             ctx.log?.info(`No articles need to be sent for ${url}`)
             return
         }
+        ctx.log?.info(`Ready to send articles for ${url}`)
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
             ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`)

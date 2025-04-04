@@ -371,7 +371,8 @@ class SpiderPools extends BaseCompatibleModel {
         if (!translator) {
             return article
         }
-        ctx.log?.info(`[${article.a_id}] Translating article...`)
+        const { username } = article
+        ctx.log?.info(`[${username}] [${article.a_id}] Translating article...`)
         let currentArticle: Article | null = article
         /**
          * 先获取所有引用文章的指针，flat为数组，对数组进行await Promise.all操作
@@ -382,7 +383,6 @@ class SpiderPools extends BaseCompatibleModel {
             articleNeedTobeTranslated.push(currentArticle)
             currentArticle = currentArticle.ref
         }
-        const { username } = article
         /**
          * 并行翻译
          * 通过文章引用来修改对应文章的翻译
