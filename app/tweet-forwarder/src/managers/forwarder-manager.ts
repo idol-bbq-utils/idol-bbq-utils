@@ -16,6 +16,7 @@ import { formatTime } from '@/utils/time'
 import { platformArticleMapToActionText, platformNameMap } from '@idol-bbq-utils/spider/const'
 import { existsSync, unlink, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
+import { orderBy } from 'lodash'
 
 type Forwarder = RealForwarder<TaskType>
 
@@ -385,7 +386,7 @@ class ForwarderPools extends BaseCompatibleModel {
         }
 
         if (articles_forwarders.length === 0) {
-            ctx.log?.info(`No articles need to be sent for ${url}`)
+            ctx.log?.debug(`No articles need to be sent for ${url}`)
             return
         }
         ctx.log?.info(`Ready to send articles for ${url}`)
@@ -508,7 +509,9 @@ class ForwarderPools extends BaseCompatibleModel {
         // follows to texts
         const texts = [] as Array<string>
         // convert to string
-        for (const [platform, follows] of results.entries()) {
+        for (let [platform, follows] of results.entries()) {
+            // 按粉丝数量大的排序
+            follows = orderBy(follows, (f) => f[0].followers, 'desc')
             const [cur, pre] = follows[0]
             let text_to_send =
                 `${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
