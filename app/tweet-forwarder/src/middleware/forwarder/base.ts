@@ -52,7 +52,7 @@ abstract class Forwarder extends BaseForwarder {
     TEXT_LIMIT: number
     constructor(config: ForwardToPlatformConfig<ForwardToPlatformEnum>, id: string, log?: Logger) {
         super(config, id, log)
-        this.block_until_date = getSubtractTime(dayjs().unix(), config.block_until || '1d')
+        this.block_until_date = getSubtractTime(dayjs().unix(), config.block_until || '30m')
         if (this.config?.replace_regex) {
             try {
                 this.log?.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)

@@ -56,7 +56,7 @@ interface ForwardToPlatformCommonConfig {
      * if 1d, the forwarder will only forward the article that created within 1 day
      * "7d", "1w", "30d", "2h"...
      *
-     * default is `1d`
+     * default is `30m`
      * ```
      * export type UnitTypeShort = 'd' | 'D' | 'M' | 'y' | 'h' | 'm' | 's' | 'ms'
      * export type UnitTypeLong = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'month' | 'year' | 'date'
