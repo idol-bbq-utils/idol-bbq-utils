@@ -74,8 +74,8 @@ class BiliForwarder extends Forwarder {
             _res.push(res)
         }
         _res.forEach((res) => {
-            if (res.data.status !== 'ok') {
-                throw new Error(`Send text to ${this.NAME} failed. ${res.data.message}`)
+            if (res.data.code !== 0) {
+                throw new Error(`Send text to ${this.name} failed. ${res.data.message}`)
             }
         })
         return _res
@@ -98,7 +98,7 @@ class BiliForwarder extends Forwarder {
     }
 
     private async sendText(text: string) {
-        const res = await axios.post(
+        return axios.post(
             'https://api.bilibili.com/x/dynamic/feed/create/dyn',
             {
                 dyn_req: {
@@ -124,7 +124,6 @@ class BiliForwarder extends Forwarder {
                 },
             },
         )
-        return res
     }
 
     private async sendTextWithPhotos(
@@ -136,7 +135,7 @@ class BiliForwarder extends Forwarder {
             img_size: number
         }>,
     ) {
-        const res = await axios.post(
+        return axios.post(
             'https://api.bilibili.com/x/dynamic/feed/create/dyn',
             {
                 dyn_req: {
@@ -163,7 +162,6 @@ class BiliForwarder extends Forwarder {
                 },
             },
         )
-        return res
     }
 }
 
