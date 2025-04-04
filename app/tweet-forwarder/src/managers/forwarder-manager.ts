@@ -627,7 +627,6 @@ class ForwarderPools extends BaseCompatibleModel {
         let metaline =
             [article.username, article.u_id, `来自${platformNameMap[article.platform]}`].filter(Boolean).join(TAB) +
             '\n'
-        metaline += [formatTime(article.created_at), ``].join(TAB)
         const action = platformArticleMapToActionText[article.platform][article.type]
         metaline += [formatTime(article.created_at), `${action}：`].join(TAB)
         return metaline
