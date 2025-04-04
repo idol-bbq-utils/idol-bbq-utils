@@ -29,6 +29,7 @@
     },
     "dependencies": {
         "dayjs": "^1.11.11",
-        "winston": "^3.13.0"
+        "winston": "^3.13.0",
+        "winston-daily-rotate-file": "^5.0.0"
     }
 }

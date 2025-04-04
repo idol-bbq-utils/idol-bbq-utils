@@ -24,8 +24,11 @@ const log: Logger = createLogger({
     ),
     transports: [
         new winston.transports.Console(),
-        new winston.transports.File({
-            filename: `${CACHE_DIR_ROOT}/logs/tweet-forwarder-${dayjs().format('YY-MM-DDTHH_mm_ss')}.log`,
+        new winston.transports.DailyRotateFile({
+            filename: `${CACHE_DIR_ROOT}/logs/tweet-forwarder-%DATE%.log`,
+            datePattern: 'YYYY-MM-DD_HH',
+            maxSize: '20m',
+            maxFiles: '14d',
         }),
     ],
 })
