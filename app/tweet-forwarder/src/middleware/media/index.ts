@@ -39,17 +39,27 @@ function download(url: string, dest: string): Promise<string> {
     })
 }
 
-async function plainDownloadMediaFile(url: string): Promise<string> {
+async function plainDownloadMediaFile(url: string, prefix?: string): Promise<string> {
     const _url = new URL(url)
     let filename = MATCH_FILE_NAME.exec(_url.pathname)?.groups?.filename
     if (!filename) {
         filename = Math.random().toString(36).slice(2, 10)
     }
+    if (prefix) {
+        filename = `${prefix}-${filename}`
+    }
     const dest = `${CACHE_DIR_ROOT}/media/plain/${filename}`
     return download(url, dest)
 }
 
-function galleryDownloadMediaFile(url: string, gallery_dl: MediaToolConfigMap['gallery-dl']) {
+function galleryDownloadMediaFile(
+    url: string,
+    gallery_dl: MediaToolConfigMap['gallery-dl'],
+    /**
+     * TODO
+     */
+    prefix?: string,
+): string[] {
     if (!gallery_dl) {
         return []
     }

@@ -412,7 +412,7 @@ class ForwarderPools extends BaseCompatibleModel {
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
                             ctx.log?.debug(`Downloading media with http downloader`)
                             new_files = await Promise.all(
-                                currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url)),
+                                currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url, ctx.taskId)),
                             )
                         }
                         if (media.use.tool === MediaToolEnum.GALLERY_DL) {
