@@ -75,7 +75,7 @@ class BiliForwarder extends Forwarder {
         }
         _res.forEach((res) => {
             if (res.data.code !== 0) {
-                throw new Error(`Send text to ${this.name} failed. ${res.data.message}`)
+                throw new Error(`Send text to ${this.NAME} failed. ${res.data.message}`)
             }
         })
         return _res
