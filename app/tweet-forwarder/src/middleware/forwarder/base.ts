@@ -68,9 +68,13 @@ abstract class Forwarder extends BaseForwarder {
 
     async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
         const { timestamp } = props || {}
+        const { replace_regex } = this.config
         if (timestamp && timestamp < this.block_until_date) {
             this.log?.warn(`blocked: can not send before ${formatTime(this.block_until_date)}`)
             return Promise.resolve()
+        }
+        if (replace_regex) {
+            text = this.textFilter(text, replace_regex)
         }
         const _log = this.log
         _log?.debug(`trying to send text with length ${text.length}`)
