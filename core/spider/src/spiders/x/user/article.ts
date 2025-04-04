@@ -233,7 +233,6 @@ async function getArticleTypeEnum(article: ElementHandle<Element>): Promise<Arti
     if (is_ref_tweet?.length > 1) {
         return ArticleTypeEnum.QUOTED
     }
-    // TODO reply
     return ArticleTypeEnum.TWEET
 }
 

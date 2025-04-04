@@ -51,7 +51,19 @@ type TaskConfig<T extends TaskType> = TaskConfigMap[T]
 
 interface ForwardToPlatformCommonConfig {
     replace_regex?: string | Array<string> | Array<Array<string>>
-    block_until?: number | string
+    /**
+     *
+     * if 1d, the forwarder will only forward the article that created within 1 day
+     * "7d", "1w", "30d", "2h"...
+     *
+     * default is `1d`
+     * ```
+     * export type UnitTypeShort = 'd' | 'D' | 'M' | 'y' | 'h' | 'm' | 's' | 'ms'
+     * export type UnitTypeLong = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'month' | 'year' | 'date'
+     * export type UnitTypeLongPlural = 'milliseconds' | 'seconds' | 'minutes' | 'hours' | 'days' | 'months' | 'years' | 'dates'
+     * ```
+     */
+    block_until?: string
 }
 
 type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> = PlatformConfigMap[T] &

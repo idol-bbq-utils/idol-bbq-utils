@@ -8,8 +8,8 @@ async function delay(time: number) {
     })
 }
 
-function formatTime(time: number | string) {
-    return dayjs(time).format('YYYY-MM-DD HH:mmZ')
+function formatTime(time: number) {
+    return dayjs.unix(time).format('YYYY-MM-DD HH:mmZ')
 }
 
 function getSubtractTime(time: number, offset: string) {

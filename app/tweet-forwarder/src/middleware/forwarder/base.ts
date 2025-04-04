@@ -1,13 +1,12 @@
 import { RETRY_LIMIT } from '@/config'
 import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
 import { BaseCompatibleModel } from '@/utils/base'
-import { formatTime } from '@/utils/time'
+import { formatTime, getSubtractTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
 import { Logger } from '@idol-bbq-utils/log'
 import { pRetry } from '@idol-bbq-utils/utils'
+import dayjs from 'dayjs'
 import { noop } from 'lodash'
-
-const DATE_OFFSET = 1
 
 const CHUNK_SEPARATOR_NEXT = '\n\n----⬇️----'
 const CHUNK_SEPARATOR_PREV = '----⬆️----\n\n'
@@ -53,10 +52,7 @@ abstract class Forwarder extends BaseForwarder {
     TEXT_LIMIT: number
     constructor(config: ForwardToPlatformConfig<ForwardToPlatformEnum>, id: string, log?: Logger) {
         super(config, id, log)
-        this.block_until_date = config.block_until
-            ? new Date(config.block_until).getTime()
-            : new Date().setDate(new Date().getDate() - DATE_OFFSET)
-
+        this.block_until_date = getSubtractTime(dayjs().unix(), config.block_until || '1d')
         if (this.config?.replace_regex) {
             try {
                 this.log?.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)

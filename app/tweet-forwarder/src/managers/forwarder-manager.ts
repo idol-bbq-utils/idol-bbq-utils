@@ -11,9 +11,11 @@ import { MediaTool, MediaToolEnum } from '@/types/media'
 import { Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
-import { cleanMediaFiles, galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
+import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
 import { formatTime } from '@/utils/time'
 import { platformArticleMapToActionText, platformNameMap } from '@idol-bbq-utils/spider/const'
+import { existsSync, unlink, unlinkSync } from 'fs'
+import dayjs from 'dayjs'
 
 type Forwarder = RealForwarder<TaskType>
 
@@ -429,7 +431,7 @@ class ForwarderPools extends BaseCompatibleModel {
                 try {
                     await target.send(text, {
                         media: maybe_media_files,
-                        timestamp: article.created_at * 1000,
+                        timestamp: article.created_at,
                     })
                     await DB.ForwardBy.save(article.id, target.id, 'article')
                 } catch (e) {
@@ -439,7 +441,17 @@ class ForwarderPools extends BaseCompatibleModel {
             /**
              * 清理媒体文件
              */
-            cleanMediaFiles(maybe_media_files.map((i) => i.path))
+            maybe_media_files
+                .map((i) => i.path)
+                .forEach((path) => {
+                    try {
+                        if (existsSync(path)) {
+                            unlinkSync(path)
+                        }
+                    } catch (e) {
+                        ctx.log?.error(`Error while unlinking file ${path}: ${e}`)
+                    }
+                })
         }
     }
 
@@ -487,9 +499,7 @@ class ForwarderPools extends BaseCompatibleModel {
         for (const [platform, follows] of results.entries()) {
             const [cur, pre] = follows[0]
             let text_to_send =
-                `${
-                    pre?.created_at ? `${formatTime(pre.created_at * 1000)}\n⬇️\n` : ''
-                }${formatTime(cur.created_at * 1000)}\n\n` +
+                `${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
                 follows
                     .map(([cur, pre]) => {
                         let text = `${cur.username}\n${' '.repeat(4)}`
@@ -514,7 +524,7 @@ class ForwarderPools extends BaseCompatibleModel {
         for (const target of forwarders) {
             try {
                 await target.send(texts_to_send, {
-                    timestamp: Date.now(),
+                    timestamp: dayjs().unix(),
                 })
                 /**
                  * 假设follows并不需要保存转发状态，因为任务基本上是一天一次
@@ -585,7 +595,7 @@ class ForwarderPools extends BaseCompatibleModel {
                 }
                 /***** extra描述结束 *****/
 
-                format_article += `${translation}\n${'-'.repeat(6)}↑${currentArticle.translated_by || '大模型' + '渣翻'}--↓原文${'-'.repeat(6)}\n`
+                format_article += `${translation}\n${'-'.repeat(6)}↑${(currentArticle.translated_by || '大模型') + '渣翻'}--↓原文${'-'.repeat(6)}\n`
             }
 
             /* 原文 */
@@ -616,9 +626,9 @@ class ForwarderPools extends BaseCompatibleModel {
         let metaline =
             [article.username, article.u_id, `来自${platformNameMap[article.platform]}`].filter(Boolean).join(TAB) +
             '\n'
-        metaline += [formatTime(article.created_at * 1000), ``].join(TAB)
+        metaline += [formatTime(article.created_at), ``].join(TAB)
         const action = platformArticleMapToActionText[article.platform][article.type]
-        metaline += [formatTime(article.created_at * 1000), `${action}：`].join(TAB)
+        metaline += [formatTime(article.created_at), `${action}：`].join(TAB)
         return metaline
     }
 }

@@ -13,10 +13,11 @@ function download(url: string, dest: string): Promise<string> {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true })
         }
+        let ext: string | undefined = undefined
         https
             .get(url, (response) => {
                 const contentType = response.headers['content-type']
-                const ext = contentType ? mimeToExt[contentType as keyof typeof mimeToExt] : undefined
+                ext = contentType ? mimeToExt[contentType as keyof typeof mimeToExt] : undefined
                 if (ext) {
                     dest += `.${ext}`
                 }
@@ -27,7 +28,12 @@ function download(url: string, dest: string): Promise<string> {
                 })
             })
             .on('error', (error) => {
-                fs.unlinkSync(dest)
+                if (ext) {
+                    dest += `.${ext}`
+                }
+                if (fs.existsSync(dest)) {
+                    fs.unlinkSync(dest)
+                }
                 reject(error.message)
             })
     })
@@ -77,12 +83,6 @@ function galleryDownloadMediaFile(url: string, gallery_dl: MediaToolConfigMap['g
     }
 }
 
-function cleanMediaFiles(paths: string[]) {
-    paths.forEach((path) => {
-        fs.unlinkSync(path)
-    })
-}
-
 function getMediaType(path: string) {
     const ext = path.split('.').pop() || ''
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
@@ -106,4 +106,4 @@ const mimeToExt = {
     'video/x-flv': 'flv',
 }
 
-export { cleanMediaFiles, getMediaType, plainDownloadMediaFile, galleryDownloadMediaFile }
+export { getMediaType, plainDownloadMediaFile, galleryDownloadMediaFile }

@@ -353,6 +353,9 @@ class SpiderPools extends BaseCompatibleModel {
 
         // 串行，防止create unique的问题
         for (const article of new_articles) {
+            /**
+             * TODO 这里可以尝试更新翻译
+             */
             const res = await DB.Article.trySave(article)
             saved_article_ids.push(res)
         }
@@ -371,68 +374,84 @@ class SpiderPools extends BaseCompatibleModel {
         ctx.log?.info(`[${article.a_id}] Translating article...`)
         let currentArticle: Article | null = article
         /**
-         * TODO: 串行改为并行
          * 先获取所有引用文章的指针，flat为数组，对数组进行await Promise.all操作
          * 再根据是否需要更新翻译进行更新
          */
+        let articleNeedTobeTranslated: Array<Article> = []
         while (currentArticle) {
-            const { a_id, platform } = currentArticle
-            // maybe the ref article translated failed
-            const article_maybe_translated = await DB.Article.getByArticleCode(a_id, platform)
-            if (currentArticle.content && !BaseTranslator.isValidTranslation(article_maybe_translated?.translation)) {
-                const content = currentArticle.content
-                const content_translation = await pRetry(() => translator.translate(content), {
-                    retries: RETRY_LIMIT,
-                    onFailedAttempt: (error) => {
-                        ctx.log?.warn(
-                            `[${a_id}] Translation content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
-                        )
-                    },
-                })
-                    .then((res) => res)
-                    .catch((err) => {
-                        ctx.log?.error(`[${a_id}] Error while translating content: ${err}`)
-                        return TRANSLATION_ERROR_FALLBACK
-                    })
-                ctx.log?.debug(`[${a_id}] Translation content: ${content_translation}`)
-                currentArticle.translation = content_translation
-                currentArticle.translated_by = translator.NAME
-            }
-
-            if (currentArticle.media) {
-                for (const [idx, media] of currentArticle.media.entries()) {
-                    // 假设图片与描述的顺序是一致的
-                    if (
-                        media.alt &&
-                        !BaseTranslator.isValidTranslation(
-                            (article_maybe_translated?.media as unknown as Article['media'])?.[idx]?.translation,
-                        )
-                    ) {
-                        const alt = media.alt
-                        const caption_translation = await await pRetry(() => translator.translate(alt), {
-                            retries: RETRY_LIMIT,
-                            onFailedAttempt: (error) => {
-                                ctx.log?.warn(
-                                    `[${a_id}] Translation media alt failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
-                                )
-                            },
-                        })
-                            .then((res) => res)
-                            .catch((err) => {
-                                ctx.log?.error(`[${a_id}] Error while translating media alt: ${err}`)
-                                return TRANSLATION_ERROR_FALLBACK
-                            })
-                        media.translation = caption_translation
-                        media.translated_by = translator.NAME
-                    }
-                }
-            }
-
-            // TODO
-            if (currentArticle.extra) {
-            }
+            articleNeedTobeTranslated.push(currentArticle)
             currentArticle = currentArticle.ref
         }
+        /**
+         * 并行翻译
+         * 通过文章引用来修改对应文章的翻译
+         */
+        ctx.log?.info(`[${article.a_id}] Starting batch translating ${articleNeedTobeTranslated.length} articles...`)
+        await Promise.all(
+            articleNeedTobeTranslated.map(async (currentArticle) => {
+                const { a_id, platform } = currentArticle
+                // maybe the ref article translated failed
+                const article_maybe_translated = await DB.Article.getByArticleCode(a_id, platform)
+                if (
+                    currentArticle.content &&
+                    !BaseTranslator.isValidTranslation(article_maybe_translated?.translation)
+                ) {
+                    const content = currentArticle.content
+                    ctx.log?.info(`[${a_id}] Starting to translate...`)
+                    const content_translation = await pRetry(() => translator.translate(content), {
+                        retries: RETRY_LIMIT,
+                        onFailedAttempt: (error) => {
+                            ctx.log?.warn(
+                                `[${a_id}] Translation content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                            )
+                        },
+                    })
+                        .then((res) => res)
+                        .catch((err) => {
+                            ctx.log?.error(`[${a_id}] Error while translating content: ${err}`)
+                            return TRANSLATION_ERROR_FALLBACK
+                        })
+                    ctx.log?.debug(`[${a_id}] Translation content: ${content_translation}`)
+                    ctx.log?.info(`[${a_id}] Translation complete.`)
+                    currentArticle.translation = content_translation
+                    currentArticle.translated_by = translator.NAME
+                }
+
+                if (currentArticle.media) {
+                    for (const [idx, media] of currentArticle.media.entries()) {
+                        // 假设图片与描述的顺序是一致的
+                        if (
+                            media.alt &&
+                            !BaseTranslator.isValidTranslation(
+                                (article_maybe_translated?.media as unknown as Article['media'])?.[idx]?.translation,
+                            )
+                        ) {
+                            const alt = media.alt
+                            const caption_translation = await await pRetry(() => translator.translate(alt), {
+                                retries: RETRY_LIMIT,
+                                onFailedAttempt: (error) => {
+                                    ctx.log?.warn(
+                                        `[${a_id}] Translation media alt failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                                    )
+                                },
+                            })
+                                .then((res) => res)
+                                .catch((err) => {
+                                    ctx.log?.error(`[${a_id}] Error while translating media alt: ${err}`)
+                                    return TRANSLATION_ERROR_FALLBACK
+                                })
+                            media.translation = caption_translation
+                            media.translated_by = translator.NAME
+                        }
+                    }
+                }
+
+                // TODO
+                if (currentArticle.extra) {
+                }
+            }),
+        )
+        ctx.log?.info(`[${article.a_id}] ${articleNeedTobeTranslated.length} Articles are translated.`)
         return article
     }
 }
