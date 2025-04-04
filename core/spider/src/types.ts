@@ -21,7 +21,13 @@ type PlatformExtractMap = {
 
 // related to platform
 type ArticleType<T extends Platform> = PlatformArticleMap[T]
-type ArticleExtractType<T extends Platform> = PlatformExtractMap[T]
+type ArticleExtractType<T extends Platform> = {
+    data: PlatformExtractMap[T]
+    /**
+     * content that will be sent as text
+     */
+    content?: string
+}
 
 type TaskType = 'article' | 'follows'
 

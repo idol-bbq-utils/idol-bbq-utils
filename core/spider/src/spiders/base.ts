@@ -35,7 +35,7 @@ abstract class BaseSpider {
     }
 
     init() {
-        this.log = this.log?.child({ childService: 'spider', label: this.NAME })
+        this.log = this.log?.child({ subservice: 'spider', label: this.NAME })
         return this
     }
 

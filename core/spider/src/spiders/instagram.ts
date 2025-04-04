@@ -152,6 +152,9 @@ namespace InsApiJsonParser {
             a_id: id,
             u_id: node?.user?.username,
             username: '',
+            /**
+             * TODO: notify when highlight updates
+             */
             created_at: 0,
             content: node?.title,
             url: `https://www.instagram.com/stories/highlights/${id}/`,

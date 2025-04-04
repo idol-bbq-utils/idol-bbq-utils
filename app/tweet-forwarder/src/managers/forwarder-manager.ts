@@ -114,8 +114,8 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
         // stop all cron jobs
         this.cronJobs.forEach((job) => {
             job.stop()
-            this.log?.info(`Task dispatcher stopped with cron: ${job.cronTime.source}`)
         })
+        this.log?.info('All jobs stopped')
         this.log?.info('Manager stopped')
     }
 
@@ -175,13 +175,16 @@ class ForwarderPools extends BaseCompatibleModel {
      */
     private forward_to: Map<string, BaseForwarder> = new Map()
     /**
-     * - Article: website -> the forwarders subscribed to this website
+     * - Article: batch id -> the forwarders subscribed to this website
      *
      * - Follows: batch id -> the forwarders subscribed to theses follows
      */
     private subscribers: Map<
         string,
         {
+            /**
+             * id for forward_to
+             */
             to: Set<string>
             cfg_forwarder: Forwarder['cfg_forwarder']
         }
@@ -320,10 +323,14 @@ class ForwarderPools extends BaseCompatibleModel {
             subscribers: Forwarder['subscribers']
             cfg_forwarder: Forwarder['cfg_forwarder']
         }
+        const batchId = crypto
+            .createHash('md5')
+            .update(`article:${websites.join(',')}`)
+            .digest('hex')
         for (const website of websites) {
             // 单次爬虫任务
             const url = new URL(website)
-            const forwarders = this.getOrInitForwarders(url.href, subscribers, cfg_forwarder)
+            const forwarders = this.getOrInitForwarders(batchId, subscribers, cfg_forwarder)
             if (forwarders.length === 0) {
                 continue
             }
@@ -361,6 +368,9 @@ class ForwarderPools extends BaseCompatibleModel {
             const to = [] as Array<BaseForwarder>
             for (const f of forwarders) {
                 const id = f.id
+                /**
+                 * 同一个宏任务循环中，此时可能会有同一个网站运行了两次及以上的定时任务，此时checkExist都是false
+                 */
                 const exist = await DB.ForwardBy.checkExist(article.id, id, 'article')
                 if (!exist) {
                     to.push(f)
@@ -429,6 +439,7 @@ class ForwarderPools extends BaseCompatibleModel {
             const text = this.articleToText(article)
             // 对所有订阅者进行转发
             for (const target of to) {
+                ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
                 try {
                     await target.send(text, {
                         media: maybe_media_files,
@@ -541,6 +552,11 @@ class ForwarderPools extends BaseCompatibleModel {
         }
     }
 
+    /**
+     * 通过 batch id 来获取或初始化转发器
+     * 如果没有找到，则新创建一个映射
+     * 并注册新的订阅者
+     */
     getOrInitForwarders(id: string, subscribers: Forwarder['subscribers'], cfg: Forwarder['cfg_forwarder']) {
         let wrap = this.subscribers.get(id)
         if (!wrap) {
@@ -552,6 +568,9 @@ class ForwarderPools extends BaseCompatibleModel {
             wrap = newWrap
         }
         const { to } = wrap
+        /**
+         * 注册新的订阅者
+         */
         subscribers?.forEach((id) => {
             if (!to?.has(id)) {
                 to.add(id)
