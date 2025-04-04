@@ -49,24 +49,26 @@ export namespace XApiJsonParser {
         if (!media) {
             return null
         }
-        return media.map((m: any) => {
-            const { media_url_https, video_info, type, ext_alt_text } = m
-            if (type === 'photo') {
-                return {
-                    type,
-                    url: media_url_https,
-                    alt: ext_alt_text,
+        return media
+            .map((m: any) => {
+                const { media_url_https, video_info, type, ext_alt_text } = m
+                if (type === 'photo') {
+                    return {
+                        type,
+                        url: media_url_https,
+                        alt: ext_alt_text,
+                    }
                 }
-            }
-            if (type === 'video') {
-                return {
-                    type,
-                    url: video_info?.variants
-                        ?.filter((i: { bitrate?: number }) => i.bitrate !== undefined)
-                        .sort((a: { bitrate: number }, b: { bitrate: number }) => b.bitrate - a.bitrate)[0].url,
+                if (type === 'video' || type === 'animated_gif') {
+                    return {
+                        type: 'video',
+                        url: video_info?.variants
+                            ?.filter((i: { bitrate?: number }) => i.bitrate !== undefined)
+                            .sort((a: { bitrate: number }, b: { bitrate: number }) => b.bitrate - a.bitrate)[0].url,
+                    }
                 }
-            }
-        })
+            })
+            .filter(Boolean)
     }
 
     function tweetParser(result: any): GenericArticle<Platform> {
