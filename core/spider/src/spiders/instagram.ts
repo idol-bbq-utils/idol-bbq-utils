@@ -28,7 +28,7 @@ class InstagramSpider extends BaseSpider {
     BASE_URL: string = 'https://www.instagram.com/'
     NAME: string = 'Instagram Generic Spider'
 
-    async crawl<T extends TaskType>(
+    async _crawl<T extends TaskType>(
         url: string,
         page: Page,
         task_type: T = 'article' as T,
@@ -210,7 +210,7 @@ namespace InsApiJsonParser {
             [PROFILE_POSTS_KEY]: {},
             [PROFILE_HIGHLIGHTS_KEY]: {},
         }
-        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             const request = response.request()
             if (/graphql\/query$/.test(url) && request.method() === 'POST') {
@@ -223,10 +223,10 @@ namespace InsApiJsonParser {
                         reasonable_jsons[PROFILE_HIGHLIGHTS_KEY] = await response.json()
                     }
                     if (Object.values(reasonable_jsons).every((e: any) => Object.keys(e).length > 0)) {
-                        resolve()
+                        done()
                     }
                 } catch (e) {
-                    reject(e)
+                    fail(e)
                 }
             }
         })
@@ -240,7 +240,10 @@ namespace InsApiJsonParser {
             throw error
         }
 
-        await waitForTweets
+        const { success, error } = await waitForTweets
+        if (!success) {
+            throw error
+        }
         const posts = postsParser(reasonable_jsons[PROFILE_POSTS_KEY])
         const highlights = highlightsParser(reasonable_jsons[PROFILE_HIGHLIGHTS_KEY]).map((h) => {
             h.username = posts[0]?.username
@@ -252,18 +255,23 @@ namespace InsApiJsonParser {
 
     export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
         let follows_json: any
-        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('graphql/query') && response.request().method() === 'POST') {
                 const postData = response.request().postData()
                 if (postData?.includes(`${GRAPHQL_FORM_QUERY_KEY}=${PROFILE_USER_KEY}`)) {
+                    if (response.status() >= 400) {
+                        fail(new Error(`Error: ${response.status()}`))
+                        return
+                    }
                     await response
                         .json()
                         .then((json) => {
                             follows_json = json
+                            done()
                         })
                         .catch((e) => {
-                            reject(e)
+                            fail(e)
                         })
                 }
             }
@@ -276,7 +284,10 @@ namespace InsApiJsonParser {
             cleanup()
             throw error
         }
-        await waitForTweets
+        const { success, error } = await waitForTweets
+        if (!success) {
+            throw error
+        }
         return followsParser(follows_json)
     }
 }

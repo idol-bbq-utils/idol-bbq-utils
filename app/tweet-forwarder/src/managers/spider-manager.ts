@@ -16,6 +16,7 @@ import { pRetry } from '@idol-bbq-utils/utils'
 import DB, { Article } from '@/db'
 import { RETRY_LIMIT } from '@/config'
 import { delay } from '@/utils/time'
+import { shuffle } from 'lodash'
 
 interface TaskResult {
     taskId: string
@@ -64,23 +65,23 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
                 ...this.props.cfg_crawler,
                 ...crawler.cfg_crawler,
             }
-            let { cron, interval_time } = crawler.cfg_crawler
+            let { interval_time, cron } = crawler.cfg_crawler
             // 定时dispatch任务
             const job = new CronJob(cron as string, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
-                if (interval_time) {
-                    interval_time = {
-                        ...{
-                            max: 0,
-                            min: 0,
-                        },
-                        ...interval_time,
-                    }
-                    const time = Math.floor(Math.random() * (interval_time.max - interval_time.min) + interval_time.min)
-                    this.log?.info(`cron triggered but wait for ${time}ms`)
-                    await delay(time)
+
+                interval_time = {
+                    ...{
+                        max: 0,
+                        min: 0,
+                    },
+                    ...interval_time,
                 }
-                this.log?.info(`[${taskId}] starting to dispatch task`)
+                const time = Math.floor(Math.random() * (interval_time.max - interval_time.min) + interval_time.min)
+                this.log?.info(`[${taskId}] Cron triggered but wait for ${time}ms`)
+                await delay(time)
+
+                this.log?.info(`[${taskId}] Starting to dispatch task: ${crawler.name}`)
                 const task: TaskScheduler.Task = {
                     id: taskId,
                     status: TaskScheduler.TaskStatus.PENDING,
@@ -195,11 +196,13 @@ class SpiderPools extends BaseCompatibleModel {
             })
             return
         }
-        websites = sanitizeWebsites({
-            websites,
-            origin,
-            paths,
-        })
+        websites = shuffle(
+            sanitizeWebsites({
+                websites,
+                origin,
+                paths,
+            }),
+        )
         if (websites.length === 0) {
             ctx.log?.error(`No websites found after sanitizing`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
@@ -208,10 +211,12 @@ class SpiderPools extends BaseCompatibleModel {
             })
             return
         }
+
+        const { translator: _translator } = cfg_crawler || {}
         // try to get translation
         let translator = undefined
-        if (cfg_crawler?.translator) {
-            const translator_cfg = cfg_crawler.translator
+        if (_translator) {
+            const translator_cfg = _translator
             translator = this.translators.get(translator_cfg.provider)
             if (!translator) {
                 const translatorBuilder = getTranslator(translator_cfg.provider)
@@ -263,7 +268,7 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (task_type === 'follows') {
-                    const follows = await pRetry(() => spider.crawl(url.href, page, 'follows'), {
+                    const follows = await pRetry(() => spider.crawl(url.href, page, 'follows', taskId), {
                         retries: RETRY_LIMIT,
                         onFailedAttempt: (error) => {
                             ctx.log?.error(
@@ -315,7 +320,7 @@ class SpiderPools extends BaseCompatibleModel {
         page: Page,
         translator?: BaseTranslator,
     ): Promise<Array<number>> {
-        const articles = await pRetry(() => spider.crawl(url.href, page, 'article'), {
+        const articles = await pRetry(() => spider.crawl(url.href, page, 'article', ctx.taskId), {
             retries: RETRY_LIMIT,
             onFailedAttempt: (error) => {
                 ctx.log?.error(

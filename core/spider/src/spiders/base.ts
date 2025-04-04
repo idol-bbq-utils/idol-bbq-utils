@@ -14,7 +14,17 @@ abstract class BaseSpider {
      */
     NAME: string = 'Base Spider'
     log?: Logger
-    public abstract crawl<T extends TaskType>(
+    public crawl<T extends TaskType>(
+        url: string,
+        page: Page,
+        task_type?: T,
+        trace_id?: string,
+    ): Promise<TaskTypeResult<T, Platform>> {
+        this.log = this.log?.child({ trace_id })
+        return this._crawl(url, page, task_type)
+    }
+
+    protected abstract _crawl<T extends TaskType>(
         url: string,
         page: Page,
         task_type?: T,
@@ -40,37 +50,47 @@ abstract class BaseSpider {
 function waitForEvent<T extends PageEvent>(
     page: Page,
     eventName: T,
-    handler?: (data: PageEvents[T], control: { resolve: () => void; reject: (reason?: any) => void }) => void,
+    handler?: (data: PageEvents[T], control: { done: () => void; fail: (error?: Error) => void }) => void,
     timeout: number = 30000,
 ): {
+    promise: Promise<{
+        success: boolean
+        data: PageEvents[T]
+        error?: Error
+    }>
     /**
      * Cleanup the event listener manually. You shuold execute this function if error occurs.
      */
     cleanup: () => void
-    promise: Promise<PageEvents[T]>
 } {
-    let promiseResolve: (value: PageEvents[T]) => void
-    let promiseReject: (reason?: any) => void
+    let promiseResolve: (value: { success: boolean; data: PageEvents[T]; error?: Error }) => void
+    let promiseReject: (value: { success: boolean; data: PageEvents[T]; error?: Error }) => void
     let eventData: PageEvents[T]
 
-    const promise = new Promise<PageEvents[T]>((resolve, reject) => {
+    const promise = new Promise<{
+        success: boolean
+        data: PageEvents[T]
+        error?: Error
+    }>((resolve) => {
         promiseResolve = resolve
-        promiseReject = reject
+        promiseReject = resolve
     })
 
-    const cleanup = () => {
-        clearTimeout(timeoutId)
-        page.off(eventName, wrappedHandler)
-    }
-
     const control = {
-        resolve: () => {
+        done: () => {
             cleanup()
-            promiseResolve(eventData)
+            promiseResolve({
+                success: true,
+                data: eventData,
+            })
         },
-        reject: (e: any) => {
+        fail: (e: any) => {
             cleanup()
-            promiseReject(e)
+            promiseReject({
+                success: false,
+                data: eventData,
+                error: e,
+            })
         },
     }
 
@@ -79,25 +99,36 @@ function waitForEvent<T extends PageEvent>(
         if (handler) {
             handler(data, control)
         } else {
-            control.resolve()
+            control.done()
         }
     }
 
     const timeoutId = setTimeout(() => {
-        cleanup()
-        promiseReject(new Error(`Timeout waiting for event \'${eventName.toString()}\' after ${timeout}ms`))
+        promiseReject({
+            success: false,
+            data: eventData,
+            error: new Error(`Timeout waiting for event \'${eventName.toString()}\' after ${timeout}ms`),
+        })
     }, timeout)
 
     page.on(eventName, wrappedHandler)
 
-    return { promise: promise.finally(cleanup), cleanup }
+    const cleanup = () => {
+        clearTimeout(timeoutId)
+        page.off(eventName, wrappedHandler)
+    }
+
+    return {
+        promise: promise.finally(cleanup),
+        cleanup,
+    }
 }
 
 function waitForResponse(
     page: Page,
     handler?: (
         data: PageEvents[PageEvent.Response],
-        control: { resolve: () => void; reject: (reason: any) => void },
+        control: { done: () => void; fail: (reason: any) => void },
     ) => void,
 ) {
     return waitForEvent(page, PageEvent.Response, handler)

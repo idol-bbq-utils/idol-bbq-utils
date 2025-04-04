@@ -10,7 +10,7 @@ const RETRY_LIMIT = 2
 
 const log: Logger = createLogger({
     defaultMeta: { service: 'tweet-forwarder' },
-    level: 'debug',
+    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
     format: format.combine(
         format.colorize(),
         format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),

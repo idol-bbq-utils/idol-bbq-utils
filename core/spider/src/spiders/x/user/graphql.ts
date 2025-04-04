@@ -189,30 +189,38 @@ export namespace XApiJsonParser {
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         let tweets_json
-        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('UserTweets') && response.request().method() === 'GET') {
+                if (response.status() >= 400) {
+                    fail(new Error(`Error: ${response.status()}`))
+                    return
+                }
                 response
                     .json()
                     .then((json) => {
                         tweets_json = json
-                        resolve()
+                        done()
                     })
                     .catch((error) => {
-                        reject(error)
+                        fail(error)
                     })
             }
         })
-        await page.setViewport(config.viewport ?? { width: 954, height: 2 })
-        await page.goto(url)
         try {
+            await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+            await page.goto(url)
             await checkLogin(page)
             await checkSomethingWrong(page)
         } catch (error) {
             cleanup()
             throw error
         }
-        await waitForTweets
+        const { success, error } = await waitForTweets
+        if (!success) {
+            throw error
+        }
+
         return XApiJsonParser.tweetsArticleParser(tweets_json)
     }
 
@@ -236,17 +244,21 @@ export namespace XApiJsonParser {
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         let tweets_json
-        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
+        const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('UserTweetsAndReplies') && response.request().method() === 'GET') {
+                if (response.status() >= 400) {
+                    fail(new Error(`Error: ${response.status()}`))
+                    return
+                }
                 response
                     .json()
                     .then((json) => {
                         tweets_json = json
-                        resolve()
+                        done()
                     })
                     .catch((error) => {
-                        reject(error)
+                        fail(error)
                     })
             }
         })
@@ -259,7 +271,10 @@ export namespace XApiJsonParser {
             cleanup()
             throw error
         }
-        await waitForTweets
+        const { success, error } = await waitForTweets
+        if (!success) {
+            throw error
+        }
         return XApiJsonParser.tweetsRepliesParser(tweets_json)
     }
 
@@ -268,24 +283,31 @@ export namespace XApiJsonParser {
      */
     export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
         let user_json
-        const { promise: waitForTweets } = waitForResponse(page, async (response, { resolve, reject }) => {
+        const { promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('UserByScreenName') && response.request().method() === 'GET') {
+                if (response.status() >= 400) {
+                    fail(new Error(`Error: ${response.status()}`))
+                    return
+                }
                 response
                     .json()
                     .then((json) => {
                         user_json = json
-                        resolve()
+                        done()
                     })
                     .catch((error) => {
-                        reject(error)
+                        fail(error)
                     })
             }
         })
         await page.setViewport({ width: 1080, height: 2 })
         await page.goto(url)
 
-        await waitForTweets
+        const { success, error } = await waitForTweets
+        if (!success) {
+            throw error
+        }
         return XApiJsonParser.tweetsFollowsParser(user_json)
     }
 }

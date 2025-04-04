@@ -14,7 +14,7 @@ export class XTimeLineSpider extends BaseSpider {
     BASE_URL: string = 'https://x.com/'
     NAME: string = 'X TimeLine Spider'
 
-    async crawl<T extends TaskType>(
+    async _crawl<T extends TaskType>(
         url: string,
         page: Page,
         task_type: T = 'article' as T,
