@@ -1,5 +1,11 @@
 import { ElementHandle } from 'puppeteer-core'
-import { ArticleTypeEnum, ITweetArticle, ITweetCard, TimelineTypeEnum, TweetExtraTypeEnum } from '@/spiders/x/types'
+import {
+    ArticleTypeEnum,
+    ITweetArticle,
+    ITweetCard,
+    TimelineTypeEnum,
+    TweetExtraTypeEnum,
+} from '@/spiders/x_oldschool/types'
 import { articleElementParser } from './element'
 
 const QUERY_TEXT_PATTERN = 'div[data-testid="tweetText"]'
