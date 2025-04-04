@@ -238,11 +238,12 @@ class SpiderPools extends BaseCompatibleModel {
         cookie_file && (await page.setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
         await page.setUserAgent(user_agent || UserAgent.CHROME)
 
-        try {
-            let result: Array<CrawlerTaskResult> = []
-            // 开始任务
-            for (const website of websites) {
-                // 单次系列爬虫任务
+        let result: Array<CrawlerTaskResult> = []
+        let errors: Array<any> = []
+        // 开始任务
+        for (const website of websites) {
+            // 单次系列爬虫任务
+            try {
                 const url = new URL(website)
                 let spider = this.spiders.get(url.hostname)
                 if (!spider) {
@@ -283,24 +284,29 @@ class SpiderPools extends BaseCompatibleModel {
                         data: [saved_follows_id],
                     })
                 }
+            } catch (error) {
+                ctx.log?.error(`Error while crawling for ${website}: ${error}`)
+                errors.push(error)
+                continue
             }
+        }
 
+        if (errors.length > 0) {
+            this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
+                taskId,
+                status: TaskScheduler.TaskStatus.FAILED,
+            })
+        } else {
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.FINISHED}`, {
                 taskId,
                 result,
                 immediate_notify: cfg_crawler?.immediate_notify,
             } as TaskResult)
-        } catch (error) {
-            ctx.log?.error(`Error while crawling: ${error}`)
-            this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
-                taskId,
-                status: TaskScheduler.TaskStatus.FAILED,
-            })
-        } finally {
-            // close page
-            await page.close()
-            ctx.log?.info(`Page closed.`)
         }
+
+        // close page
+        await page.close()
+        ctx.log?.info(`Page closed.`)
     }
 
     async drop(...args: any[]): Promise<void> {
