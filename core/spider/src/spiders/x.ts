@@ -546,6 +546,7 @@ type CardDataMapping = {
         }>
     }
     [CardTypeEnum.SPACE]: {}
+    [CardTypeEnum.NONE]: {}
 }
 type Card<T extends CardTypeEnum> = {
     type: T
