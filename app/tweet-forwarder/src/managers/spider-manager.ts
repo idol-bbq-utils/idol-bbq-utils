@@ -13,7 +13,7 @@ import { BaseSpider } from 'node_modules/@idol-bbq-utils/spider/lib/spiders/base
 import { TranslatorProvider } from '@/types/translator'
 import { getTranslator } from '@/middleware/translator'
 import { pRetry } from '@idol-bbq-utils/utils'
-import DB, { Article } from '@/db'
+import DB, { Article, DBArticleExtractType } from '@/db'
 import { RETRY_LIMIT } from '@/config'
 import { delay } from '@/utils/time'
 import { shuffle } from 'lodash'
@@ -449,8 +449,26 @@ class SpiderPools extends BaseCompatibleModel {
                     }
                 }
 
-                // TODO
                 if (currentArticle.extra) {
+                    const extra_ref = currentArticle.extra as DBArticleExtractType
+                    let { content, translation } = extra_ref
+                    if (content && !BaseTranslator.isValidTranslation(translation)) {
+                        const content_translation = await pRetry(() => translator.translate(content), {
+                            retries: RETRY_LIMIT,
+                            onFailedAttempt: (error) => {
+                                ctx.log?.warn(
+                                    `[${username}] [${a_id}] Translation extra content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                                )
+                            },
+                        })
+                            .then((res) => res)
+                            .catch((err) => {
+                                ctx.log?.error(`[${username}] [${a_id}] Error while translating extra content: ${err}`)
+                                return TRANSLATION_ERROR_FALLBACK
+                            })
+                        extra_ref.translation = content_translation
+                        extra_ref.translated_by = translator.NAME
+                    }
                 }
             }),
         )

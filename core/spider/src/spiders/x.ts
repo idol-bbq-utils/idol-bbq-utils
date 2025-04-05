@@ -1,4 +1,4 @@
-import { GenericArticle, GenericFollows, Platform, TaskType, TaskTypeResult } from '@/types'
+import { ArticleExtractType, GenericArticle, GenericFollows, Platform, TaskType, TaskTypeResult } from '@/types'
 import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 import { JSONPath } from 'jsonpath-plus'
@@ -52,6 +52,158 @@ class XTimeLineSpider extends BaseSpider {
     }
 }
 namespace XApiJsonParser {
+    namespace Card {
+        function getThumbnailUrl(
+            values: Array<{
+                key: string
+                value: { type: string } & Record<string, any>
+            }>,
+        ) {
+            let media = values
+                .filter((v) => v.value.type === 'IMAGE')
+                .map(
+                    (v) =>
+                        v.value.image_value as {
+                            height: number
+                            width: number
+                            url: string
+                        },
+                )
+            if (media.length <= 0) {
+                return
+            }
+            media = media.sort((a, b) => b.height - a.height)
+            return media[0].url
+        }
+
+        interface BindingValue {
+            key: string
+            value: {
+                string_value: string
+                type: string
+            }
+        }
+
+        const transformPollData = (bindingValues: BindingValue[]) => {
+            const resultMap = new Map<number, { name?: string; count?: string }>()
+
+            // 使用正则表达式匹配所有choice数字编号
+            const choicePattern = /^choice(\d+)_(label|count)$/
+
+            bindingValues.forEach((item) => {
+                const match = item.key.match(choicePattern)
+                if (!match) return
+
+                const [, indexStr, type] = match
+                const index = parseInt(indexStr, 10)
+
+                if (!resultMap.has(index)) {
+                    resultMap.set(index, {})
+                }
+
+                const current = resultMap.get(index)!
+                if (type === 'label') {
+                    current.name = item.value.string_value
+                } else if (type === 'count') {
+                    current.count = item.value.string_value
+                }
+            })
+
+            // 转换为有序数组并过滤无效条目
+            return Array.from(resultMap.entries())
+                .sort(([a], [b]) => a - b) // 按choice数字顺序排序
+                .map(([index, values]) => ({
+                    name: values.name || `Unknown Choice ${index}`,
+                    count: values.count || '0',
+                }))
+                .filter((item) => item.name && item.count) // 过滤无效条目
+        }
+
+        function extractValueByKey(
+            values: Array<{
+                key: string
+                value: { type: string } & Record<string, any>
+            }>,
+            key: string,
+        ) {
+            if (!values) {
+                return
+            }
+            const value = values.find((v) => v.key === key)
+            if (value) {
+                return value.value
+            }
+            return
+        }
+
+        export function cardParser(card: any): ArticleExtractType<Platform.X> | null {
+            if (!card) {
+                return null
+            }
+            let _card = {
+                type: CardTypeEnum.IMAGE,
+                card_url: card.url,
+            } as Card<CardTypeEnum>
+            if (card.name.includes('image')) {
+                _card.type = CardTypeEnum.IMAGE
+            }
+            if (card.name.includes('player')) {
+                _card.type = CardTypeEnum.PLAYER
+            }
+            if (card.name.includes('choice')) {
+                _card.type = CardTypeEnum.CHOICE
+            }
+            if (card.name.includes('audiospace')) {
+                _card.type = CardTypeEnum.SPACE
+            }
+            const binding_values = card.binding_values
+
+            let media
+            let content
+            if ([CardTypeEnum.IMAGE, CardTypeEnum.PLAYER].includes(_card.type)) {
+                _card = {
+                    ..._card,
+                    title: extractValueByKey(binding_values, 'title')?.string_value,
+                    description: extractValueByKey(binding_values, 'description')?.string_value,
+                    domain: extractValueByKey(binding_values, 'domain')?.string_value,
+                    thumbnail_url: getThumbnailUrl(binding_values),
+                    player_url: extractValueByKey(binding_values, 'player_url')?.string_value,
+                } as Card<CardTypeEnum.IMAGE | CardTypeEnum.PLAYER>
+                const type_guard_card = _card as Card<CardTypeEnum.IMAGE | CardTypeEnum.PLAYER>
+                content = [
+                    type_guard_card.title ? type_guard_card.title : '',
+                    type_guard_card.description ? type_guard_card.description : '',
+                    type_guard_card.domain ? type_guard_card.domain : '',
+                    'player_url' in type_guard_card && type_guard_card.player_url ? type_guard_card.player_url : '',
+                ]
+                    .filter(Boolean)
+                    .join('\n')
+            }
+            media = (_card as Card<CardTypeEnum.IMAGE | CardTypeEnum.PLAYER>).thumbnail_url
+
+            if (_card.type === CardTypeEnum.CHOICE) {
+                const choices = binding_values.filter((v: any) => v.key.startsWith('choice'))
+                _card = {
+                    ..._card,
+                    choices: transformPollData(choices),
+                } as Card<CardTypeEnum.CHOICE>
+                content = (_card as Card<CardTypeEnum.CHOICE>).choices
+                    .map((choice) => `${choice.name}: ${choice.count}`)
+                    .join('\n')
+            }
+
+            if (_card.type === CardTypeEnum.SPACE) {
+                content = `space id: ${extractValueByKey(binding_values, 'id')?.string_value}`
+            }
+            return {
+                data: _card,
+                content,
+                media,
+                extra_type: 'card',
+            } as ArticleExtractType<Platform.X>
+        }
+    }
+
     function sanitizeTweetsJson(json: any) {
         let tweets = JSONPath({ path: "$..instructions[?(@.type === 'TimelineAddEntries')].entries", json })[0]
         let pin_tweet = JSONPath({ path: "$..instructions[?(@.type === 'TimelinePinEntry')].entry", json })[0]
@@ -68,28 +220,6 @@ namespace XApiJsonParser {
     // 时间转换辅助函数
     function parseTwitterDate(dateStr: string) {
         return Date.parse(dateStr.replace(/( \+0000)/, ' UTC$1'))
-    }
-
-    // TODO
-    function cardParser(card: any) {
-        if (!card) {
-            return null
-        }
-        if (card.name.includes('image')) {
-            return {
-                type: 'card',
-                data: {
-                    content: card.binding_values?.find(({ key }: { key: string }) => key === 'title')?.value
-                        ?.string_value,
-                    media: card.binding_values?.find(
-                        ({ key }: { key: string }) => key === 'photo_image_full_size_original',
-                    )?.value?.image_value?.url,
-                    link: card.binding_values?.find(({ key }: { key: string }) => key === 'card_url')?.value
-                        ?.string_value,
-                },
-            }
-        }
-        return null
     }
 
     function mediaParser(media: any) {
@@ -144,7 +274,7 @@ namespace XApiJsonParser {
                   : null,
             media: mediaParser(legacy?.entities?.media || legacy?.extended_entities?.media),
             has_media: !!legacy?.entities?.media || !!legacy?.extended_entities?.media,
-            extra: cardParser(result.card?.legacy),
+            extra: Card.cardParser(result.card?.legacy),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
 
@@ -385,4 +515,40 @@ namespace XApiJsonParser {
     }
 }
 
+enum CardTypeEnum {
+    PLAYER = 'player',
+    IMAGE = 'image',
+    CHOICE = 'choice',
+    SPACE = 'space',
+}
+
+type CardDataMedia = {
+    title?: string
+    description?: string
+    domain?: string
+    thumbnail_url?: string
+}
+
+type CardDataMapping = {
+    [CardTypeEnum.PLAYER]: CardDataMedia & {
+        player_url: string
+    }
+    [CardTypeEnum.IMAGE]: CardDataMedia
+    [CardTypeEnum.CHOICE]: {
+        choices: Array<{
+            name: string
+            count: string
+        }>
+    }
+    [CardTypeEnum.SPACE]: {}
+}
+type Card<T extends CardTypeEnum> = {
+    type: T
+    card_url: string
+} & CardDataMapping[T]
+
+type ExtraContentType = Card<CardTypeEnum> | null
+
 export { ArticleTypeEnum, XApiJsonParser, XTimeLineSpider }
+
+export type { ExtraContentType }

@@ -1,4 +1,10 @@
-import { GenericArticle, GenericFollows, GenericMediaInfo, Platform } from '@idol-bbq-utils/spider/types'
+import {
+    ArticleExtractType,
+    GenericArticle,
+    GenericFollows,
+    GenericMediaInfo,
+    Platform,
+} from '@idol-bbq-utils/spider/types'
 import { prisma, Prisma } from './client'
 import { getSubtractTime } from '@/utils/time'
 
@@ -14,6 +20,10 @@ type ArticleWithId = Article & { id: number }
 
 type DBArticle = Prisma.crawler_articleGetPayload<{}>
 type DBFollows = Prisma.crawler_followsGetPayload<{}>
+type DBArticleExtractType = ArticleExtractType<Platform> & {
+    translation?: string
+    translated_by?: string
+}
 namespace DB {
     export namespace Article {
         export async function checkExist(article: Article) {
@@ -209,4 +219,4 @@ namespace DB {
 }
 
 export default DB
-export type { Article, ArticleWithId, MediaInfo, DBFollows }
+export type { Article, ArticleWithId, MediaInfo, DBFollows, DBArticleExtractType }

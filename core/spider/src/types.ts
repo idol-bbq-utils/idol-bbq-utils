@@ -1,4 +1,5 @@
 import { X, Instagram } from './spiders'
+import { ExtraContentType } from './spiders/x'
 
 enum Platform {
     X = 1,
@@ -14,8 +15,8 @@ type PlatformArticleMap = {
 }
 
 type PlatformExtractMap = {
-    [Platform.X]: any
-    [Platform.Twitter]: any
+    [Platform.X]: ExtraContentType
+    [Platform.Twitter]: ExtraContentType
     [Platform.Instagram]: null
 }
 
@@ -27,6 +28,8 @@ type ArticleExtractType<T extends Platform> = {
      * content that will be sent as text
      */
     content?: string
+    media?: Array<GenericMediaInfo>
+    extra_type?: string
 }
 
 type TaskType = 'article' | 'follows'
@@ -89,4 +92,12 @@ interface GenericArticle<T extends Platform> {
 }
 
 export { Platform }
-export type { GenericArticle, GenericMediaInfo, GenericFollows, TaskTypeResult, TaskType, MediaType }
+export type {
+    GenericArticle,
+    GenericMediaInfo,
+    GenericFollows,
+    TaskTypeResult,
+    TaskType,
+    MediaType,
+    ArticleExtractType,
+}

@@ -5,7 +5,7 @@ import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import { AppConfig } from '@/types'
 import { Platform, TaskType } from '@idol-bbq-utils/spider/types'
-import DB, { Article, ArticleWithId, DBFollows } from '@/db'
+import DB, { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { MediaTool, MediaToolEnum } from '@/types/media'
 import { Forwarder as RealForwarder } from '@/types/forwarder'
@@ -76,10 +76,11 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
                 ...forwarder.cfg_forwarder,
             }
             const { cron } = forwarder.cfg_forwarder
+            const { task_title, name } = forwarder
             // 定时dispatch任务
             const job = new CronJob(cron as string, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
-                this.log?.info(`starting to dispatch task`)
+                this.log?.info(`starting to dispatch task ${[name, task_title].filter(Boolean).join(' ')}...`)
                 const task: TaskScheduler.Task = {
                     id: taskId,
                     status: TaskScheduler.TaskStatus.PENDING,
@@ -415,6 +416,15 @@ class ForwarderPools extends BaseCompatibleModel {
                             new_files = await Promise.all(
                                 currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url, ctx.taskId)),
                             )
+
+                            if (currentArticle.extra?.media) {
+                                const extra_files = await Promise.all(
+                                    currentArticle.extra.media.map(({ url }) =>
+                                        plainDownloadMediaFile(url, ctx.taskId),
+                                    ),
+                                )
+                                new_files = new_files.concat(extra_files)
+                            }
                         }
                         if (media.use.tool === MediaToolEnum.GALLERY_DL) {
                             ctx.log?.debug(`Downloading media with gallery-dl`)
@@ -422,6 +432,14 @@ class ForwarderPools extends BaseCompatibleModel {
                                 currentArticle.url,
                                 media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
                             )
+                            if (currentArticle.extra?.media) {
+                                const extra_files = await Promise.all(
+                                    currentArticle.extra.media.map(({ url }) =>
+                                        plainDownloadMediaFile(url, ctx.taskId),
+                                    ),
+                                )
+                                new_files = new_files.concat(extra_files)
+                            }
                         }
                         if (new_files.length > 0) {
                             ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
@@ -615,6 +633,10 @@ class ForwarderPools extends BaseCompatibleModel {
 
                 /***** extra描述 *****/
                 if (currentArticle.extra) {
+                    const extra = currentArticle.extra as DBArticleExtractType
+                    if (extra.translation) {
+                        translation = `${translation}\n~~~\n${extra.translation}`
+                    }
                 }
                 /***** extra描述结束 *****/
 
@@ -633,7 +655,11 @@ class ForwarderPools extends BaseCompatibleModel {
                 raw_article = `${raw_article}\n\n${raw_alts.join(`\n---\n`)}`
             }
             if (currentArticle.extra) {
+                const extra = currentArticle.extra as DBArticleExtractType
                 // card parser
+                if (extra.content) {
+                    raw_article = `${raw_article}\n~~~\n${extra.content}`
+                }
             }
             format_article += `${raw_article}`
             if (currentArticle.ref) {
