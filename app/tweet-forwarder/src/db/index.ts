@@ -59,7 +59,7 @@ namespace DB {
                 data: {
                     ...article,
                     ref: ref,
-                    extra: article.extra ?? Prisma.JsonNull,
+                    extra: article.extra ? (article.extra as unknown as Prisma.JsonObject) : Prisma.JsonNull,
                     media: (article.media as unknown as Prisma.JsonArray) ?? Prisma.JsonNull,
                 },
             })
