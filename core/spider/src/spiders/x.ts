@@ -187,9 +187,9 @@ namespace XApiJsonParser {
                     ..._card,
                     choices: transformPollData(choices),
                 } as Card<CardTypeEnum.CHOICE>
-                content = (_card as Card<CardTypeEnum.CHOICE>).choices
+                content = `choices:\n${(_card as Card<CardTypeEnum.CHOICE>).choices
                     .map((choice) => `${choice.name}: ${choice.count}`)
-                    .join('\n')
+                    .join('\n')}`
             }
 
             if (_card.type === CardTypeEnum.SPACE) {
