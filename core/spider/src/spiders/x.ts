@@ -141,7 +141,7 @@ namespace XApiJsonParser {
                 return null
             }
             let _card = {
-                type: CardTypeEnum.IMAGE,
+                type: CardTypeEnum.NONE,
                 card_url: card.url,
             } as Card<CardTypeEnum>
             if (card.name.includes('image')) {
@@ -156,6 +156,10 @@ namespace XApiJsonParser {
             if (card.name.includes('audiospace')) {
                 _card.type = CardTypeEnum.SPACE
             }
+            if (_card.type === CardTypeEnum.NONE) {
+                return null
+            }
+
             const binding_values = card.binding_values
 
             let media
@@ -516,6 +520,7 @@ namespace XApiJsonParser {
 }
 
 enum CardTypeEnum {
+    NONE = 'none',
     PLAYER = 'player',
     IMAGE = 'image',
     CHOICE = 'choice',
