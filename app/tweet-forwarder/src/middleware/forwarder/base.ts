@@ -1,22 +1,44 @@
-import { log } from '@/config'
-import { IForwardTo, MediaStorageType, SourcePlatformEnum } from '@/types/bot'
-import { formatTime } from '@/utils/time'
+import { RETRY_LIMIT } from '@/config'
+import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
+import { BaseCompatibleModel } from '@/utils/base'
+import { formatTime, getSubtractTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
+import { Logger } from '@idol-bbq-utils/log'
+import { pRetry } from '@idol-bbq-utils/utils'
+import dayjs from 'dayjs'
+import { noop } from 'lodash'
 
-const DATE_OFFSET = 1
-abstract class BaseForwarder {
-    protected token: string
-    protected name: string = 'base-forwarder'
-    constructor(token: string) {
-        this.token = token
+const CHUNK_SEPARATOR_NEXT = '\n\n----⬇️----'
+const CHUNK_SEPARATOR_PREV = '----⬆️----\n\n'
+const PADDING_LENGTH = 24
+
+abstract class BaseForwarder extends BaseCompatibleModel {
+    static _PLATFORM = ForwardToPlatformEnum.None
+    log?: Logger
+    id: string
+    protected config: ForwardToPlatformConfig<ForwardToPlatformEnum>
+    constructor(config: ForwardToPlatformConfig<ForwardToPlatformEnum>, id: string, log?: Logger) {
+        super()
+        this.log = log
+        this.config = config
+        this.id = String(id)
     }
+
+    async init(): Promise<void> {
+        this.log = this.log?.child({ service: 'Forwarder', subservice: this.NAME, label: this.id })
+        this.log?.debug(`loaded with config ${this.config}`)
+    }
+
+    async drop(...args: any[]): Promise<void> {
+        noop()
+    }
+
     public abstract send(
         text: string,
         props?: {
             media?: Array<{
-                source: SourcePlatformEnum
-                type: MediaStorageType
                 media_type: string
+                // local file path
                 path: string
             }>
             timestamp?: number
@@ -25,37 +47,61 @@ abstract class BaseForwarder {
 }
 
 abstract class Forwarder extends BaseForwarder {
-    protected config: IForwardTo['config']
     protected block_until_date: number
-    constructor(token: string, config: IForwardTo['config']) {
-        super(token)
-        this.config = config
-        this.block_until_date = config?.block_until
-            ? new Date(config.block_until).getTime()
-            : new Date().setDate(new Date().getDate() - DATE_OFFSET)
-        try {
-            if (this.config?.replace_regex) {
-                log.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)
+    protected BASIC_TEXT_LIMIT = 1000
+    TEXT_LIMIT: number
+    constructor(config: ForwardToPlatformConfig<ForwardToPlatformEnum>, id: string, log?: Logger) {
+        super(config, id, log)
+        this.block_until_date = getSubtractTime(dayjs().unix(), config.block_until || '30m')
+        if (this.config?.replace_regex) {
+            try {
+                this.log?.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)
                 this.textFilter('test', this.config?.replace_regex)
+            } catch (e) {
+                this.log?.error(`replace regex is invalid for reason: ${e}`)
+                throw e
             }
-        } catch (e) {
-            log.error(`config is invalid for reasone: ${e}`)
-            throw e
         }
+        this.TEXT_LIMIT =
+            this.BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SEPARATOR_PREV.length - PADDING_LENGTH
     }
 
-    public send(...[text, props, ...rest]: Parameters<BaseForwarder['send']>) {
+    async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
         const { timestamp } = props || {}
+        const { replace_regex } = this.config
         if (timestamp && timestamp < this.block_until_date) {
-            log.warn(`blocked: can not send before ${formatTime(this.block_until_date)}`)
+            this.log?.warn(`blocked: can not send before ${formatTime(this.block_until_date)}`)
             return Promise.resolve()
         }
-        log.debug(`[forwarder] [${this.name}] trying to send text`)
-        return this.realSend(this.textFilter(text, this.config?.replace_regex), props, ...rest)
+        if (replace_regex) {
+            text = this.textFilter(text, replace_regex)
+        }
+        const _log = this.log
+        _log?.debug(`trying to send text with length ${text.length}`)
+        return new Promise(async (resolve, reject) => {
+            let text_to_be_sent = text
+            let i = 0
+            let texts = []
+            while (text_to_be_sent.length > this.BASIC_TEXT_LIMIT) {
+                const current_chunk = text_to_be_sent.slice(0, this.TEXT_LIMIT)
+                texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${current_chunk}${CHUNK_SEPARATOR_NEXT}`)
+                text_to_be_sent = text_to_be_sent.slice(this.TEXT_LIMIT)
+                i = i + 1
+            }
+            texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${text_to_be_sent}`)
+            await pRetry(() => this.realSend(texts, props), {
+                retries: RETRY_LIMIT,
+                onFailedAttempt(e) {
+                    _log?.error(`send texts failed, retrying...: ${e.originalError.message}`)
+                },
+            }).catch((e) => {
+                _log?.error(`send texts failed: ${e.message}`)
+            })
+            resolve(true)
+        })
     }
-    protected abstract realSend(...args: Parameters<BaseForwarder['send']>): ReturnType<BaseForwarder['send']>
 
-    textFilter(text: string, regexps: NonNullable<IForwardTo['config']>['replace_regex']): string {
+    textFilter(text: string, regexps: ForwardToPlatformConfig['replace_regex']): string {
         if (!regexps) {
             return text
         }
@@ -68,6 +114,11 @@ abstract class Forwarder extends BaseForwarder {
         }
         return text.replace(new RegExp(regexps[0], 'g'), regexps.length > 1 ? regexps[1] : '')
     }
+
+    protected abstract realSend(
+        texts: Array<string>,
+        props: Parameters<BaseForwarder['send']>[1],
+    ): ReturnType<BaseForwarder['send']>
 }
 
 export { BaseForwarder, Forwarder }

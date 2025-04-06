@@ -1,12 +1,12 @@
 bots:
   - name: 'example-bot'
     websites:                                 # (required) websites to forward tweets from
-      - domain: 'https://x.com'               # (required) website domain, notice the slash at the end
+      - origin: 'https://x.com'               # (required) website origin, notice the slash at the end
         paths: ['user1', 'user2', 'user3']
         cookie_file: ./assets/tweet-forwarder/x.cookies
         config:
           cron: '*/2 * * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【Follows】'
         paths: ['user5', 'user6', 'user7']
@@ -44,25 +44,25 @@ bots:
         key: 'glm-token'                      # (required) translator key
   - name: 'all-follows-bot'
     websites:
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【星团声优推特粉丝变化情况】'
         paths: ['SayuriDate', 'Liyu0109', '_Naomi_Payton_', 'AoyamaNagisa', 'MisakiNako_', 'NozomiSuzuhara', 'AyaEmori_BOX', 'a_yabushima', '0927_yuina', 'Sakakura_Sakura']
         config:
           cron: '14 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【虹团声优推特粉丝变化情况】'
         paths: ['yano_hinaki35', 'aguri_onishi', 'tomori_kusunoki', 'cocohayashi515', 'kaor1n_n', 'MayuSgr',  'kitoakari_1016', 'sashide_m', 't_chiemi1006', 'natyaaaaaaan07', 'iRis_k_miyu', 'k_moeka_', 'uchida_shu0524', 'homoto_akina']
         config:
           cron: '16 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【水团声优推特粉丝变化情况】'
         paths: ['anju_inami', 'Rikako_Aida', 'suwananaka', 'box_komiyaarisa', 'Saito_Shuka', 'aikyan_', 'Kanako_tktk', 'aina_suzuki723', 'furihata_ai']
         config:
           cron: '24 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【缪斯声优推特粉丝变化情况】'
         paths: ['nittaemi85', 'nanjolno', 'aya_uchida', 'mimori_suzuko', 'rippialoha', 'pile_eric', 'kusudaaina', 'INFO_shikaco', 'tokui_sorangley']

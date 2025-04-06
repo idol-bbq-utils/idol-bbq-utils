@@ -14,7 +14,8 @@ env:
   CURRENT_BRANCH_NAME: ${{ github.head_ref  || github.ref_name }}
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
-  build-tests:
+  # unit-tests: # TODO
+  build-test:
     env:
       PUPPETEER_SKIP_DOWNLOAD: true
       DATABASE_URL: 'file:./data.db'
@@ -43,7 +44,7 @@ jobs:
       - name: build tests
         run: pnpm build
   build-and-push-image:
-    needs: build-tests
+    needs: build-test
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -90,7 +91,7 @@ jobs:
       # It uses the `tags` and `labels` parameters to tag and label the image with the output from the "meta" step.
       - name: Build and push Docker image
         id: push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4
         with:
           context: .
           file: app/tweet-forwarder/Dockerfile

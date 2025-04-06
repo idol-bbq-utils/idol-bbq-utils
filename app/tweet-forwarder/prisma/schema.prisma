@@ -8,39 +8,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model x_forward {
-  id       Int     @id @unique(map: "sqlite_autoindex_x_forward_1") @default(autoincrement())
-  ref      Int
-  username String
-  x_tweets x_tweet @relation(fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model crawler_article {
+  id                    Int               @id @unique(map: "sqlite_autoindex_crawler_article_1") @default(autoincrement())
+  platform              Int
+  a_id                  String
+  u_id                  String
+  username              String
+  created_at            Int
+  content               String?
+  translation           String?
+  translated_by         String?
+  url                   String
+  type                  String
+  ref                   Int?
+  has_media             Boolean
+  media                 Json?
+  extra                 Json?
+  u_avatar              String?
+  crawler_article       crawler_article?  @relation("crawler_articleTocrawler_article", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_crawler_article crawler_article[] @relation("crawler_articleTocrawler_article")
 
-  @@unique([ref, username], map: "forward_by")
+  @@unique([a_id, platform], map: "sqlite_autoindex_crawler_article_2")
+  @@index([platform], map: "platform_index")
+  @@index([platform, created_at(sort: Desc)], map: "platform_by_timestamp")
 }
 
-model x_tweet {
-  id            Int         @id @unique(map: "sqlite_autoindex_x_tweet_1") @default(autoincrement())
-  u_id          String
-  username      String
-  timestamp     Int
-  text          String
-  type          String
-  tweet_link    String?     @default("")
-  has_media     Boolean?
-  ref           Int?
-  translation   String?
-  x_forward     x_forward[]
-  x_tweet       x_tweet?    @relation("x_tweetTox_tweet", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_x_tweet x_tweet[]   @relation("x_tweetTox_tweet")
+model crawler_follows {
+  id         Int    @id @unique(map: "sqlite_autoindex_crawler_follows_1") @default(autoincrement())
+  username   String
+  u_id       String
+  platform   Int
+  followers  Int
+  created_at Int
 
-  @@unique([u_id, timestamp(sort: Desc)], map: "article")
+  @@index([u_id], map: "user_id_index")
 }
 
-model x_follows {
-  id        Int    @id @unique(map: "sqlite_autoindex_x_follows_1") @default(autoincrement())
-  username  String
-  u_id      String
-  timestamp Int
-  follows   Int?
+model forward_by {
+  ref_id    Int
+  bot_id    String
+  task_type String
 
-  @@index([u_id(sort: Desc)], map: "follows_for_user")
+  @@id([ref_id, bot_id, task_type])
+  @@index([bot_id], map: "bot_id_index")
 }

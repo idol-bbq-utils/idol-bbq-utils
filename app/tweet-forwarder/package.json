@@ -24,7 +24,7 @@
         "generate": "pnpm prisma migrate dev --name init",
         "build": "tsc && tsc-alias",
         "dev": "pnpm build && node lib/main.js",
-        "test": "pnpm build && node lib/test.js",
+        "test": "jest --testPathIgnorePatterns \"playground/*\" --",
         "run": "node lib/main.js"
     },
     "bugs": {
@@ -35,7 +35,7 @@
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
-        "@prisma/client": "^5.16.2",
+        "@prisma/client": "^6.3.0",
         "axios": "^1.7.2",
         "cron": "^3.1.7",
         "dayjs": "^1.11.11",
@@ -50,6 +50,6 @@
     },
     "devDependencies": {
         "@types/lodash": "^4.17.6",
-        "prisma": "^5.16.2"
+        "prisma": "^6.3.0"
     }
 }

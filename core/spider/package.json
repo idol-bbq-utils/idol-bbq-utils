@@ -15,6 +15,10 @@
         "./types": {
             "types": "./lib/types.d.ts",
             "default": "./lib/types.js"
+        },
+        "./const": {
+            "types": "./lib/const.d.ts",
+            "default": "./lib/const.js"
         }
     },
     "directories": {
@@ -33,12 +37,15 @@
     "scripts": {
         "build": "tsc && tsc-alias",
         "build:production": "tsc --build tsconfig.prod.json && tsc-alias",
-        "test": "pnpm build && node lib/test.js"
+        "test": "jest --testPathIgnorePatterns \"playground/*\" --",
+        "test:playground": "jest --testPathPattern \"playground/*\" --"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
+        "@idol-bbq-utils/log": "workspace:^",
+        "jsonpath-plus": "^10.2.0",
         "puppeteer-core": "^23.6.0"
     }
 }

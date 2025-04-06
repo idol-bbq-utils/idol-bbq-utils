@@ -1,0 +1,98 @@
+{
+    "data": {
+        "user": {
+            "friendship_status": {
+                "following": false,
+                "blocking": false,
+                "is_feed_favorite": false,
+                "outgoing_request": false,
+                "followed_by": false,
+                "incoming_request": false,
+                "is_restricted": false,
+                "is_bestie": false,
+                "muting": false,
+                "is_muting_reel": false
+            },
+            "gating": null,
+            "is_memorialized": false,
+            "is_private": false,
+            "has_story_archive": null,
+            "supervision_info": null,
+            "is_regulated_c18": false,
+            "regulated_news_in_locations": [],
+            "bio_links": [
+                {
+                    "image_url": "",
+                    "is_pinned": false,
+                    "link_type": "external",
+                    "lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fhelp.instagram.com%2F%3Ffbclid%3DPAZXh0bgNhZW0CMTEAAaZfLnrjsFfbPuTxwzoVnU0f0VWViptlkmG6KZ4S01muTouVZM5YWY-Rqi8_aem_qNPEE0PdJqujZSX3ajpN-Q\u0026e=AT0EgEUooCxmvEPUjEaJM-seKKI3c6gUu7sWDNgMU3JaId1cr96S65kk0_lI96siI7WEr4-ylz-QaCCDuCvU1SuqhFHhFNyf09cImTMr3xmxhsl7CydT54Q",
+                    "media_type": "none",
+                    "title": "",
+                    "url": "https://help.instagram.com/"
+                }
+            ],
+            "text_post_app_badge_label": "instagram",
+            "show_text_post_app_badge": true,
+            "username": "instagram",
+            "text_post_new_post_count": null,
+            "pk": "25025320",
+            "live_broadcast_visibility": null,
+            "live_broadcast_id": null,
+            "profile_pic_url": "https://scontent-nrt1-1.cdninstagram.com/v/t51.2885-19/281440578_1088265838702675_6233856337905829714_n.jpg?stp=dst-jpg_s150x150_tt6\u0026_nc_ht=scontent-nrt1-1.cdninstagram.com\u0026_nc_cat=1\u0026_nc_oc=Q6cZ2QHrh9IGLeBdrC277jpeTmkiqa92974jqVKPDMG3Ek3SKnkyLdah9OVV1U1jvGnQ4OdQKcHcoSMlO_Y1UUJkL2Zt\u0026_nc_ohc=wd0IuiyrqDEQ7kNvgFo6W23\u0026_nc_gid=la3Yp86Uk9avpYUjrK5aEg\u0026edm=ALGbJPMBAAAA\u0026ccb=7-5\u0026oh=00_AYE6dWgG9Qoa0ODbMRuOeibr9E4UBSuaXGjKKslydTPyuQ\u0026oe=67E1D998\u0026_nc_sid=7d3ac5",
+            "hd_profile_pic_url_info": {
+                "url": "https://scontent-nrt1-1.cdninstagram.com/v/t51.2885-19/281440578_1088265838702675_6233856337905829714_n.jpg?_nc_ht=scontent-nrt1-1.cdninstagram.com\u0026_nc_cat=1\u0026_nc_oc=Q6cZ2QHrh9IGLeBdrC277jpeTmkiqa92974jqVKPDMG3Ek3SKnkyLdah9OVV1U1jvGnQ4OdQKcHcoSMlO_Y1UUJkL2Zt\u0026_nc_ohc=wd0IuiyrqDEQ7kNvgFo6W23\u0026_nc_gid=la3Yp86Uk9avpYUjrK5aEg\u0026edm=ALGbJPMBAAAA\u0026ccb=7-5\u0026oh=00_AYHS7mzwsl2PnyTFl8MPrPd_KMlO-BowIWF_GyNRMzXoUw\u0026oe=67E1D998\u0026_nc_sid=7d3ac5"
+            },
+            "is_unpublished": false,
+            "id": "25025320",
+            "latest_reel_media": 0,
+            "has_profile_pic": null,
+            "profile_pic_genai_tool_info": [],
+            "biography": "Discover what's new on Instagram 🔎✨",
+            "full_name": "Instagram",
+            "is_verified": true,
+            "show_account_transparency_details": true,
+            "account_type": 3,
+            "follower_count": 686468515,
+            "mutual_followers_count": 0,
+            "profile_context_links_with_user_ids": [],
+            "address_street": "",
+            "city_name": "",
+            "is_business": false,
+            "zip": "",
+            "biography_with_entities": {
+                "entities": []
+            },
+            "category": "digital content creator",
+            "should_show_category": false,
+            "account_badges": [],
+            "ai_agent_type": null,
+            "fb_profile_bio_link_web": null,
+            "external_lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fhelp.instagram.com%2F%3Ffbclid%3DPAZXh0bgNhZW0CMTEAAaZfLnrjsFfbPuTxwzoVnU0f0VWViptlkmG6KZ4S01muTouVZM5YWY-Rqi8_aem_qNPEE0PdJqujZSX3ajpN-Q\u0026e=AT0EgEUooCxmvEPUjEaJM-seKKI3c6gUu7sWDNgMU3JaId1cr96S65kk0_lI96siI7WEr4-ylz-QaCCDuCvU1SuqhFHhFNyf09cImTMr3xmxhsl7CydT54Q",
+            "external_url": "https://help.instagram.com/",
+            "pronouns": [],
+            "transparency_label": null,
+            "transparency_product": null,
+            "has_chaining": false,
+            "remove_message_entrypoint": false,
+            "fbid_v2": "17841400039600391",
+            "is_embeds_disabled": false,
+            "is_professional_account": null,
+            "following_count": 156,
+            "media_count": 7977,
+            "total_clips_count": 1,
+            "latest_besties_reel_media": 0,
+            "reel_media_seen_timestamp": null
+        },
+        "viewer": {
+            "user": {
+                "pk": "50658128641",
+                "id": "50658128641",
+                "can_see_organic_insights": true
+            }
+        }
+    },
+    "extensions": {
+        "is_final": true
+    },
+    "status": "ok"
+}

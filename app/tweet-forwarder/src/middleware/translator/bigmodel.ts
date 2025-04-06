@@ -1,9 +1,10 @@
-import { log } from "@/config";
-import { BaseTranslator } from "./base";
-import axios from "axios";
+import { BaseTranslator } from './base'
+import axios from 'axios'
+import { Logger } from '@idol-bbq-utils/log'
+import { TranslatorConfig, TranslatorProvider } from '@/types/translator'
 
 enum EnumBigModel {
-    GLM4Flash = 'glm-4-flash'
+    GLM4Flash = 'glm-4-flash',
 }
 
 abstract class BaseBigModel extends BaseTranslator {
@@ -11,39 +12,40 @@ abstract class BaseBigModel extends BaseTranslator {
     protected BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 }
 
-class BigModelGLM4Flash extends BaseBigModel {
-    public name = 'GLM-4-Flash'
-    private prompt: string
-    private api_key: string
-    constructor(api_key: string, prompt?: string) {
-        super()
-        this.api_key = api_key
-        this.prompt = prompt || this.TRANSLATION_PROMPT
-    }
-    public async init() {
-        log.info(`[BigModel] ${this.name} model loaded with prompt ${this.prompt}`)
+class BigModelLLMTranslator extends BaseBigModel {
+    static _PROVIDER = TranslatorProvider.BigModel
+    NAME: string
+    constructor(api_key: string, log?: Logger, config?: TranslatorConfig) {
+        super(api_key, log, config)
+        this.NAME = this.config?.name || 'glm-4-flash'
+        this.BASE_URL = this.config?.base_url || this.BASE_URL
     }
     public async translate(text: string) {
-        const res = await axios.post(this.BASE_URL, {
-            model: EnumBigModel.GLM4Flash,
-            messages: [
-                {
-                    role: 'system',
-                    content: this.prompt
+        const res = await axios.post(
+            this.BASE_URL,
+            {
+                max_tokens: 4000,
+                ...this.config?.extended_payload,
+                model: this.config?.model_id || EnumBigModel.GLM4Flash,
+                messages: [
+                    {
+                        role: 'system',
+                        content: this.config?.prompt || this.TRANSLATION_PROMPT,
+                    },
+                    {
+                        role: 'user',
+                        content: text,
+                    },
+                ],
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${this.api_key}`,
                 },
-                {
-                    role: 'user',
-                    content: text
-                }
-            ],
-            max_tokens: 4000
-        }, {
-            headers: {
-                Authorization: `Bearer ${this.api_key}`
-            }
-        })
+            },
+        )
         return res.data.choices[0].message.content
     }
 }
 
-export { BigModelGLM4Flash }
+export { BigModelLLMTranslator }

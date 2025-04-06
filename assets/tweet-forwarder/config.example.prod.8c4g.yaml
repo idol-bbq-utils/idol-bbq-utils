@@ -1,17 +1,17 @@
 bots:
   - name: '莲-bot'
     websites:                                 # (required) websites to forward tweets from
-      - domain: 'https://x.com'              # (required) website domain, notice the slash at the end
+      - origin: 'https://x.com'              # (required) website origin, notice the slash at the end
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: ./assets/choco-cookies.txt
         config:
           cron: '*/10 0-11 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: ./assets/iizz-cookies.txt
         config:
           cron: '*/10 12-23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【莲团声优推特粉丝变化情况】'
         paths: ['hanamiya_nina', 'NozomiNirei', 'ssk_ktk828', 'cocona_nonaka', 'KonaTsukine', 'kannkannna', 'sakuraihi_na', 'Hayama_Fuka', 'kurusurindesu']
@@ -49,12 +49,12 @@ bots:
         prompt: '现在你是一个翻译，接下来会给你日语或英语或者其它（大部分是日语和英语，有可能有埃及象形文字），请翻译以下日语或英语或其它为简体中文，只输出译文，不要输出原文。如果是带有# hash tag的标签、emoji、颜文字，不需要翻译，直接输出原文。如果无法翻译请输出：“╮(╯-╰)╭非常抱歉无法翻译”。此外，你不需要提供注解，只用翻译原文就行。'
   - name: '莲对手团-bot'
     websites:
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         paths: ['amane_bushi', '_mmiya_mm']
         cookie_file: ./assets/shizuku-cookies.txt
         config:
           cron: '*/10 * * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【（待定）推特粉丝变化情况】'
         paths: ['amane_bushi', '_mmiya_mm']
@@ -81,25 +81,25 @@ bots:
         min: 0
   - name: 'lovelive-follows-bot'
     websites:
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【星团声优推特粉丝变化情况】'
         paths: ['SayuriDate', 'Liyu0109', '_Naomi_Payton_', 'AoyamaNagisa', 'MisakiNako_', 'NozomiSuzuhara', 'AyaEmori_BOX', 'a_yabushima', '0927_yuina', 'Sakakura_Sakura']
         config:
           cron: '6 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【虹团声优推特粉丝变化情况】'
         paths: ['yano_hinaki35', 'aguri_onishi', 'tomori_kusunoki', 'cocohayashi515', 'kaor1n_n', 'MayuSgr',  'kitoakari_1016', 'sashide_m', 't_chiemi1006', 'natyaaaaaaan07', 'iRis_k_miyu', 'k_moeka_', 'uchida_shu0524', 'homoto_akina']
         config:
           cron: '7 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【水团声优推特粉丝变化情况】'
         paths: ['anju_inami', 'Rikako_Aida', 'suwananaka', 'box_komiyaarisa', 'Saito_Shuka', 'aikyan_', 'Kanako_tktk', 'aina_suzuki723', 'furihata_ai']
         config:
           cron: '8 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【缪斯声优推特粉丝变化情况】'
         paths: ['nittaemi85', 'nanjolno', 'aya_uchida', 'mimori_suzuko', 'rippialoha', 'pile_eric', 'kusudaaina', 'INFO_shikaco', 'tokui_sorangley']

@@ -1,23 +1,23 @@
 bots:
   - name: '测试机器人'
     websites:                                 # (必须) 需要设置至少一个网页
-      - domain: 'https://x.com'               # (必须) 网站域名，注意最后不要有'/'
+      - origin: 'https://x.com'               # (必须) 网站域名，注意最后不要有'/'
         # 抓取的用户id，即 https://x.com/userid, 以下示例是莲之空成员的X账号id，可以根据需要修改
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/day.cookies     # 对应网站的cookies文件，格式为netscape
         config:
           cron: '0-59/10 0-11 * * *'          # 定时任务（见https://crontab.guru/），每10分钟抓取一次，抓取时间为 [0,12) 点之间
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine', 'kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/night.cookies   # 对应网站的cookies文件，格式为netscape
         config:
           cron: '0-59/10 12-22 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         paths: ['hanamiya_nina', 'NozomiNirei', 'sakuraihi_na', 'KonaTsukine','kannkannna', 'kurusurindesu', 'ssk_ktk828', 'cocona_nonaka', 'Hayama_Fuka']
         cookie_file: /path/to/night.cookies
         config:
           cron: '0-59/10 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'                  # (可选) 任务类型，follows表示关注者变化，不填写则默认为抓取推文
         task_title: '【莲团声优推特粉丝变化情况】'
         paths: ['hanamiya_nina', 'NozomiNirei', 'ssk_ktk828', 'cocona_nonaka', 'KonaTsukine', 'kannkannna', 'sakuraihi_na', 'Hayama_Fuka', 'kurusurindesu']
@@ -56,25 +56,25 @@ bots:
         key: 'glm-token'                      # (必须)
   - name: 'all-follows-bot'
     websites:
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【星团声优推特粉丝变化情况】'
         paths: ['SayuriDate', 'Liyu0109', '_Naomi_Payton_', 'AoyamaNagisa', 'MisakiNako_', 'NozomiSuzuhara', 'AyaEmori_BOX', 'a_yabushima', '0927_yuina', 'Sakakura_Sakura']
         config:
           cron: '14 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【虹团声优推特粉丝变化情况】'
         paths: ['yano_hinaki35', 'aguri_onishi', 'tomori_kusunoki', 'cocohayashi515', 'kaor1n_n', 'MayuSgr',  'kitoakari_1016', 'sashide_m', 't_chiemi1006', 'natyaaaaaaan07', 'iRis_k_miyu', 'k_moeka_', 'uchida_shu0524', 'homoto_akina']
         config:
           cron: '16 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【水团声优推特粉丝变化情况】'
         paths: ['anju_inami', 'Rikako_Aida', 'suwananaka', 'box_komiyaarisa', 'Saito_Shuka', 'aikyan_', 'Kanako_tktk', 'aina_suzuki723', 'furihata_ai']
         config:
           cron: '24 23 * * *'
-      - domain: 'https://x.com'
+      - origin: 'https://x.com'
         task_type: 'follows'
         task_title: '【缪斯声优推特粉丝变化情况】'
         paths: ['nittaemi85', 'nanjolno', 'aya_uchida', 'mimori_suzuko', 'rippialoha', 'pile_eric', 'kusudaaina', 'INFO_shikaco', 'tokui_sorangley']

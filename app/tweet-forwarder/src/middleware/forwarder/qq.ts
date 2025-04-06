@@ -1,53 +1,28 @@
 import axios from 'axios'
 import { Forwarder } from './base'
-import { pRetry } from '@idol-bbq-utils/utils'
-import { log } from '@/config'
-import { SourcePlatformEnum } from '@/types/bot'
-
-const BASIC_TEXT_LIMIT = 4000
-const CHUNK_SEPARATOR_NEXT = '\n\n----⬇️----'
-const CHUNK_SPSERATOR_PREV = '----⬆️----\n\n'
-const PADDING_LENGTH = 24
-const TEXT_LIMIT = BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SPSERATOR_PREV.length - PADDING_LENGTH
+import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
 
 class QQForwarder extends Forwarder {
+    static _PLATFORM = ForwardToPlatformEnum.QQ
     private group_id: string
     private url: string
-    name = 'qq'
-    constructor(group_id: string, url: string, ...args: [...ConstructorParameters<typeof Forwarder>]) {
-        super(...args)
-        if (!group_id) {
-            throw new Error(`forwarder ${this.name} group_id is required`)
-        }
-        if (!url) {
-            throw new Error(`forwarder ${this.name} url is required`)
+    private token: string
+    NAME = 'qq'
+    BASIC_TEXT_LIMIT = 4000
+    constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
+        super(config, ...rest)
+        const { group_id, url, token } = config as ForwardToPlatformConfig<ForwardToPlatformEnum.QQ>
+        if (!group_id || !url) {
+            throw new Error(`forwarder ${this.NAME} group_id and url is required`)
         }
         this.group_id = group_id
         this.url = url
+        this.token = token
     }
-    public async realSend(text: string, props: Parameters<Forwarder['send']>[1]) {
-        const { media } = props || {}
-        await pRetry(() => this.sendPhotoText(text, media || []), {
-            retries: 2,
-            onFailedAttempt(error) {
-                log.error(
-                    `Send text to qq group failed. There are ${error.retriesLeft} retries left. ${error.originalError.message}`,
-                )
-            },
-        })
-        return
-    }
-
-    async sendPhotoText(
-        text: string,
-        media: Array<{
-            source: SourcePlatformEnum
-            type: string
-            media_type: string
-            path: string
-        }>,
-    ) {
-        log.debug(`Send text with photos..., media: ${media}`)
+    public async realSend(...[texts, props]: [...Parameters<Forwarder['realSend']>]) {
+        let { media } = props || {}
+        media = media || []
+        const _log = this.log
         let pics: Array<{
             type: 'image'
             data: {
@@ -58,7 +33,7 @@ class QQForwarder extends Forwarder {
             .map((i) => ({
                 type: 'image',
                 data: {
-                    file: `file:///${i.path}`,
+                    file: `file://${i.path}`,
                 },
             }))
         let videos: Array<{
@@ -71,50 +46,35 @@ class QQForwarder extends Forwarder {
             .map((i) => ({
                 type: 'video',
                 data: {
-                    file: `file:///${i.path}`,
+                    file: `file://${i.path}`,
                 },
             }))
-        log.debug(`pics: ${pics}`)
-        log.debug(`videos: ${videos}`)
+        if (media.length > 0) {
+            _log?.debug(`Send text with photos..., media: ${media}`)
+            _log?.debug(`pics: ${pics}`)
+            _log?.debug(`videos: ${videos}`)
+        }
 
         let _res = []
-        let text_to_be_sent = text
-        let i = 0
-        while (text_to_be_sent.length > BASIC_TEXT_LIMIT) {
-            const current_chunk = text_to_be_sent.slice(0, TEXT_LIMIT)
+
+        for (const t of texts) {
             const res = await this.sendWithPayload([
                 {
                     type: 'text',
                     data: {
-                        text: `${i > 0 ? CHUNK_SPSERATOR_PREV : ''}${current_chunk}${CHUNK_SEPARATOR_NEXT}`,
+                        text: t,
                     },
                 },
                 ...pics,
             ])
             _res.push(res)
-            text_to_be_sent = text_to_be_sent.slice(TEXT_LIMIT)
-            i = i + 1
         }
-        const res = await this.sendWithPayload([
-            {
-                type: 'text',
-                data: {
-                    text: `${i > 0 ? CHUNK_SPSERATOR_PREV : ''}${text_to_be_sent}`,
-                },
-            },
-            ...pics,
-        ])
-        _res.push(res)
 
         const maybe_video_res = videos.length !== 0 && (await this.sendWithPayload(videos))
         maybe_video_res && _res.push(maybe_video_res)
-        _res.forEach((res) => {
-            if (res.data.status !== 'ok') {
-                throw new Error(`Send text to ${this.name} failed. ${res.data.message}`)
-            }
-        })
         return _res
     }
+
     async sendWithPayload(
         arr_of_segments: Array<
             | {

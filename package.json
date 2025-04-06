@@ -9,7 +9,10 @@
         "dev:forwarder": "lerna run --scope=@idol-bbq-utils/tweet-forwarder dev",
         "run:forwarder": "lerna run --scope=@idol-bbq-utils/tweet-forwarder run",
         "format": "pnpm prettier --write . --ignore-path .prettierignore",
-        "clean": "lerna run clean"
+        "clean": "lerna run clean",
+        "docs:dev": "lerna run --scope=docs docs:dev",
+        "docs:build": "lerna run --scope=docs docs:build",
+        "docs:preview": "lerna run --scope=docs docs:preview"
     },
     "keywords": [],
     "author": "",
@@ -18,8 +21,11 @@
         "node": ">=20.0.0"
     },
     "devDependencies": {
+        "@types/jest": "^29.5.14",
+        "jest": "^29.7.0",
         "lerna": "^8.1.6",
         "prettier": "^3.3.2",
+        "ts-jest": "^29.2.6",
         "tsc-alias": "^1.8.10",
         "typescript": "^5.5.3"
     },

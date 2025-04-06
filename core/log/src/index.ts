@@ -1,6 +1,8 @@
-import winston, { Logger } from 'winston'
+import * as winston from 'winston'
+import { Logger } from 'winston'
 import { format } from 'winston'
 import dayjs from 'dayjs'
+import 'winston-daily-rotate-file'
 
 const { combine, colorize, timestamp, json, printf } = format
 
@@ -23,5 +25,5 @@ const createLogger = (config: winston.LoggerOptions) =>
         ...config,
     })
 
-export { default_log, createLogger, Logger, winston }
+export { default_log, createLogger, Logger, winston, format }
 export default default_log

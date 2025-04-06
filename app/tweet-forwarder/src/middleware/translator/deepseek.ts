@@ -1,40 +1,37 @@
-import { log } from '@/config'
 import { BaseTranslator } from './base'
 import axios from 'axios'
+import { TranslatorConfig, TranslatorProvider } from '@/types/translator'
+import { Logger } from '@idol-bbq-utils/log'
 
 const RECOMMEND_CONFIGURATIONS = {
     temperature: 1.3, // recommended for translation. ref: https://api-docs.deepseek.com/quick_start/parameter_settings
 }
 
 abstract class BaseDeepSeek extends BaseTranslator {
-    public name = 'base deepseek translator'
+    NAME = 'base deepseek translator'
     protected BASE_URL = 'https://api.deepseek.com/chat/completions'
 }
 
-class DeepSeekV3 extends BaseDeepSeek {
-    public name = 'DeepSeek-v3'
-    private prompt: string
-    private api_key: string
-    private model_id: string
-    constructor(api_key: string, model_id?: string, prompt?: string) {
-        super()
+class DeepSeekLLMTranslator extends BaseDeepSeek {
+    static _PROVIDER: TranslatorProvider = TranslatorProvider.Deepseek
+    NAME: string
+    constructor(api_key: string, log?: Logger, config?: TranslatorConfig) {
+        super(api_key, log, config)
         this.api_key = api_key
-        this.model_id = model_id || 'deepseek-chat'
-        this.prompt = prompt || this.TRANSLATION_PROMPT
-    }
-    public async init() {
-        log.info(`[DeepSeek] ${this.name} model loaded with prompt ${this.prompt}`)
+        this.NAME = config?.name || 'DeepSeek-v3'
+        this.BASE_URL = config?.base_url || this.BASE_URL
     }
     public async translate(text: string) {
         const res = await axios.post(
             this.BASE_URL,
             {
                 ...RECOMMEND_CONFIGURATIONS,
-                model: this.model_id,
+                ...this.config?.extended_payload,
+                model: this.config?.model_id || 'deepseek-chat',
                 messages: [
                     {
                         role: 'system',
-                        content: this.prompt,
+                        content: this.config?.prompt || this.TRANSLATION_PROMPT,
                     },
                     {
                         role: 'user',
@@ -52,4 +49,4 @@ class DeepSeekV3 extends BaseDeepSeek {
     }
 }
 
-export { DeepSeekV3 }
+export { DeepSeekLLMTranslator }
