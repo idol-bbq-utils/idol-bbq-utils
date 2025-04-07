@@ -3,7 +3,7 @@ import { Forwarder } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import FormData from 'form-data'
 import fs from 'fs'
-import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
+import { type ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
 
 interface BiliImageUploaded {
     img_src: string

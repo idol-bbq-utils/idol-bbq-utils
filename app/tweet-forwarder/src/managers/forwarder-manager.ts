@@ -3,18 +3,19 @@ import { Spider } from '@idol-bbq-utils/spider'
 import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
-import { AppConfig } from '@/types'
-import { Platform, TaskType } from '@idol-bbq-utils/spider/types'
-import DB, { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
+import type { AppConfig } from '@/types'
+import { Platform, type TaskType } from '@idol-bbq-utils/spider/types'
+import DB from '@/db'
+import type { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
-import { MediaTool, MediaToolEnum } from '@/types/media'
-import { Forwarder as RealForwarder } from '@/types/forwarder'
+import { type MediaTool, MediaToolEnum } from '@/types/media'
+import type { Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
 import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
 import { formatTime } from '@/utils/time'
 import { platformArticleMapToActionText, platformNameMap } from '@idol-bbq-utils/spider/const'
-import { existsSync, unlink, unlinkSync } from 'fs'
+import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
 import { orderBy } from 'lodash'
 
@@ -532,9 +533,18 @@ class ForwarderPools extends BaseCompatibleModel {
         const texts = [] as Array<string>
         // convert to string
         for (let [platform, follows] of results.entries()) {
+            if (follows.length === 0) {
+                ctx.log?.warn(`No follows found for ${platform}`)
+                continue
+            }
             // 按粉丝数量大的排序
             follows = orderBy(follows, (f) => f[0].followers, 'desc')
-            const [cur, pre] = follows[0]
+            const follow = follows[0]
+            if (!follow) {
+                ctx.log?.warn(`No follows found for ${platform}`)
+                continue
+            }
+            const [cur, pre] = follow
             let text_to_send =
                 `${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
                 follows

@@ -21,16 +21,19 @@
         "node": ">=20.0.0"
     },
     "devDependencies": {
+        "@types/bun": "^1.2.8",
         "@types/jest": "^29.5.14",
         "jest": "^29.7.0",
-        "lerna": "^8.1.6",
         "prettier": "^3.3.2",
         "ts-jest": "^29.2.6",
-        "tsc-alias": "^1.8.10",
         "typescript": "^5.5.3"
     },
     "dependencies": {
         "tslib": "^2.6.3"
     },
-    "packageManager": "pnpm@9.12.2"
+    "workspaces": [
+        "core/*",
+        "app/*",
+        "docs"
+    ]
 }

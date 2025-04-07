@@ -1,10 +1,5 @@
-import {
-    ArticleExtractType,
-    GenericArticle,
-    GenericFollows,
-    GenericMediaInfo,
-    Platform,
-} from '@idol-bbq-utils/spider/types'
+import { Platform } from '@idol-bbq-utils/spider/types'
+import type { ArticleExtractType, GenericArticle, GenericFollows, GenericMediaInfo } from '@idol-bbq-utils/spider/types'
 import { prisma, Prisma } from './client'
 import { getSubtractTime } from '@/utils/time'
 

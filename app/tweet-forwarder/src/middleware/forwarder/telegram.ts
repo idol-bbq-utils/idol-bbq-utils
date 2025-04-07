@@ -1,7 +1,7 @@
 import { Input, Telegraf } from 'telegraf'
 import { Forwarder } from './base.js'
-import { InputMediaPhoto, InputMediaVideo } from 'telegraf/types'
-import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder.js'
+import type { InputMediaPhoto, InputMediaVideo } from 'telegraf/types'
+import { type ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder.js'
 
 class TgForwarder extends Forwarder {
     static _PLATFORM = ForwardToPlatformEnum.Telegram

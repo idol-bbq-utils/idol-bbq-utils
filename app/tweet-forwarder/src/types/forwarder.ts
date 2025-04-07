@@ -1,6 +1,6 @@
-import { TaskType } from '@idol-bbq-utils/spider/types'
-import { CommonCfgConfig } from './common'
-import { Media } from './media'
+import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { CommonCfgConfig } from './common'
+import type { Media } from './media'
 
 enum ForwardToPlatformEnum {
     None = 'none',
@@ -50,7 +50,7 @@ type TaskConfigMap = {
 type TaskConfig<T extends TaskType> = TaskConfigMap[T]
 
 interface ForwardToPlatformCommonConfig {
-    replace_regex?: string | Array<string> | Array<Array<string>>
+    replace_regex?: string | [string, string] | Array<[string, string]>
     /**
      *
      * if 1d, the forwarder will only forward the article that created within 1 day
@@ -120,11 +120,6 @@ interface Forwarder<T extends TaskType> {
     cfg_forwarder?: ForwarderConfig
 }
 
-export {
-    ForwardTo,
-    Forwarder,
-    ForwarderConfig,
-    ForwardToPlatformEnum,
-    ForwardToPlatformConfig,
-    ForwardToPlatformCommonConfig,
-}
+export { ForwardToPlatformEnum }
+
+export type { ForwardTo, Forwarder, ForwarderConfig, ForwardToPlatformConfig, ForwardToPlatformCommonConfig }

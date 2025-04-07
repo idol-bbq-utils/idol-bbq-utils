@@ -1,5 +1,5 @@
 import { RETRY_LIMIT } from '@/config'
-import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
+import { type ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
 import { BaseCompatibleModel } from '@/utils/base'
 import { formatTime, getSubtractTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
