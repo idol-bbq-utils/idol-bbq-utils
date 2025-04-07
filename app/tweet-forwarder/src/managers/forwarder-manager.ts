@@ -464,7 +464,11 @@ class ForwarderPools extends BaseCompatibleModel {
                         media: maybe_media_files,
                         timestamp: article.created_at,
                     })
-                    await DB.ForwardBy.save(article.id, target.id, 'article')
+                    let currentArticle: ArticleWithId | null = article
+                    while (currentArticle) {
+                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                        currentArticle = currentArticle.ref as ArticleWithId | null
+                    }
                 } catch (e) {
                     ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                 }
