@@ -289,6 +289,8 @@ namespace XApiJsonParser {
             tweet.ref = tweetParser(legacy.retweeted_status_result.result)
             // 转发类型推文media按照ref为准
             tweet.media = null
+            tweet.has_media = false
+            tweet.extra = null
         }
 
         if (tweet.media) {
