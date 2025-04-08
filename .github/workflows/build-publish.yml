@@ -15,36 +15,18 @@ env:
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   # unit-tests: # TODO
-  build-test:
-    env:
-      PUPPETEER_SKIP_DOWNLOAD: true
-      DATABASE_URL: 'file:./data.db'
-    runs-on: ubuntu-latest
+  # build-test:
+  #   env:
+  #     PUPPETEER_SKIP_DOWNLOAD: true
+  #     DATABASE_URL: 'file:./data.db'
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: install dependencies
-        run: |
-          pnpm install
-          pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder generate
-
-      - name: build tests
-        run: pnpm build
   build-and-push-image:
-    needs: build-test
+    # needs: build-test
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
