@@ -18,7 +18,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD true
 ENV DATABASE_URL="file:/app/data.db"
 
 RUN bun install --filter "./app/tweet-forwarder" --filter "./core/*" --frozen-lockfile --production
-RUN bun --filter "@idol-bbq-utils/tweet-forwarder" generate
+RUN bun --filter "@idol-bbq-utils/tweet-forwarder" db:init
 
 # Install Chrome dependencies
 RUN apt-get update \
@@ -42,9 +42,9 @@ RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSI
  
 WORKDIR /app
 
-RUN chown -R node:node /app/
+RUN chown -R bun:bun /app/
 
-USER node
+USER bun
 
 ENV NO_SANDBOX=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
