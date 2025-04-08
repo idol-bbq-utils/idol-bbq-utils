@@ -1,6 +1,8 @@
-import { Platform, TaskType, TaskTypeResult } from '@/types'
+import { Platform, type TaskType, type TaskTypeResult } from '@/types'
 import { Logger } from '@idol-bbq-utils/log'
-import { Page, PageEvents, PageEvent } from 'puppeteer-core'
+import { Page, type PageEvents } from 'puppeteer-core'
+// Replace PageEvent with its literal values
+type PageEvent = 'response' | 'request' | 'domcontentloaded' | 'load'
 import { Spider } from '.'
 
 abstract class BaseSpider {
@@ -126,12 +128,9 @@ function waitForEvent<T extends PageEvent>(
 
 function waitForResponse(
     page: Page,
-    handler?: (
-        data: PageEvents[PageEvent.Response],
-        control: { done: () => void; fail: (reason: any) => void },
-    ) => void,
+    handler?: (data: PageEvents['response'], control: { done: () => void; fail: (reason: any) => void }) => void,
 ) {
-    return waitForEvent(page, PageEvent.Response, handler)
+    return waitForEvent(page, 'response', handler)
 }
 
 export { BaseSpider, waitForEvent, waitForResponse }

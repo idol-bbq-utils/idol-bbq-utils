@@ -5,20 +5,18 @@
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
     "license": "MIT",
-    "main": "lib/index.js",
-    "types": "lib/index.d.ts",
     "exports": {
         ".": {
-            "types": "./lib/index.d.ts",
-            "default": "./lib/index.js"
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
         },
         "./types": {
-            "types": "./lib/types.d.ts",
-            "default": "./lib/types.js"
+            "types": "./src/types.ts",
+            "default": "./src/types.ts"
         },
         "./const": {
-            "types": "./lib/const.d.ts",
-            "default": "./lib/const.js"
+            "types": "./src/const.ts",
+            "default": "./src/const.ts"
         }
     },
     "directories": {
@@ -46,6 +44,6 @@
     "dependencies": {
         "@idol-bbq-utils/log": "workspace:^",
         "jsonpath-plus": "^10.2.0",
-        "puppeteer-core": "^23.6.0"
+        "puppeteer-core": "^24.6.0"
     }
 }

@@ -1,5 +1,5 @@
 import { X, Instagram } from './spiders'
-import { ExtraContentType } from './spiders/x'
+import type { ExtraContentType } from './spiders/x'
 
 enum Platform {
     X = 1,
