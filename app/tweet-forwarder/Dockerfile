@@ -41,7 +41,6 @@ RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSI
  
 WORKDIR /app
 
-COPY --from=builder /app/ .
 RUN chown -R node:node /app/
 
 USER node
