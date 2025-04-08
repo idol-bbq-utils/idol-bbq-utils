@@ -24,7 +24,6 @@
         "db:init": "bunx prisma migrate dev --name init",
         "build": "bun build src/main.ts --outdir=./build --target=bun --minify",
         "dev": "bun src/main.ts",
-        "test": "jest --testPathIgnorePatterns \"playground/*\" --",
         "start": "bun src/main.ts"
     },
     "bugs": {

@@ -1,4 +1,5 @@
-import { ArticleExtractType, GenericArticle, GenericFollows, Platform, TaskType, TaskTypeResult } from '@/types'
+import { Platform } from '@/types'
+import type { ArticleExtractType, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
 import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 import { JSONPath } from 'jsonpath-plus'

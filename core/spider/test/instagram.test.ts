@@ -1,10 +1,9 @@
 import puppeteer from 'puppeteer-core'
-import { getSpider } from '../src'
+import { Spider } from '../src'
 import { parseNetscapeCookieToPuppeteerCookie, UserAgent } from '../src/utils'
-import { readFileSync, writeFileSync } from 'fs'
-import { XApiJsonParser } from '../src/spiders/x/user/graphql'
+import { readFileSync } from 'fs'
 import { createLogger, winston, format } from '@idol-bbq-utils/log'
-import { GenericFollows } from '../src/types'
+import type { GenericFollows } from '../src/types'
 import { InsApiJsonParser } from '../src/spiders/instagram'
 
 /**
@@ -12,7 +11,7 @@ import { InsApiJsonParser } from '../src/spiders/instagram'
  */
 test.skip('spider', async () => {
     const url = 'https://www.instagram.com/instagram'
-    const spider = getSpider(url)
+    const spider = Spider.getSpider(url)
     if (spider) {
         const spiderInstance = new spider(
             createLogger({
@@ -62,15 +61,15 @@ test.skip('spider', async () => {
 })
 
 test('Instagram API JSON Parser', async () => {
-    const posts_json = JSON.parse(readFileSync('tests/data/instagram/instagram-posts.json', 'utf-8'))
-    const hightlights_json = JSON.parse(readFileSync('tests/data/instagram/instagram-highlights.json', 'utf-8'))
-    const profile_json = JSON.parse(readFileSync('tests/data/instagram/instagram-profile.json', 'utf-8'))
+    const posts_json = JSON.parse(readFileSync('test/data/instagram/instagram-posts.json', 'utf-8'))
+    const hightlights_json = JSON.parse(readFileSync('test/data/instagram/instagram-highlights.json', 'utf-8'))
+    const profile_json = JSON.parse(readFileSync('test/data/instagram/instagram-profile.json', 'utf-8'))
 
-    const posts_json_result = JSON.parse(readFileSync('tests/data/instagram/instagram-posts-result.json', 'utf-8'))
+    const posts_json_result = JSON.parse(readFileSync('test/data/instagram/instagram-posts-result.json', 'utf-8'))
     const hightlights_json_result = JSON.parse(
-        readFileSync('tests/data/instagram/instagram-highlights-result.json', 'utf-8'),
+        readFileSync('test/data/instagram/instagram-highlights-result.json', 'utf-8'),
     )
-    const profile_json_result = JSON.parse(readFileSync('tests/data/instagram/instagram-follows-result.json', 'utf-8'))
+    const profile_json_result = JSON.parse(readFileSync('test/data/instagram/instagram-follows-result.json', 'utf-8'))
 
     expect(InsApiJsonParser.postsParser(posts_json)).toEqual(posts_json_result)
     expect(InsApiJsonParser.highlightsParser(hightlights_json)).toEqual(hightlights_json_result)

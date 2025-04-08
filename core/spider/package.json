@@ -33,10 +33,8 @@
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
     },
     "scripts": {
-        "build": "tsc && tsc-alias",
-        "build:production": "tsc --build tsconfig.prod.json && tsc-alias",
-        "test": "jest --testPathIgnorePatterns \"playground/*\" --",
-        "test:playground": "jest --testPathPattern \"playground/*\" --"
+        "test": "bun test --test-name-pattern='^(?!.*(playground)).*$' --",
+        "test:playground": "bun test --test-name-pattern='.*playground.*$' --"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"

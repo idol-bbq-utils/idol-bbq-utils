@@ -1,4 +1,4 @@
-import { CookieParam } from 'puppeteer-core'
+import type { CookieParam } from 'puppeteer-core'
 import fs from 'fs'
 
 const UserAgent = {
@@ -29,8 +29,8 @@ function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<Cookie
             path = fileds[2],
             secure = fileds[3],
             expires = fileds[4],
-            name = fileds[5],
-            value = fileds[6]
+            name = fileds[5] || '',
+            value = fileds[6] || ''
         cookies.push({
             name,
             value,

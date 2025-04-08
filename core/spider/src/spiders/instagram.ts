@@ -1,4 +1,5 @@
-import { GenericArticle, GenericFollows, GenericMediaInfo, Platform, TaskType, TaskTypeResult } from '@/types'
+import { Platform } from '@/types'
+import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
 import { BaseSpider, waitForResponse } from './base'
 import { Page } from 'puppeteer-core'
 

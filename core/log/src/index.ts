@@ -8,7 +8,7 @@ const { combine, colorize, timestamp, json, printf } = format
 
 const default_format = printf(({ timestamp, level, message, ...meta }) => {
     const service = meta && (meta['service'] ? `[${meta['service']}]` : '')
-    return `${dayjs(timestamp).format()} ${service} [${level}]: ${JSON.stringify(message)}`
+    return `${dayjs(timestamp as any).format()} ${service} [${level}]: ${JSON.stringify(message)}`
 })
 
 const default_config = {

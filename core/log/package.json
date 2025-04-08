@@ -20,10 +20,6 @@
         "type": "git",
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
     },
-    "scripts": {
-        "build": "tsc && tsc-alias",
-        "dev": "pnpm build && node lib/test.js"
-    },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
