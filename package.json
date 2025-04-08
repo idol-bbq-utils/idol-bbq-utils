@@ -9,7 +9,6 @@
         "dev:forwarder": "lerna run --scope=@idol-bbq-utils/tweet-forwarder dev",
         "run:forwarder": "lerna run --scope=@idol-bbq-utils/tweet-forwarder run",
         "format": "pnpm prettier --write . --ignore-path .prettierignore",
-        "clean": "lerna run clean",
         "docs:dev": "lerna run --scope=docs docs:dev",
         "docs:build": "lerna run --scope=docs docs:build",
         "docs:preview": "lerna run --scope=docs docs:preview"
@@ -27,9 +26,6 @@
         "prettier": "^3.3.2",
         "ts-jest": "^29.2.6",
         "typescript": "^5.5.3"
-    },
-    "dependencies": {
-        "tslib": "^2.6.3"
     },
     "workspaces": [
         "core/*",

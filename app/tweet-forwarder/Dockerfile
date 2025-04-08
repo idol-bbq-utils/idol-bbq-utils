@@ -1,34 +1,24 @@
 ARG CHROME_VERSION=130.0.6723.58
 ARG GALLERY_DL_VERSION=v1.28.5
 
-FROM node:20-slim AS base
+FROM oven/bun:1 AS runner
 
-FROM base AS builder
-
-RUN npm install -g pnpm@9.12.2
+ARG CHROME_VERSION
+ARG GALLERY_DL_VERSION
 
 RUN apt-get update \
     && apt-get install -y openssl
 
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml lerna.json tsconfig.json ./
+COPY package.json bun.lock tsconfig.json ./
 COPY ./app/tweet-forwarder ./app/tweet-forwarder
 COPY ./core ./core
 
 ENV PUPPETEER_SKIP_DOWNLOAD true
 ENV DATABASE_URL="file:/app/data.db"
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder generate
-RUN pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder build --include-dependencies
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --production
-
-
-FROM base AS runner
-
-ARG CHROME_VERSION
-ARG GALLERY_DL_VERSION
+RUN bun install --frozen-lockfile --production
+RUN bun --filter "@idol-bbq-utils/tweet-forwarder" generate
 
 RUN apt-get update \
     && apt-get install -y wget gnupg \
@@ -60,4 +50,4 @@ ENV NO_SANDBOX=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 ENV DATABASE_URL="file:/app/data.db"
 
-CMD ["node", "app/tweet-forwarder/lib/main.js"]
+CMD ["bun", "--filter" , "@idol-bbq-utils/tweet-forwarder", "start"]
