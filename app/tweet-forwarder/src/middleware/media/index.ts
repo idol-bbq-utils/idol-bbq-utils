@@ -3,7 +3,8 @@ import { execSync } from 'child_process'
 import { CACHE_DIR_ROOT, log } from '@/config'
 import https from 'https'
 import path from 'path'
-import { MediaToolConfigMap } from '@/types/media'
+import type { MediaToolConfigMap } from '@/types/media'
+import type { MediaType } from '@idol-bbq-utils/spider/types'
 
 const MATCH_FILE_NAME = /(?<filename>[^/]+)\.(?<ext>[^.]+)$/
 
@@ -93,7 +94,7 @@ function galleryDownloadMediaFile(
     }
 }
 
-function getMediaType(path: string) {
+function getMediaType(path: string): MediaType {
     const ext = path.split('.').pop() || ''
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
         return 'photo'

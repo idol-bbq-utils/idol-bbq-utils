@@ -4,6 +4,7 @@ import { BaseCompatibleModel } from '@/utils/base'
 import { formatTime, getSubtractTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
 import { Logger } from '@idol-bbq-utils/log'
+import type { MediaType } from '@idol-bbq-utils/spider/types'
 import { pRetry } from '@idol-bbq-utils/utils'
 import dayjs from 'dayjs'
 import { noop } from 'lodash'
@@ -37,7 +38,7 @@ abstract class BaseForwarder extends BaseCompatibleModel {
         text: string,
         props?: {
             media?: Array<{
-                media_type: string
+                media_type: MediaType
                 // local file path
                 path: string
             }>

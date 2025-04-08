@@ -4,7 +4,7 @@ import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import type { AppConfig } from '@/types'
-import { Platform, type TaskType } from '@idol-bbq-utils/spider/types'
+import { Platform, type MediaType, type TaskType } from '@idol-bbq-utils/spider/types'
 import DB from '@/db'
 import type { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
@@ -397,32 +397,44 @@ class ForwarderPools extends BaseCompatibleModel {
             ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`)
             let maybe_media_files = [] as Array<{
                 path: string
-                media_type: string
+                media_type: MediaType
             }>
             // article to photo
 
             // 下载媒体文件
             if (cfg_forwarder?.media) {
                 const media = cfg_forwarder.media
-                let paths = [] as Array<string>
 
                 let currentArticle: Article | null = article
                 while (currentArticle) {
-                    let new_files = [] as Array<string>
+                    let new_files = [] as Array<{
+                        path: string
+                        media_type: MediaType
+                    }>
                     if (currentArticle.has_media) {
                         ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
                         // handle media
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
                             ctx.log?.debug(`Downloading media with http downloader`)
                             new_files = await Promise.all(
-                                currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url, ctx.taskId)),
+                                currentArticle.media?.map(async ({ url, type }) => {
+                                    const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                    return {
+                                        path,
+                                        media_type: type,
+                                    }
+                                }),
                             )
 
                             if (currentArticle.extra?.media) {
                                 const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(({ url }) =>
-                                        plainDownloadMediaFile(url, ctx.taskId),
-                                    ),
+                                    currentArticle.extra.media.map(async ({ url, type }) => {
+                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                        return {
+                                            path,
+                                            media_type: type,
+                                        }
+                                    }),
                                 )
                                 new_files = new_files.concat(extra_files)
                             }
@@ -432,28 +444,30 @@ class ForwarderPools extends BaseCompatibleModel {
                             new_files = await galleryDownloadMediaFile(
                                 currentArticle.url,
                                 media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
-                            )
+                            ).map((path) => ({
+                                path,
+                                media_type: getMediaType(path),
+                            }))
                             if (currentArticle.extra?.media) {
                                 const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(({ url }) =>
-                                        plainDownloadMediaFile(url, ctx.taskId),
-                                    ),
+                                    currentArticle.extra.media.map(async ({ url }) => {
+                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                        return {
+                                            path,
+                                            media_type: getMediaType(path),
+                                        }
+                                    }),
                                 )
                                 new_files = new_files.concat(extra_files)
                             }
                         }
                         if (new_files.length > 0) {
                             ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
-                            paths = paths.concat(new_files)
+                            maybe_media_files = maybe_media_files.concat(new_files)
                         }
                     }
                     currentArticle = currentArticle.ref
                 }
-                // maybe fallback to default
-                maybe_media_files = paths.map((path) => ({
-                    path,
-                    media_type: getMediaType(path),
-                }))
             }
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
             const text = this.articleToText(article)

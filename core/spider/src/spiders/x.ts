@@ -241,14 +241,21 @@ namespace XApiJsonParser {
                     }
                 }
                 if (type === 'video' || type === 'animated_gif') {
-                    return {
-                        type: 'video',
-                        url: video_info?.variants
-                            ?.filter((i: { bitrate?: number }) => i.bitrate !== undefined)
-                            .sort((a: { bitrate: number }, b: { bitrate: number }) => b.bitrate - a.bitrate)[0].url,
-                    }
+                    return [
+                        {
+                            type: 'video',
+                            url: video_info?.variants
+                                ?.filter((i: { bitrate?: number }) => i.bitrate !== undefined)
+                                .sort((a: { bitrate: number }, b: { bitrate: number }) => b.bitrate - a.bitrate)[0].url,
+                        },
+                        {
+                            type: 'video_thumbnail',
+                            url: media_url_https,
+                        },
+                    ]
                 }
             })
+            .flat()
             .filter(Boolean)
     }
 

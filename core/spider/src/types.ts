@@ -40,7 +40,7 @@ type TaskTypeResult<T extends TaskType, P extends Platform> = T extends 'article
       ? GenericFollows
       : never
 
-type MediaType = 'photo' | 'video'
+type MediaType = 'photo' | 'video' | 'video_thumbnail' | 'unknown'
 interface GenericMediaInfo {
     type: MediaType
     /**
