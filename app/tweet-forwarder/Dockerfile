@@ -1,12 +1,11 @@
 ARG CHROME_VERSION=130.0.6723.58
 ARG GALLERY_DL_VERSION=v1.28.5
 
-FROM oven/bun:1 AS runner
-
-ARG CHROME_VERSION
-ARG GALLERY_DL_VERSION
+FROM oven/bun:1.2.8-slim AS base
+FROM base AS builder
 
 RUN apt-get update \
+    # For prisma client dependencies
     && apt-get install -y openssl
 
 WORKDIR /app
@@ -18,14 +17,15 @@ ENV PUPPETEER_SKIP_DOWNLOAD true
 ENV DATABASE_URL="file:/app/data.db"
 
 RUN bun install --filter "./app/tweet-forwarder" --filter "./core/*" --frozen-lockfile --production
-RUN bun --filter "@idol-bbq-utils/tweet-forwarder" db:init
+RUN bun --filter "@idol-bbq-utils/tweet-forwarder" db:generate-client
+RUN bun --filter "@idol-bbq-utils/tweet-forwarder" build
 
-# Install Chrome dependencies
+FROM base AS runner
+
+ARG CHROME_VERSION
+ARG GALLERY_DL_VERSION
 RUN apt-get update \
     && apt-get install -y wget gnupg \
-    && apt-get update \
-    && apt-get install -y fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
-      --no-install-recommends \
     # Required for Chrome
     && apt-get install -y fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libcurl4 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libvulkan1 libxcomposite1 libxdamage1 libxfixes3 libxkbcommon0 libxrandr2 xdg-utils \
       --no-install-recommends \
@@ -41,6 +41,8 @@ RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSI
     && chmod +x /usr/local/bin/gallery-dl
  
 WORKDIR /app
+COPY --from=builder /app/app/tweet-forwarder/build/main.js /app/bin.js
+COPY --from=builder /app/app/tweet-forwarder/prisma/client /app/prisma/client
 
 RUN chown -R bun:bun /app/
 
@@ -50,4 +52,4 @@ ENV NO_SANDBOX=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 ENV DATABASE_URL="file:/app/data.db"
 
-CMD ["bun", "--filter" , "@idol-bbq-utils/tweet-forwarder", "start"]
+CMD ["sh", "-c", "bun /app/bin.js"]

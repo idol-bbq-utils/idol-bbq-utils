@@ -22,7 +22,7 @@
     "scripts": {
         "db:generate-client": "bunx prisma generate",
         "db:init": "bunx prisma migrate dev --name init",
-        "build": "tsc && tsc-alias",
+        "build": "bun build src/main.ts --outdir=./build --target=bun --minify",
         "dev": "bun src/main.ts",
         "test": "jest --testPathIgnorePatterns \"playground/*\" --",
         "start": "bun src/main.ts"
