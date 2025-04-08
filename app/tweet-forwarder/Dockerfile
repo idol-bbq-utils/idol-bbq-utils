@@ -20,6 +20,7 @@ ENV DATABASE_URL="file:/app/data.db"
 RUN bun install --filter "./app/tweet-forwarder" --filter "./core/*" --frozen-lockfile --production
 RUN bun --filter "@idol-bbq-utils/tweet-forwarder" generate
 
+# Install Chrome dependencies
 RUN apt-get update \
     && apt-get install -y wget gnupg \
     && apt-get update \

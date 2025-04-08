@@ -30,6 +30,6 @@
     "workspaces": [
         "core/*",
         "app/*",
-        "docs"
+        "docs/*"
     ]
 }
