@@ -17,7 +17,7 @@ COPY ./core ./core
 ENV PUPPETEER_SKIP_DOWNLOAD true
 ENV DATABASE_URL="file:/app/data.db"
 
-RUN bun install --frozen-lockfile --production
+RUN bun install --filter "./app/tweet-forwarder" --filter "./core/*" --frozen-lockfile --production
 RUN bun --filter "@idol-bbq-utils/tweet-forwarder" generate
 
 RUN apt-get update \
