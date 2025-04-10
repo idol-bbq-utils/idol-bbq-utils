@@ -560,7 +560,7 @@ class ForwarderPools extends BaseCompatibleModel {
             }
             const [cur, pre] = follow
             let text_to_send =
-                `${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
+                `${platformNameMap[platform]}:\n${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
                 follows
                     .map(([cur, pre]) => {
                         let text = `${cur.username}\n${' '.repeat(4)}`
