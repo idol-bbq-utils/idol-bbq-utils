@@ -16,7 +16,8 @@ const platformArticleMapToActionText: Record<Platform, Record<string, string>> =
     },
     [Platform.Instagram]: {
         [Instagram.ArticleTypeEnum.POST]: '发布帖子',
-        [Instagram.ArticleTypeEnum.STORIES]: '发布故事',
+        [Instagram.ArticleTypeEnum.STORY]: '发布故事',
+        [Instagram.ArticleTypeEnum.HIGHLIGHTS]: '发布highlights',
         [Instagram.ArticleTypeEnum.REEL]: '发布视频',
     },
 }

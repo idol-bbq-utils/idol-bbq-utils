@@ -11,9 +11,13 @@ enum ArticleTypeEnum {
      */
     POST = 'post',
     /**
-     * as known as highlights
+     * https://www.instagram.com/stories/username
      */
-    STORIES = 'stories',
+    STORY = 'story',
+    /**
+     * https://www.instagram.com/stories/highlights/username
+     */
+    HIGHLIGHTS = 'highlights',
     /**
      * TODO
      *
@@ -41,13 +45,16 @@ class InstagramSpider extends BaseSpider {
         const { id } = result
         const _url = `${this.BASE_URL}${id}`
         if (task_type === 'article') {
-            this.log?.info('Trying to grab posts and highlights.')
-            return (await InsApiJsonParser.grabPosts(page, _url)) as TaskTypeResult<T, Platform.Instagram>
+            this.log?.info('Trying to grab posts.')
+            const res = await InsApiJsonParser.grabPosts(page, _url)
+            this.log?.info(`Trying to grab stories.`)
+            const stories = await InsApiJsonParser.grabStories(page, `${this.BASE_URL}stories/${id}/`)
+            return res.concat(stories) as TaskTypeResult<T, Platform.Instagram>
         }
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return (await InsApiJsonParser.grabFollowsNumer(page, _url)) as TaskTypeResult<T, Platform.Instagram>
+            return (await InsApiJsonParser.grabFollowsNumber(page, _url)) as TaskTypeResult<T, Platform.Instagram>
         }
 
         throw new Error('Invalid task type')
@@ -159,12 +166,30 @@ namespace InsApiJsonParser {
             created_at: 0,
             content: node?.title,
             url: `https://www.instagram.com/stories/highlights/${id}/`,
-            type: ArticleTypeEnum.STORIES,
+            type: ArticleTypeEnum.HIGHLIGHTS,
             ref: null,
             has_media: true,
             media: null,
             extra: null,
             u_avatar: null,
+        }
+    }
+    const STORY_ACCESSIBILITY_CAPTION_REGEX = /(?<=.*?\d+\.\s).*/
+    function storyParser(item: any): GenericArticle<Platform.Instagram> {
+        return {
+            platform: Platform.Instagram,
+            a_id: item?.id.split('_')[0],
+            u_id: '',
+            username: '',
+            created_at: item?.taken_at,
+            content: item?.accessibility_caption.match(STORY_ACCESSIBILITY_CAPTION_REGEX)?.[0] || null,
+            url: '',
+            type: ArticleTypeEnum.STORY,
+            ref: null,
+            has_media: true,
+            media: mediaParser(item),
+            extra: null,
+            u_avatar: '',
         }
     }
 
@@ -189,6 +214,34 @@ namespace InsApiJsonParser {
             u_id: user?.username,
             followers: user?.follower_count,
         }
+    }
+
+    const USERNAME_REGEX_FROM_OG_TITLE =
+        /(?:趁\s*(?<username>.*?)\s*的这条快拍|Watch this story by (?<username>.*?) on Instagram)/i
+    async function storiesParser(json: any, page: Page): Promise<Array<GenericArticle<Platform.Instagram>>> {
+        const reels_media = JSONPath({ path: '$..reels_media', json })[0]
+        const res = reels_media
+            .map((i: any) => {
+                const stories = i.items
+                    .map((item: any) => storyParser(item))
+                    .map((item: any) => {
+                        return {
+                            ...item,
+                            u_id: i.user?.username,
+                            url: `https://www.instagram.com/stories/${i.user?.username}/${item.a_id}`,
+                            u_avatar: i.user?.profile_pic_url,
+                        }
+                    })
+                return stories
+            })
+            .flat()
+        const og_title = await page.$('meta[property="og:title"]')
+        const title = await og_title?.evaluate((el) => el.getAttribute('content'))
+        const username = title.match(USERNAME_REGEX_FROM_OG_TITLE).groups?.username
+        for (const item of res) {
+            item.username = username
+        }
+        return res
     }
 
     /**
@@ -263,44 +316,44 @@ namespace InsApiJsonParser {
      *
      * https://github.com/oven-sh/bun/issues/13853
      */
-    // export async function grabStories(
-    //     page: Page,
-    //     url: string,
-    //     config: {
-    //         viewport?: {
-    //             width: number
-    //             height: number
-    //         }
-    //     } = {
-    //         viewport: {
-    //             width: 954,
-    //             height: 2,
-    //         },
-    //     },
-    // ): Promise<Array<GenericArticle<Platform.Instagram>>> {
-    //     await page.setViewport(config.viewport ?? { width: 954, height: 2 })
-    //     await page.goto(url)
-    //     try {
-    //         await checkLogin(page)
-    //         await checkSomethingWrong(page)
-    //     } catch (error) {
-    //         throw error
-    //     }
-    //     /**
-    //      * Xpath selector for stories json, but not working in bun with puppeteer version after 22.10+
-    //      */
-    //     // const stores_json = await page.$('::-p-xpath(//script[@type="application/json"])')
-    //     const json_script_tags = await page.$$('script[type="application/json"]')
-    //     for (const json_script_tag of json_script_tags) {
-    //         const text = await json_script_tag.evaluate((el) => el.innerText)
-    //         if (text.includes('xdt_api__v1__feed__reels_media')) {
-    //             return storiesParser(JSON.parse(text))
-    //         }
-    //     }
-    //     return
-    // }
+    export async function grabStories(
+        page: Page,
+        url: string,
+        config: {
+            viewport?: {
+                width: number
+                height: number
+            }
+        } = {
+            viewport: {
+                width: 954,
+                height: 2,
+            },
+        },
+    ): Promise<Array<GenericArticle<Platform.Instagram>>> {
+        await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+        await page.goto(url)
+        try {
+            await checkLogin(page)
+            await checkSomethingWrong(page)
+        } catch (error) {
+            throw error
+        }
+        /**
+         * Xpath selector for stories json, but not working in bun with puppeteer version after 22.10+
+         */
+        // const stores_json = await page.$('::-p-xpath(//script[@type="application/json"])')
+        const json_script_tags = await page.$$('script[type="application/json"]')
+        for (const json_script_tag of json_script_tags) {
+            const text = await json_script_tag.evaluate((el) => el.innerText)
+            if (text.includes('xdt_api__v1__feed__reels_media')) {
+                return await storiesParser(JSON.parse(text), page)
+            }
+        }
+        return []
+    }
 
-    export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
+    export async function grabFollowsNumber(page: Page, url: string): Promise<GenericFollows> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('graphql/query') && response.request().method() === 'POST') {
