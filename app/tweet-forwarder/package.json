@@ -36,7 +36,7 @@
         "@idol-bbq-utils/utils": "workspace:^",
         "@prisma/client": "^6.3.0",
         "axios": "^1.7.2",
-        "cron": "^3.1.7",
+        "cron": "^4.1.4",
         "dayjs": "^1.11.11",
         "dotenv": "^16.4.5",
         "fluent-ffmpeg": "^2.1.3",

@@ -244,21 +244,63 @@ namespace InsApiJsonParser {
             throw error
         }
 
-        const { success, error } = await waitForTweets
-        if (!success) {
-            throw error
+        const data = await waitForTweets
+        if (!data.success) {
+            throw data.error
         }
         const posts = postsParser(reasonable_jsons[PROFILE_POSTS_KEY])
         const highlights = highlightsParser(reasonable_jsons[PROFILE_HIGHLIGHTS_KEY]).map((h) => {
-            h.username = posts[0]?.username
-            h.u_avatar = posts[0]?.u_avatar
+            h.username = posts[0]?.username ?? ''
+            h.u_avatar = posts[0]?.u_avatar ?? ''
             return h
         })
-        return posts.concat(highlights)
+        return posts
     }
 
+    /** 由于使用了bun做运行时，无法使用xpath做内容筛选
+     *
+     * https://github.com/puppeteer/puppeteer/issues/12570
+     *
+     * https://github.com/oven-sh/bun/issues/13853
+     */
+    // export async function grabStories(
+    //     page: Page,
+    //     url: string,
+    //     config: {
+    //         viewport?: {
+    //             width: number
+    //             height: number
+    //         }
+    //     } = {
+    //         viewport: {
+    //             width: 954,
+    //             height: 2,
+    //         },
+    //     },
+    // ): Promise<Array<GenericArticle<Platform.Instagram>>> {
+    //     await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+    //     await page.goto(url)
+    //     try {
+    //         await checkLogin(page)
+    //         await checkSomethingWrong(page)
+    //     } catch (error) {
+    //         throw error
+    //     }
+    //     /**
+    //      * Xpath selector for stories json, but not working in bun with puppeteer version after 22.10+
+    //      */
+    //     // const stores_json = await page.$('::-p-xpath(//script[@type="application/json"])')
+    //     const json_script_tags = await page.$$('script[type="application/json"]')
+    //     for (const json_script_tag of json_script_tags) {
+    //         const text = await json_script_tag.evaluate((el) => el.innerText)
+    //         if (text.includes('xdt_api__v1__feed__reels_media')) {
+    //             return storiesParser(JSON.parse(text))
+    //         }
+    //     }
+    //     return
+    // }
+
     export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
-        let follows_json: any
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('graphql/query') && response.request().method() === 'POST') {
@@ -271,8 +313,7 @@ namespace InsApiJsonParser {
                     await response
                         .json()
                         .then((json) => {
-                            follows_json = json
-                            done()
+                            done(json)
                         })
                         .catch((e) => {
                             fail(e)
@@ -288,10 +329,11 @@ namespace InsApiJsonParser {
             cleanup()
             throw error
         }
-        const { success, error } = await waitForTweets
-        if (!success) {
-            throw error
+        const data = await waitForTweets
+        if (!data.success) {
+            throw data.error
         }
+        const follows_json = data.data
         return followsParser(follows_json)
     }
 }

@@ -6,4 +6,4 @@ dist/
 prisma/
 build/
 docs/
-test/
+test/**/*.json

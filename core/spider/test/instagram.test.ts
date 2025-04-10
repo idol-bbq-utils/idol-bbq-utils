@@ -5,6 +5,7 @@ import { readFileSync } from 'fs'
 import { createLogger, winston, format } from '@idol-bbq-utils/log'
 import type { GenericFollows } from '../src/types'
 import { InsApiJsonParser } from '../src/spiders/instagram'
+import { test, expect } from 'bun:test'
 
 /**
  * require network access & headless browser

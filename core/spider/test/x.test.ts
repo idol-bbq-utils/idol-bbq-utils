@@ -1,10 +1,10 @@
 import puppeteer from 'puppeteer-core'
-import { Spider, X } from '../src'
-import { parseNetscapeCookieToPuppeteerCookie, UserAgent } from '../src/utils'
+import { Spider, X } from '@/.'
+import { parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@/utils'
 import { readFileSync } from 'fs'
 import { createLogger, winston, format } from '@idol-bbq-utils/log'
 import { test, expect } from 'bun:test'
-import type { GenericFollows } from '../src/types'
+import type { GenericFollows } from '@/types'
 
 test('X Spider', async () => {
     const url = 'https://x.com/X'
