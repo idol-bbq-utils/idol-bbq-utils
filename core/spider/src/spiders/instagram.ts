@@ -182,7 +182,7 @@ namespace InsApiJsonParser {
             u_id: '',
             username: '',
             created_at: item?.taken_at,
-            content: item?.accessibility_caption.match(STORY_ACCESSIBILITY_CAPTION_REGEX)?.[0] || null,
+            content: item?.accessibility_caption?.match(STORY_ACCESSIBILITY_CAPTION_REGEX)?.[0] || null,
             url: '',
             type: ArticleTypeEnum.STORY,
             ref: null,
