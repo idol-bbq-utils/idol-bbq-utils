@@ -9,7 +9,7 @@ import DB from '@/db'
 import type { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { type MediaTool, MediaToolEnum } from '@/types/media'
-import type { Forwarder as RealForwarder } from '@/types/forwarder'
+import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
 import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
@@ -152,9 +152,11 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
     }
 }
 
-/**
- * Forward Target 会订阅
- */
+type ForwardToIdWithRuntimeConfig = Record<string, ForwardToPlatformCommonConfig | undefined>
+type ForwardToInstanceWithRuntimeConfig = {
+    forwarder: BaseForwarder
+    runtime_config?: ForwardToPlatformCommonConfig
+}
 class ForwarderPools extends BaseCompatibleModel {
     NAME = 'ForwarderPools'
     log?: Logger
@@ -188,7 +190,7 @@ class ForwarderPools extends BaseCompatibleModel {
             /**
              * id for forward_to
              */
-            to: Set<string>
+            to: ForwardToIdWithRuntimeConfig
             cfg_forwarder: Forwarder['cfg_forwarder']
         }
     > = new Map()
@@ -347,7 +349,7 @@ class ForwarderPools extends BaseCompatibleModel {
     async processSingleArticleTask(
         ctx: TaskScheduler.TaskCtx,
         url: string,
-        forwarders: Array<BaseForwarder>,
+        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
         cfg_forwarder: Forwarder['cfg_forwarder'],
     ) {
         const { u_id, platform } = Spider.extractBasicInfo(url) ?? {}
@@ -365,18 +367,19 @@ class ForwarderPools extends BaseCompatibleModel {
          */
         const articles_forwarders = [] as Array<{
             article: ArticleWithId
-            to: Array<BaseForwarder>
+            to: Array<ForwardToInstanceWithRuntimeConfig>
         }>
         for (const article of articles) {
-            const to = [] as Array<BaseForwarder>
-            for (const f of forwarders) {
+            const to = [] as Array<ForwardToInstanceWithRuntimeConfig>
+            for (const forwarder of forwarders) {
+                const { forwarder: f } = forwarder
                 const id = f.id
                 /**
                  * 同一个宏任务循环中，此时可能会有同一个网站运行了两次及以上的定时任务，此时checkExist都是false
                  */
                 const exist = await DB.ForwardBy.checkExist(article.id, id, 'article')
                 if (!exist) {
-                    to.push(f)
+                    to.push(forwarder)
                 }
             }
             if (to.length > 0) {
@@ -394,7 +397,7 @@ class ForwarderPools extends BaseCompatibleModel {
         ctx.log?.info(`Ready to send articles for ${url}`)
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
-            ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`)
+            ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.forwarder.id).join(', ')}`)
             let maybe_media_files = [] as Array<{
                 path: string
                 media_type: MediaType
@@ -472,12 +475,13 @@ class ForwarderPools extends BaseCompatibleModel {
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
             const text = this.articleToText(article)
             // 对所有订阅者进行转发
-            for (const target of to) {
+            for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
                 try {
                     await target.send(text, {
                         media: maybe_media_files,
                         timestamp: article.created_at,
+                        runtime_config,
                     })
                     let currentArticle: ArticleWithId | null = article
                     while (currentArticle) {
@@ -508,7 +512,11 @@ class ForwarderPools extends BaseCompatibleModel {
     /**
      * 一次性任务，并不需要保存转发状态
      */
-    async processFollowsTask(ctx: TaskScheduler.TaskCtx, websites: Array<string>, forwarders: Array<BaseForwarder>) {
+    async processFollowsTask(
+        ctx: TaskScheduler.TaskCtx,
+        websites: Array<string>,
+        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
+    ) {
         if (websites.length === 0) {
             ctx.log?.error(`No websites found`)
             return
@@ -575,17 +583,18 @@ class ForwarderPools extends BaseCompatibleModel {
                         return text
                     })
                     .join('\n')
-            if (task_title) {
-                text_to_send = `${task_title}\n${text_to_send}`
-            }
             texts.push(text_to_send)
         }
         // 对所有订阅者进行转发
-        const texts_to_send = texts.join('\n\n')
-        for (const target of forwarders) {
+        let texts_to_send = texts.join('\n\n')
+        if (task_title) {
+            texts_to_send = `${task_title}\n${texts_to_send}`
+        }
+        for (const { forwarder: target, runtime_config } of forwarders) {
             try {
                 await target.send(texts_to_send, {
                     timestamp: dayjs().unix(),
+                    runtime_config,
                 })
                 /**
                  * 假设follows并不需要保存转发状态，因为任务基本上是一天一次
@@ -606,11 +615,28 @@ class ForwarderPools extends BaseCompatibleModel {
      * 如果没有找到，则新创建一个映射
      * 并注册新的订阅者
      */
-    getOrInitForwarders(id: string, subscribers: Forwarder['subscribers'], cfg: Forwarder['cfg_forwarder']) {
+    getOrInitForwarders(
+        id: string,
+        subscribers: Forwarder['subscribers'],
+        cfg: Forwarder['cfg_forwarder'],
+    ): Array<ForwardToInstanceWithRuntimeConfig> {
         let wrap = this.subscribers.get(id)
         if (!wrap) {
             const newWrap = {
-                to: new Set(subscribers || this.forward_to.keys()),
+                to: subscribers
+                    ? subscribers.reduce((acc, s) => {
+                          if (typeof s === 'string') {
+                              acc[s] = undefined
+                          }
+                          if (typeof s === 'object') {
+                              acc[s.id] = s.cfg_forward_target
+                          }
+                          return acc
+                      }, {} as ForwardToIdWithRuntimeConfig)
+                    : this.forward_to.keys().reduce((acc, id) => {
+                          acc[id] = undefined
+                          return acc
+                      }, {} as ForwardToIdWithRuntimeConfig),
                 cfg_forwarder: cfg,
             }
             this.subscribers.set(id, newWrap)
@@ -620,13 +646,23 @@ class ForwarderPools extends BaseCompatibleModel {
         /**
          * 注册新的订阅者
          */
-        subscribers?.forEach((id) => {
-            if (!to?.has(id)) {
-                to.add(id)
+        subscribers?.forEach((s) => {
+            const id = typeof s === 'string' ? s : s.id
+            if (!(id in to)) {
+                to[id] = typeof s === 'string' ? undefined : s.cfg_forward_target
             }
         })
-        return Array.from(to)
-            .map((id) => this.forward_to.get(id))
+        return Object.entries(to)
+            .map(([id, cfg]) => {
+                const forwarder = this.forward_to.get(id)
+                if (!forwarder) {
+                    return undefined
+                }
+                return {
+                    forwarder,
+                    runtime_config: cfg,
+                }
+            })
             .filter((i) => i !== undefined)
     }
 

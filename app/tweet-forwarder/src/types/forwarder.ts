@@ -64,6 +64,8 @@ interface ForwardToPlatformCommonConfig {
      * ```
      */
     block_until?: string
+    accept_keywords?: Array<string>
+    filter_keywords?: Array<string>
 }
 
 type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> = PlatformConfigMap[T] &
@@ -114,9 +116,16 @@ interface Forwarder<T extends TaskType> {
      */
     cfg_task?: TaskConfig<T>
     /**
-     * Array of forwarder target's id, if empty will use all targets
+     * Array of forwarder target's id or id with runtime config, if empty will use all targets
      */
-    subscribers?: Array<string>
+    subscribers?: Array<
+        | string
+        | {
+              id: string
+              cfg_forward_target?: ForwardToPlatformCommonConfig
+          }
+    >
+
     cfg_forwarder?: ForwarderConfig
 }
 

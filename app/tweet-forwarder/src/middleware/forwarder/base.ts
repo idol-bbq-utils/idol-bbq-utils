@@ -1,5 +1,9 @@
 import { RETRY_LIMIT } from '@/config'
-import { type ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
+import {
+    type ForwardToPlatformCommonConfig,
+    type ForwardToPlatformConfig,
+    ForwardToPlatformEnum,
+} from '@/types/forwarder'
 import { BaseCompatibleModel } from '@/utils/base'
 import { formatTime, getSubtractTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
@@ -43,17 +47,16 @@ abstract class BaseForwarder extends BaseCompatibleModel {
                 path: string
             }>
             timestamp?: number
+            runtime_config?: ForwardToPlatformCommonConfig
         },
     ): Promise<any>
 }
 
 abstract class Forwarder extends BaseForwarder {
-    protected block_until_date: number
     protected BASIC_TEXT_LIMIT = 1000
     TEXT_LIMIT: number
     constructor(config: ForwardToPlatformConfig<ForwardToPlatformEnum>, id: string, log?: Logger) {
         super(config, id, log)
-        this.block_until_date = getSubtractTime(dayjs().unix(), config.block_until || '30m')
         if (this.config?.replace_regex) {
             try {
                 this.log?.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)
@@ -68,11 +71,30 @@ abstract class Forwarder extends BaseForwarder {
     }
 
     async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
-        const { timestamp } = props || {}
-        const { replace_regex } = this.config
-        if (timestamp && timestamp < this.block_until_date) {
-            this.log?.warn(`blocked: can not send before ${formatTime(this.block_until_date)}`)
+        const { timestamp, runtime_config: _runtime_config } = props || {}
+        const runtime_config = {
+            ...this.config,
+            ..._runtime_config,
+        }
+        const { replace_regex, block_until, filter_keywords, accept_keywords } = runtime_config
+        const block_until_date = getSubtractTime(dayjs().unix(), block_until || '30m')
+        if (timestamp && timestamp < block_until_date) {
+            this.log?.warn(`blocked: can not send before ${formatTime(block_until_date)}`)
             return Promise.resolve()
+        }
+        if (accept_keywords) {
+            const regex = new RegExp(accept_keywords.join('|'), 'i')
+            if (!regex.test(text)) {
+                this.log?.warn(`blocked: accept keywords not matched`)
+                return Promise.resolve()
+            }
+        }
+        if (filter_keywords) {
+            const regex = new RegExp(filter_keywords.join('|'), 'i')
+            if (regex.test(text)) {
+                this.log?.warn(`blocked: filter keywords matched`)
+                return Promise.resolve()
+            }
         }
         if (replace_regex) {
             text = this.textFilter(text, replace_regex)
