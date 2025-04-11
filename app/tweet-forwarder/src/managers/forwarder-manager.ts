@@ -3,18 +3,19 @@ import { Spider } from '@idol-bbq-utils/spider'
 import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
-import { AppConfig } from '@/types'
-import { Platform, TaskType } from '@idol-bbq-utils/spider/types'
-import DB, { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
+import type { AppConfig } from '@/types'
+import { Platform, type MediaType, type TaskType } from '@idol-bbq-utils/spider/types'
+import DB from '@/db'
+import type { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
-import { MediaTool, MediaToolEnum } from '@/types/media'
-import { Forwarder as RealForwarder } from '@/types/forwarder'
+import { type MediaTool, MediaToolEnum } from '@/types/media'
+import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
 import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
 import { formatTime } from '@/utils/time'
 import { platformArticleMapToActionText, platformNameMap } from '@idol-bbq-utils/spider/const'
-import { existsSync, unlink, unlinkSync } from 'fs'
+import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
 import { orderBy } from 'lodash'
 
@@ -151,9 +152,11 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
     }
 }
 
-/**
- * Forward Target 会订阅
- */
+type ForwardToIdWithRuntimeConfig = Record<string, ForwardToPlatformCommonConfig | undefined>
+type ForwardToInstanceWithRuntimeConfig = {
+    forwarder: BaseForwarder
+    runtime_config?: ForwardToPlatformCommonConfig
+}
 class ForwarderPools extends BaseCompatibleModel {
     NAME = 'ForwarderPools'
     log?: Logger
@@ -187,7 +190,7 @@ class ForwarderPools extends BaseCompatibleModel {
             /**
              * id for forward_to
              */
-            to: Set<string>
+            to: ForwardToIdWithRuntimeConfig
             cfg_forwarder: Forwarder['cfg_forwarder']
         }
     > = new Map()
@@ -346,7 +349,7 @@ class ForwarderPools extends BaseCompatibleModel {
     async processSingleArticleTask(
         ctx: TaskScheduler.TaskCtx,
         url: string,
-        forwarders: Array<BaseForwarder>,
+        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
         cfg_forwarder: Forwarder['cfg_forwarder'],
     ) {
         const { u_id, platform } = Spider.extractBasicInfo(url) ?? {}
@@ -364,18 +367,19 @@ class ForwarderPools extends BaseCompatibleModel {
          */
         const articles_forwarders = [] as Array<{
             article: ArticleWithId
-            to: Array<BaseForwarder>
+            to: Array<ForwardToInstanceWithRuntimeConfig>
         }>
         for (const article of articles) {
-            const to = [] as Array<BaseForwarder>
-            for (const f of forwarders) {
+            const to = [] as Array<ForwardToInstanceWithRuntimeConfig>
+            for (const forwarder of forwarders) {
+                const { forwarder: f } = forwarder
                 const id = f.id
                 /**
                  * 同一个宏任务循环中，此时可能会有同一个网站运行了两次及以上的定时任务，此时checkExist都是false
                  */
                 const exist = await DB.ForwardBy.checkExist(article.id, id, 'article')
                 if (!exist) {
-                    to.push(f)
+                    to.push(forwarder)
                 }
             }
             if (to.length > 0) {
@@ -393,35 +397,47 @@ class ForwarderPools extends BaseCompatibleModel {
         ctx.log?.info(`Ready to send articles for ${url}`)
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
-            ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`)
+            ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.forwarder.id).join(', ')}`)
             let maybe_media_files = [] as Array<{
                 path: string
-                media_type: string
+                media_type: MediaType
             }>
             // article to photo
 
             // 下载媒体文件
             if (cfg_forwarder?.media) {
                 const media = cfg_forwarder.media
-                let paths = [] as Array<string>
 
                 let currentArticle: Article | null = article
                 while (currentArticle) {
-                    let new_files = [] as Array<string>
+                    let new_files = [] as Array<{
+                        path: string
+                        media_type: MediaType
+                    }>
                     if (currentArticle.has_media) {
                         ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
                         // handle media
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
                             ctx.log?.debug(`Downloading media with http downloader`)
                             new_files = await Promise.all(
-                                currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url, ctx.taskId)),
+                                currentArticle.media?.map(async ({ url, type }) => {
+                                    const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                    return {
+                                        path,
+                                        media_type: type,
+                                    }
+                                }),
                             )
 
                             if (currentArticle.extra?.media) {
                                 const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(({ url }) =>
-                                        plainDownloadMediaFile(url, ctx.taskId),
-                                    ),
+                                    currentArticle.extra.media.map(async ({ url, type }) => {
+                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                        return {
+                                            path,
+                                            media_type: type,
+                                        }
+                                    }),
                                 )
                                 new_files = new_files.concat(extra_files)
                             }
@@ -431,40 +447,47 @@ class ForwarderPools extends BaseCompatibleModel {
                             new_files = await galleryDownloadMediaFile(
                                 currentArticle.url,
                                 media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
-                            )
+                            ).map((path) => ({
+                                path,
+                                media_type: getMediaType(path),
+                            }))
                             if (currentArticle.extra?.media) {
                                 const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(({ url }) =>
-                                        plainDownloadMediaFile(url, ctx.taskId),
-                                    ),
+                                    currentArticle.extra.media.map(async ({ url }) => {
+                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                        return {
+                                            path,
+                                            media_type: getMediaType(path),
+                                        }
+                                    }),
                                 )
                                 new_files = new_files.concat(extra_files)
                             }
                         }
                         if (new_files.length > 0) {
                             ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
-                            paths = paths.concat(new_files)
+                            maybe_media_files = maybe_media_files.concat(new_files)
                         }
                     }
                     currentArticle = currentArticle.ref
                 }
-                // maybe fallback to default
-                maybe_media_files = paths.map((path) => ({
-                    path,
-                    media_type: getMediaType(path),
-                }))
             }
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
             const text = this.articleToText(article)
             // 对所有订阅者进行转发
-            for (const target of to) {
+            for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
                 try {
                     await target.send(text, {
                         media: maybe_media_files,
                         timestamp: article.created_at,
+                        runtime_config,
                     })
-                    await DB.ForwardBy.save(article.id, target.id, 'article')
+                    let currentArticle: ArticleWithId | null = article
+                    while (currentArticle) {
+                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                        currentArticle = currentArticle.ref as ArticleWithId | null
+                    }
                 } catch (e) {
                     ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                 }
@@ -489,7 +512,11 @@ class ForwarderPools extends BaseCompatibleModel {
     /**
      * 一次性任务，并不需要保存转发状态
      */
-    async processFollowsTask(ctx: TaskScheduler.TaskCtx, websites: Array<string>, forwarders: Array<BaseForwarder>) {
+    async processFollowsTask(
+        ctx: TaskScheduler.TaskCtx,
+        websites: Array<string>,
+        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
+    ) {
         if (websites.length === 0) {
             ctx.log?.error(`No websites found`)
             return
@@ -526,13 +553,23 @@ class ForwarderPools extends BaseCompatibleModel {
         // 开始转发
         // follows to texts
         const texts = [] as Array<string>
+        const _results = orderBy(Array.from(results.entries()), (i) => i[0], 'asc')
         // convert to string
-        for (let [platform, follows] of results.entries()) {
+        for (let [platform, follows] of _results) {
+            if (follows.length === 0) {
+                ctx.log?.warn(`No follows found for ${platform}`)
+                continue
+            }
             // 按粉丝数量大的排序
             follows = orderBy(follows, (f) => f[0].followers, 'desc')
-            const [cur, pre] = follows[0]
+            const follow = follows[0]
+            if (!follow) {
+                ctx.log?.warn(`No follows found for ${platform}`)
+                continue
+            }
+            const [cur, pre] = follow
             let text_to_send =
-                `${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
+                `${platformNameMap[platform]}:\n${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
                 follows
                     .map(([cur, pre]) => {
                         let text = `${cur.username}\n${' '.repeat(4)}`
@@ -547,17 +584,18 @@ class ForwarderPools extends BaseCompatibleModel {
                         return text
                     })
                     .join('\n')
-            if (task_title) {
-                text_to_send = `${task_title}\n${text_to_send}`
-            }
             texts.push(text_to_send)
         }
         // 对所有订阅者进行转发
-        const texts_to_send = texts.join('\n\n')
-        for (const target of forwarders) {
+        let texts_to_send = texts.join('\n\n')
+        if (task_title) {
+            texts_to_send = `${task_title}\n${texts_to_send}`
+        }
+        for (const { forwarder: target, runtime_config } of forwarders) {
             try {
                 await target.send(texts_to_send, {
                     timestamp: dayjs().unix(),
+                    runtime_config,
                 })
                 /**
                  * 假设follows并不需要保存转发状态，因为任务基本上是一天一次
@@ -578,11 +616,28 @@ class ForwarderPools extends BaseCompatibleModel {
      * 如果没有找到，则新创建一个映射
      * 并注册新的订阅者
      */
-    getOrInitForwarders(id: string, subscribers: Forwarder['subscribers'], cfg: Forwarder['cfg_forwarder']) {
+    getOrInitForwarders(
+        id: string,
+        subscribers: Forwarder['subscribers'],
+        cfg: Forwarder['cfg_forwarder'],
+    ): Array<ForwardToInstanceWithRuntimeConfig> {
         let wrap = this.subscribers.get(id)
         if (!wrap) {
             const newWrap = {
-                to: new Set(subscribers || this.forward_to.keys()),
+                to: subscribers
+                    ? subscribers.reduce((acc, s) => {
+                          if (typeof s === 'string') {
+                              acc[s] = undefined
+                          }
+                          if (typeof s === 'object') {
+                              acc[s.id] = s.cfg_forward_target
+                          }
+                          return acc
+                      }, {} as ForwardToIdWithRuntimeConfig)
+                    : this.forward_to.keys().reduce((acc, id) => {
+                          acc[id] = undefined
+                          return acc
+                      }, {} as ForwardToIdWithRuntimeConfig),
                 cfg_forwarder: cfg,
             }
             this.subscribers.set(id, newWrap)
@@ -592,13 +647,23 @@ class ForwarderPools extends BaseCompatibleModel {
         /**
          * 注册新的订阅者
          */
-        subscribers?.forEach((id) => {
-            if (!to?.has(id)) {
-                to.add(id)
+        subscribers?.forEach((s) => {
+            const id = typeof s === 'string' ? s : s.id
+            if (!(id in to)) {
+                to[id] = typeof s === 'string' ? undefined : s.cfg_forward_target
             }
         })
-        return Array.from(to)
-            .map((id) => this.forward_to.get(id))
+        return Object.entries(to)
+            .map(([id, cfg]) => {
+                const forwarder = this.forward_to.get(id)
+                if (!forwarder) {
+                    return undefined
+                }
+                return {
+                    forwarder,
+                    runtime_config: cfg,
+                }
+            })
             .filter((i) => i !== undefined)
     }
 
@@ -644,7 +709,7 @@ class ForwarderPools extends BaseCompatibleModel {
             }
 
             /* 原文 */
-            let raw_article = currentArticle.content
+            let raw_article = currentArticle.content ?? ''
             let raw_alts = []
             for (const [idx, media] of (currentArticle.media || []).entries()) {
                 if (media.type === 'photo' && media.alt) {

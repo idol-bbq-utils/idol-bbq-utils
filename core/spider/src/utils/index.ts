@@ -1,4 +1,4 @@
-import { CookieParam } from 'puppeteer-core'
+import type { CookieData } from 'puppeteer-core'
 import fs from 'fs'
 
 const UserAgent = {
@@ -12,7 +12,7 @@ const UserAgent = {
  * @param cookie_file path to cookie file
  * @returns CookieParam[]
  */
-function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<CookieParam> {
+function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<CookieData> {
     let lines = fs.readFileSync(cookie_file, 'utf8').split('\n')
     const cookies = []
     for (let line of lines) {
@@ -24,13 +24,13 @@ function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<Cookie
             continue
         }
         let fileds = line.split(new RegExp('[\t ]+'))
-        let domain = fileds[0],
+        let domain = fileds[0] || '',
             includeSubdomain = fileds[1],
             path = fileds[2],
             secure = fileds[3],
             expires = fileds[4],
-            name = fileds[5],
-            value = fileds[6]
+            name = fileds[5] || '',
+            value = fileds[6] || ''
         cookies.push({
             name,
             value,

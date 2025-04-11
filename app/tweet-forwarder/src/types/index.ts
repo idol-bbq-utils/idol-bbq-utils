@@ -1,6 +1,6 @@
-import { TaskType } from '@idol-bbq-utils/spider/types'
-import { Crawler, CrawlerConfig } from './crawler'
-import { Forwarder, ForwarderConfig, ForwardTo, ForwardToPlatformCommonConfig } from './forwarder'
+import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { Crawler, CrawlerConfig } from './crawler'
+import type { Forwarder, ForwarderConfig, ForwardTo, ForwardToPlatformCommonConfig } from './forwarder'
 
 /**
  * only crawling or forwarding or both
@@ -14,4 +14,4 @@ interface AppConfig {
     cfg_forwarder?: ForwarderConfig
 }
 
-export { AppConfig }
+export type { AppConfig }

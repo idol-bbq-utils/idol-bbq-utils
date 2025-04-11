@@ -1,6 +1,6 @@
 import { BaseTranslator } from './base'
 import axios from 'axios'
-import { TranslatorConfig, TranslatorProvider } from '@/types/translator'
+import { type TranslatorConfig, TranslatorProvider } from '@/types/translator'
 import { Logger } from '@idol-bbq-utils/log'
 
 abstract class BaseOpenai extends BaseTranslator {

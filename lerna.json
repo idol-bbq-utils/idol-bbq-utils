@@ -1,6 +1,0 @@
-{
-    "$schema": "node_modules/lerna/schemas/lerna-schema.json",
-    "version": "0.2.0",
-    "packages": ["core/*", "app/*", "docs"],
-    "npmClient": "pnpm"
-}

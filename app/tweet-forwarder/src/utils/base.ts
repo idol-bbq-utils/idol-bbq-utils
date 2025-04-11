@@ -1,6 +1,7 @@
 import { Logger } from '@idol-bbq-utils/log'
 import { CronJob } from 'cron'
 import { EventEmitter } from 'events'
+import { uniq } from 'lodash'
 
 interface Droppable {
     drop(...args: any[]): Promise<void>
@@ -76,15 +77,16 @@ function sanitizeWebsites({
     origin?: string
     paths?: Array<string>
 }): Array<string> {
+    let res = [] as Array<string>
     if (websites) {
-        return websites
+        res = res.concat(websites)
     }
     if (origin) {
         if (paths && paths.length > 0) {
-            return paths.map((p) => `${origin.replace(/\/$/, '')}/${p.replace(/^\//, '')}`)
+            res = res.concat(paths.map((p) => `${origin.replace(/\/$/, '')}/${p.replace(/^\//, '')}`))
         }
     }
-    return []
+    return uniq(res)
 }
 
 export { TaskScheduler, BaseCompatibleModel, sanitizeWebsites }

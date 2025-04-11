@@ -28,4 +28,5 @@ function getTranslator(provider: TranslatorProvider): TranslatorConstructor | nu
     return null
 }
 
-export { TranslatorConstructor, getTranslator }
+export { getTranslator }
+export type { TranslatorConstructor }

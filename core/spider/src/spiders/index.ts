@@ -33,5 +33,6 @@ namespace Spider {
 }
 
 export { Spider }
+export * from './base'
 export * as X from './x'
 export * as Instagram from './instagram'

@@ -1,7 +1,7 @@
 {
-    "name": "@idol-bbq-utils/spider",
+    "name": "@idol-bbq-utils/render",
     "version": "0.2.0",
-    "description": "For grabbing content from websites.",
+    "description": "Render text to image/svg.",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
     "license": "MIT",
@@ -13,18 +13,8 @@
         "./types": {
             "types": "./src/types.ts",
             "default": "./src/types.ts"
-        },
-        "./const": {
-            "types": "./src/const.ts",
-            "default": "./src/const.ts"
         }
     },
-    "directories": {
-        "lib": "lib"
-    },
-    "files": [
-        "lib"
-    ],
     "publishConfig": {
         "access": "public"
     },
@@ -40,8 +30,10 @@
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
-        "@idol-bbq-utils/log": "workspace:^",
-        "jsonpath-plus": "^10.2.0",
-        "puppeteer-core": "^24.6.0"
+        "react": "^19.1.0",
+        "satori": "^0.12.2"
+    },
+    "devDependencies": {
+        "@types/react": "^19.1.0"
     }
 }

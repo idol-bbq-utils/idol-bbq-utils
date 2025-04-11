@@ -1,4 +1,4 @@
-import dayjs, { ManipulateType } from 'dayjs'
+import dayjs, { type ManipulateType } from 'dayjs'
 
 async function delay(time: number) {
     return new Promise((resolve) => {
@@ -14,7 +14,7 @@ function formatTime(time: number) {
 
 function getSubtractTime(time: number, offset: string) {
     const match = offset.match(/(\d+)([a-zA-Z]+)/)
-    if (!match) throw new Error('Invalid offset format')
+    if (match === null || !match[1] || !match[2]) throw new Error('Invalid offset format')
     return dayjs
         .unix(time)
         .subtract(parseInt(match[1], 10), match[2] as ManipulateType)
