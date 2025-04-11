@@ -4,6 +4,7 @@ import { BaseSpider, waitForResponse } from './base'
 import { Page } from 'puppeteer-core'
 
 import { JSONPath } from 'jsonpath-plus'
+import { defaultViewport } from './base'
 
 enum ArticleTypeEnum {
     /**
@@ -257,10 +258,7 @@ namespace InsApiJsonParser {
                 height: number
             }
         } = {
-            viewport: {
-                width: 954,
-                height: 2,
-            },
+            viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.Instagram>>> {
         let reasonable_jsons: any = {
@@ -287,7 +285,7 @@ namespace InsApiJsonParser {
                 }
             }
         })
-        await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+        await page.setViewport(config.viewport ?? defaultViewport)
         await page.goto(url)
         try {
             await checkLogin(page)
@@ -325,13 +323,10 @@ namespace InsApiJsonParser {
                 height: number
             }
         } = {
-            viewport: {
-                width: 954,
-                height: 2,
-            },
+            viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.Instagram>>> {
-        await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+        await page.setViewport(config.viewport ?? defaultViewport)
         await page.goto(url)
         try {
             await checkLogin(page)

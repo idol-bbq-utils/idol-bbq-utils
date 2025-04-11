@@ -4,6 +4,7 @@ import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 import { JSONPath } from 'jsonpath-plus'
 import { waitForResponse } from '@/spiders/base'
+import { defaultViewport } from './base'
 
 enum ArticleTypeEnum {
     /**
@@ -375,10 +376,7 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: {
-                width: 954,
-                height: 2,
-            },
+            viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
@@ -399,7 +397,7 @@ namespace XApiJsonParser {
             }
         })
         try {
-            await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+            await page.setViewport(config.viewport ?? defaultViewport)
             await page.goto(url)
             await checkLogin(page)
             await checkSomethingWrong(page)
@@ -429,10 +427,7 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: {
-                width: 954,
-                height: 2,
-            },
+            viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
@@ -452,7 +447,7 @@ namespace XApiJsonParser {
                     })
             }
         })
-        await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+        await page.setViewport(config.viewport ?? defaultViewport)
         await page.goto(url)
         try {
             await checkLogin(page)
@@ -491,7 +486,7 @@ namespace XApiJsonParser {
                     })
             }
         })
-        await page.setViewport({ width: 1080, height: 2 })
+        await page.setViewport(defaultViewport)
         await page.goto(url)
 
         const data = await waitForTweets

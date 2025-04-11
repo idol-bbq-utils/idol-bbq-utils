@@ -144,4 +144,9 @@ function waitForResponse(
     return waitForEvent(page, 'response', handler)
 }
 
-export { BaseSpider, waitForEvent, waitForResponse }
+const defaultViewport = {
+    width: 1,
+    height: 1,
+}
+
+export { BaseSpider, waitForEvent, waitForResponse, defaultViewport }

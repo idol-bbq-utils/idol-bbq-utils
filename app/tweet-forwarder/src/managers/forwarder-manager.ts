@@ -553,8 +553,9 @@ class ForwarderPools extends BaseCompatibleModel {
         // 开始转发
         // follows to texts
         const texts = [] as Array<string>
+        const _results = orderBy(Array.from(results.entries()), (i) => i[0], 'asc')
         // convert to string
-        for (let [platform, follows] of results.entries()) {
+        for (let [platform, follows] of _results) {
             if (follows.length === 0) {
                 ctx.log?.warn(`No follows found for ${platform}`)
                 continue
@@ -708,7 +709,7 @@ class ForwarderPools extends BaseCompatibleModel {
             }
 
             /* 原文 */
-            let raw_article = currentArticle.content
+            let raw_article = currentArticle.content ?? ''
             let raw_alts = []
             for (const [idx, media] of (currentArticle.media || []).entries()) {
                 if (media.type === 'photo' && media.alt) {
