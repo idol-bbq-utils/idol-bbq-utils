@@ -72,11 +72,11 @@ export class FontDetector {
     private addDetectors(input: string) {
         const regex = /font-family:\s*'(.+?)';.+?unicode-range:\s*(.+?);/gms
         const matches = input.matchAll(regex)
-
         for (const [, _lang, range] of matches) {
             if (!_lang) continue
             if (!range) continue
             const lang = _lang.replaceAll(' ', '+')
+
             if (!this.rangesByLang[lang]) {
                 this.rangesByLang[lang] = []
             }
@@ -92,8 +92,7 @@ function convert(input: string): UnicodeRange {
         .map((range) => {
             range = range.replaceAll('U+', '')
             const [start, end] = range.split('-').map((hex) => parseInt(hex, 16))
-
-            if (end !== undefined && isNaN(end) && start) {
+            if ((end === undefined || (end !== undefined && isNaN(end))) && start) {
                 return start
             }
             if (start !== undefined && end !== undefined && !isNaN(start) && !isNaN(end)) {
@@ -105,7 +104,6 @@ function convert(input: string): UnicodeRange {
 
 function checkSegmentInRange(segment: string, range: UnicodeRange): boolean {
     const codePoint = segment.codePointAt(0)
-
     if (!codePoint) return false
 
     return range.some((val) => {
