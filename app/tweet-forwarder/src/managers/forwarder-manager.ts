@@ -6,7 +6,7 @@ import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/ba
 import type { AppConfig } from '@/types'
 import { Platform, type MediaType, type TaskType } from '@idol-bbq-utils/spider/types'
 import DB from '@/db'
-import type { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
+import type { Article, ArticleWithId, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { type MediaTool, MediaToolEnum } from '@/types/media'
 import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
@@ -14,14 +14,13 @@ import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
 import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
 import { formatTime } from '@/utils/time'
-import { platformArticleMapToActionText, platformNameMap } from '@idol-bbq-utils/spider/const'
+import { platformNameMap } from '@idol-bbq-utils/spider/const'
+import { articleToText, followsToText } from '@idol-bbq-utils/render'
 import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
 import { orderBy } from 'lodash'
 
 type Forwarder = RealForwarder<TaskType>
-
-const TAB = ' '.repeat(4)
 
 interface TaskResult {
     taskId: string
@@ -473,7 +472,7 @@ class ForwarderPools extends BaseCompatibleModel {
                 }
             }
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
-            const text = this.articleToText(article)
+            const text = articleToText(article)
             // 对所有订阅者进行转发
             for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
@@ -551,43 +550,7 @@ class ForwarderPools extends BaseCompatibleModel {
         }
 
         // 开始转发
-        // follows to texts
-        const texts = [] as Array<string>
-        const _results = orderBy(Array.from(results.entries()), (i) => i[0], 'asc')
-        // convert to string
-        for (let [platform, follows] of _results) {
-            if (follows.length === 0) {
-                ctx.log?.warn(`No follows found for ${platform}`)
-                continue
-            }
-            // 按粉丝数量大的排序
-            follows = orderBy(follows, (f) => f[0].followers, 'desc')
-            const follow = follows[0]
-            if (!follow) {
-                ctx.log?.warn(`No follows found for ${platform}`)
-                continue
-            }
-            const [cur, pre] = follow
-            let text_to_send =
-                `${platformNameMap[platform]}:\n${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
-                follows
-                    .map(([cur, pre]) => {
-                        let text = `${cur.username}\n${' '.repeat(4)}`
-                        if (pre?.followers) {
-                            text += `${pre.followers.toString().padStart(2)}  --->  `
-                        }
-                        if (cur.followers) {
-                            text += `${cur.followers.toString().padEnd(2)}`
-                        }
-                        const offset = (cur.followers || 0) - (pre?.followers || 0)
-                        text += `${TAB}${offset >= 0 ? '+' : ''}${offset.toString()}`
-                        return text
-                    })
-                    .join('\n')
-            texts.push(text_to_send)
-        }
-        // 对所有订阅者进行转发
-        let texts_to_send = texts.join('\n\n')
+        let texts_to_send = followsToText(orderBy(Array.from(results.entries()), (i) => i[0], 'asc'))
         if (task_title) {
             texts_to_send = `${task_title}\n${texts_to_send}`
         }
@@ -665,84 +628,6 @@ class ForwarderPools extends BaseCompatibleModel {
                 }
             })
             .filter((i) => i !== undefined)
-    }
-
-    /**
-     * 原文 -> 媒体文件alt -> extra
-     */
-    private articleToText(article: Article) {
-        let currentArticle: Article | null = article
-        let format_article = ''
-        while (currentArticle) {
-            const metaline = this.formatMetaline(currentArticle)
-            format_article += `${metaline}`
-            if (currentArticle.content) {
-                format_article += '\n\n'
-            }
-            if (currentArticle.translated_by) {
-                /***** 翻译原文 *****/
-                let translation = currentArticle.translation || ''
-                /***** 翻译原文结束 *****/
-
-                /***** 图片描述翻译 *****/
-                let media_translations: Array<string> = []
-                for (const [idx, media] of (currentArticle.media || []).entries()) {
-                    if (media.type === 'photo' && media.translation) {
-                        media_translations.push(`图片${idx + 1} alt: ${media.translation as string}`)
-                    }
-                }
-                if (media_translations.length > 0) {
-                    translation = `${translation}\n\n${media_translations.join(`\n---\n`)}`
-                }
-                /***** 图片描述结束 *****/
-
-                /***** extra描述 *****/
-                if (currentArticle.extra) {
-                    const extra = currentArticle.extra as DBArticleExtractType
-                    if (extra.translation) {
-                        translation = `${translation}\n~~~\n${extra.translation}`
-                    }
-                }
-                /***** extra描述结束 *****/
-
-                format_article += `${translation}\n${'-'.repeat(6)}↑${(currentArticle.translated_by || '大模型') + '渣翻'}--↓原文${'-'.repeat(6)}\n`
-            }
-
-            /* 原文 */
-            let raw_article = currentArticle.content ?? ''
-            let raw_alts = []
-            for (const [idx, media] of (currentArticle.media || []).entries()) {
-                if (media.type === 'photo' && media.alt) {
-                    raw_alts.push(`photo${idx + 1} alt: ${media.alt as string}`)
-                }
-            }
-            if (raw_alts.length > 0) {
-                raw_article = `${raw_article}\n\n${raw_alts.join(`\n---\n`)}`
-            }
-            if (currentArticle.extra) {
-                const extra = currentArticle.extra as DBArticleExtractType
-                // card parser
-                if (extra.content) {
-                    raw_article = `${raw_article}\n~~~\n${extra.content}`
-                }
-            }
-            format_article += `${raw_article}`
-            if (currentArticle.ref) {
-                format_article += `\n\n${'-'.repeat(12)}\n\n`
-            }
-            // get ready for next run
-            currentArticle = currentArticle.ref
-        }
-        return format_article
-    }
-
-    private formatMetaline(article: Article) {
-        let metaline =
-            [article.username, article.u_id, `来自${platformNameMap[article.platform]}`].filter(Boolean).join(TAB) +
-            '\n'
-        const action = platformArticleMapToActionText[article.platform][article.type]
-        metaline += [formatTime(article.created_at), `${action}：`].join(TAB)
-        return metaline
     }
 }
 

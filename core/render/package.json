@@ -34,9 +34,11 @@
         "@resvg/resvg-js": "^2.6.2",
         "dayjs": "^1.11.13",
         "react": "^19.1.0",
-        "satori": "^0.12.2"
+        "satori": "^0.12.2",
+        "lodash": "^4.17.21"
     },
     "devDependencies": {
-        "@types/react": "^19.1.0"
+        "@types/react": "^19.1.0",
+        "@types/lodash": "^4.17.6"
     }
 }

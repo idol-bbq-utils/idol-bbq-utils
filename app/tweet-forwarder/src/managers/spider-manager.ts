@@ -14,7 +14,7 @@ import { TranslatorProvider } from '@/types/translator'
 import { getTranslator } from '@/middleware/translator'
 import { pRetry } from '@idol-bbq-utils/utils'
 import DB from '@/db'
-import type { Article, DBArticleExtractType } from '@/db'
+import type { Article } from '@/db'
 import { RETRY_LIMIT } from '@/config'
 import { delay } from '@/utils/time'
 import { shuffle } from 'lodash'
@@ -451,7 +451,7 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (currentArticle.extra) {
-                    const extra_ref = currentArticle.extra as DBArticleExtractType
+                    const extra_ref = currentArticle.extra
                     let { content, translation } = extra_ref
                     if (content && !BaseTranslator.isValidTranslation(translation)) {
                         const content_translation = await pRetry(() => translator.translate(content), {
