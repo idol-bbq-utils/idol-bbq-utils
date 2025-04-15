@@ -36,6 +36,7 @@ class GoogleLLMTranslator extends BaseTranslator {
             ],
         })
         this.prompt = config?.prompt || this.TRANSLATION_PROMPT
+        this.NAME = config?.name || this.NAME
     }
     public async init() {
         await super.init()
