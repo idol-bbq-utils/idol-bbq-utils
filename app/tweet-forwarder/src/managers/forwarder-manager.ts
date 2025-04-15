@@ -245,6 +245,7 @@ class ForwarderPools extends BaseCompatibleModel {
             cfg_forwarder,
             name,
             subscribers,
+            cfg_forward_target,
         } = task.data as Forwarder
         ctx.log = this.log?.child({ label: name, trace_id: taskId })
         // prepare
@@ -281,6 +282,7 @@ class ForwarderPools extends BaseCompatibleModel {
                             websites,
                             cfg_forwarder,
                             subscribers,
+                            cfg_forward_target,
                         },
                     },
                 })
@@ -322,10 +324,11 @@ class ForwarderPools extends BaseCompatibleModel {
     }
 
     async processArticleTask(ctx: TaskScheduler.TaskCtx) {
-        const { websites, subscribers, cfg_forwarder } = ctx.task.data as {
+        const { websites, subscribers, cfg_forwarder, cfg_forward_target } = ctx.task.data as {
             websites: Array<string>
             subscribers: Forwarder['subscribers']
             cfg_forwarder: Forwarder['cfg_forwarder']
+            cfg_forward_target: Forwarder['cfg_forward_target']
         }
         const batchId = crypto
             .createHash('md5')
@@ -583,17 +586,22 @@ class ForwarderPools extends BaseCompatibleModel {
         id: string,
         subscribers: Forwarder['subscribers'],
         cfg: Forwarder['cfg_forwarder'],
+        cfg_forward_target?: Forwarder['cfg_forward_target'],
     ): Array<ForwardToInstanceWithRuntimeConfig> {
+        const common_cfg = cfg_forward_target
         let wrap = this.subscribers.get(id)
         if (!wrap) {
             const newWrap = {
                 to: subscribers
                     ? subscribers.reduce((acc, s) => {
                           if (typeof s === 'string') {
-                              acc[s] = undefined
+                              acc[s] = common_cfg
                           }
                           if (typeof s === 'object') {
-                              acc[s.id] = s.cfg_forward_target
+                              acc[s.id] = {
+                                  ...common_cfg,
+                                  ...s.cfg_forward_target,
+                              }
                           }
                           return acc
                       }, {} as ForwardToIdWithRuntimeConfig)
@@ -613,7 +621,13 @@ class ForwarderPools extends BaseCompatibleModel {
         subscribers?.forEach((s) => {
             const id = typeof s === 'string' ? s : s.id
             if (!(id in to)) {
-                to[id] = typeof s === 'string' ? undefined : s.cfg_forward_target
+                to[id] =
+                    typeof s === 'string'
+                        ? common_cfg
+                        : {
+                              ...common_cfg,
+                              ...s.cfg_forward_target,
+                          }
             }
         })
         return Object.entries(to)

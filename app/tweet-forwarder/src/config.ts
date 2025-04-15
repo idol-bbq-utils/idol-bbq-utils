@@ -27,7 +27,7 @@ const log: Logger = createLogger({
             filename: `${CACHE_DIR_ROOT}/logs/tweet-forwarder-%DATE%.log`,
             datePattern: 'YYYY-MM-DD_HH',
             maxSize: '20m',
-            maxFiles: '14d',
+            maxFiles: '3d',
         }),
     ],
 })

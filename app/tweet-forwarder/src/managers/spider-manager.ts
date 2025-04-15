@@ -236,7 +236,7 @@ class SpiderPools extends BaseCompatibleModel {
         const page = await this.browser.newPage()
         const cookie_file = cfg_crawler?.cookie_file
         const user_agent = cfg_crawler?.user_agent
-        cookie_file && (await page.setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
+        cookie_file && (await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
         await page.setUserAgent(user_agent || UserAgent.CHROME)
 
         let result: Array<CrawlerTaskResult> = []

@@ -127,6 +127,8 @@ interface Forwarder<T extends TaskType> {
     >
 
     cfg_forwarder?: ForwarderConfig
+
+    cfg_forward_target?: ForwardToPlatformCommonConfig
 }
 
 export { ForwardToPlatformEnum }
