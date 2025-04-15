@@ -13,8 +13,6 @@ import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
 import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
-import { formatTime } from '@/utils/time'
-import { platformNameMap } from '@idol-bbq-utils/spider/const'
 import { articleToText, followsToText } from '@idol-bbq-utils/render'
 import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
@@ -337,7 +335,7 @@ class ForwarderPools extends BaseCompatibleModel {
         for (const website of websites) {
             // 单次爬虫任务
             const url = new URL(website)
-            const forwarders = this.getOrInitForwarders(batchId, subscribers, cfg_forwarder)
+            const forwarders = this.getOrInitForwarders(batchId, subscribers, cfg_forwarder, cfg_forward_target)
             if (forwarders.length === 0) {
                 continue
             }
