@@ -85,7 +85,7 @@ abstract class Forwarder extends BaseForwarder {
         }
         if (accept_keywords) {
             const regex = new RegExp(accept_keywords.join('|'), 'i')
-            if (!regex.test(text) || (original_text && !regex.test(original_text))) {
+            if (!regex.test(text) && original_text && !regex.test(original_text)) {
                 this.log?.warn(`blocked: accept keywords not matched`)
                 return Promise.resolve()
             }
