@@ -13,7 +13,7 @@ enum TranslatorProvider {
      */
     None = 'None',
     /**
-     * default model id gemini
+     * default model id gemini-2.0-flash
      */
     Google = 'Google',
     /**

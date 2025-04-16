@@ -12,8 +12,8 @@ import { type MediaTool, MediaToolEnum } from '@/types/media'
 import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
-import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
-import { articleToText, followsToText } from '@idol-bbq-utils/render'
+import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile, writeImgToFile } from '@/middleware/media'
+import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
 import { orderBy } from 'lodash'
@@ -192,6 +192,7 @@ class ForwarderPools extends BaseCompatibleModel {
         }
     > = new Map()
     private props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>
+    private ArticleConverter = new ImgConverter()
     // private workers:
     constructor(props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>, emitter: EventEmitter, log?: Logger) {
         super()
@@ -397,11 +398,27 @@ class ForwarderPools extends BaseCompatibleModel {
         ctx.log?.info(`Ready to send articles for ${url}`)
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
+            let articleToImgSuccess = false
             ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.forwarder.id).join(', ')}`)
             let maybe_media_files = [] as Array<{
                 path: string
                 media_type: MediaType
             }>
+            if (cfg_forwarder?.render_type === 'img') {
+                try {
+                    const imgBuffer = await this.ArticleConverter.articleToImg(article, process.env.FONTS_DIR)
+                    ctx.log?.debug(`Converted article ${article.a_id} to img successfully`)
+                    const path = writeImgToFile(imgBuffer, `${ctx.taskId}-${article.a_id}-rendered.png`)
+
+                    maybe_media_files.push({
+                        path,
+                        media_type: 'photo',
+                    })
+                    articleToImgSuccess = true
+                } catch (e) {
+                    ctx.log?.error(`Error while converting article to img: ${e}`)
+                }
+            }
             // article to photo
 
             // 下载媒体文件
@@ -473,7 +490,7 @@ class ForwarderPools extends BaseCompatibleModel {
                 }
             }
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
-            const text = articleToText(article)
+            const text = articleToImgSuccess ? formatMetaline(article) : articleToText(article)
             // 对所有订阅者进行转发
             for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)

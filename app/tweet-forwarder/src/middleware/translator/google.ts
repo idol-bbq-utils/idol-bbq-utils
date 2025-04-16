@@ -15,7 +15,7 @@ class GoogleLLMTranslator extends BaseTranslator {
         super(api_key, log, config)
         this.genAI = new GoogleGenerativeAI(api_key)
         this.model = this.genAI.getGenerativeModel({
-            model: this.config?.model_id || 'gemini-1.0-pro',
+            model: this.config?.model_id || 'gemini-2.0-flash',
             safetySettings: [
                 {
                     category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,

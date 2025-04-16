@@ -1,6 +1,11 @@
 import type { Article } from '@/types'
 import { getIconCode, loadEmoji, type apis } from './utils/twemoji'
 import { FontDetector, languageFontMap } from './utils/font'
+import { articleParser, CARD_WIDTH } from '@/template/img/DefaultCard'
+import satori from 'satori'
+import tailwindConfig from '@/template/img/DefaultTailwindConfig'
+import { Resvg } from '@resvg/resvg-js'
+import fs from 'fs'
 
 function withCache(fn: Function) {
     const cache = new Map()
@@ -168,6 +173,42 @@ const loadDynamicAsset = withCache(async (emojiType: keyof typeof apis, _code: s
     }
 })
 
-class ImgConverter {}
+class ImgConverter {
+    constructor() {}
+    public async articleToImg(article: Article, fontsDir: string = './assets/fonts') {
+        const { height, component: Card } = articleParser(article)
+        const svg = await satori(Card, {
+            width: CARD_WIDTH,
+            height: height,
+            fonts: [
+                {
+                    name: 'Noto Sans',
+                    data: fs.readFileSync(`${fontsDir}/NotoSans-Regular.ttf`),
+                    style: 'normal',
+                    weight: 400,
+                },
+                {
+                    name: 'Noto Sans',
+                    data: fs.readFileSync(`${fontsDir}/NotoSans-Bold.ttf`),
+                    style: 'normal',
+                    weight: 700,
+                },
+            ],
+            loadAdditionalAsset: (code: string, text: string) => {
+                return loadDynamicAsset('twemoji', code, text)
+            },
+            tailwindConfig,
+        })
+        const resvg = new Resvg(svg, {
+            fitTo: {
+                mode: 'width',
+                value: CARD_WIDTH * 1.5,
+            },
+        })
+        const data = resvg.render()
+        const buffer = data.asPng()
+        return buffer
+    }
+}
 
-export { loadDynamicAsset }
+export { loadDynamicAsset, ImgConverter }

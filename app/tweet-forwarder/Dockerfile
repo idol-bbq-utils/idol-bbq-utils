@@ -12,6 +12,7 @@ WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
 COPY ./app/tweet-forwarder ./app/tweet-forwarder
 COPY ./core ./core
+COPY ./assets/fonts ./assets/fonts
 
 ENV PUPPETEER_SKIP_DOWNLOAD true
 ENV DATABASE_URL="file:/app/data.db"
@@ -43,6 +44,7 @@ RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSI
 WORKDIR /app
 COPY --from=builder /app/app/tweet-forwarder/build/main.js /app/bin.js
 COPY --from=builder /app/app/tweet-forwarder/prisma/client /app/prisma/client
+COPY --from=builder /app/assets/fonts /app/assets/fonts
 
 RUN chown -R bun:bun /app/
 
@@ -51,5 +53,6 @@ USER bun
 ENV NO_SANDBOX=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 ENV DATABASE_URL="file:/app/data.db"
+ENV FONTS_DIR=/app/assets
 
 CMD ["sh", "-c", "bun /app/bin.js"]

@@ -32,10 +32,11 @@
     "dependencies": {
         "@idol-bbq-utils/spider": "workspace:^",
         "@resvg/resvg-js": "^2.6.2",
+        "clsx": "^2.1.1",
         "dayjs": "^1.11.13",
+        "lodash": "^4.17.21",
         "react": "^19.1.0",
-        "satori": "^0.12.2",
-        "lodash": "^4.17.21"
+        "satori": "^0.12.2"
     },
     "devDependencies": {
         "@types/react": "^19.1.0",

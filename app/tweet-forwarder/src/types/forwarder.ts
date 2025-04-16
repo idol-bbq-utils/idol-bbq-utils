@@ -74,6 +74,7 @@ type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatform
 interface ForwarderConfig extends CommonCfgConfig {
     cron?: string
     media?: Media
+    render_type?: 'text' | 'img'
 }
 
 interface ForwardTo<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
