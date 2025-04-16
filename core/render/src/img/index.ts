@@ -87,8 +87,7 @@ async function loadGoogleFont(fonts: string[], text: string) {
             .forEach((fontData, i) => {
                 if (fontData) {
                     // TODO: We should be able to directly get the language code here :)
-                    const langCode = Object.entries(languageFontMap).find(([, v]) => v === _fonts[i])?.[0]
-
+                    const langCode = Object.entries(languageFontMap).find(([, v]) => v.includes(_fonts[i] || ''))?.[0]
                     if (langCode) {
                         const buffer = encodeFontInfoAsArrayBuffer(langCode, fontData)
                         encodedFontBuffers.push(buffer)
@@ -116,6 +115,10 @@ const loadDynamicAsset = withCache(async (emojiType: keyof typeof apis, _code: s
     }
 
     const codes = _code.split('|')
+    // Some magic symbol
+    if (codes.includes('symbol') && !codes.includes('ja-JP') && text.includes('┈')) {
+        codes.push('ja-JP')
+    }
 
     // Try to load from Google Fonts.
     const fonts = codes

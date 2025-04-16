@@ -135,7 +135,7 @@ export const languageFontMap = {
     'te-IN': 'Noto+Sans+Telugu',
     devanagari: 'Noto+Sans+Devanagari',
     kannada: 'Noto+Sans+Kannada',
-    symbol: ['Noto+Sans+Symbols', 'Noto+Sans+Symbols+2'],
+    symbol: ['Noto+Sans+Symbols+2', 'Noto+Sans+Symbols'],
     math: 'Noto+Sans+Math',
     unknown: 'Noto+Sans',
 }
