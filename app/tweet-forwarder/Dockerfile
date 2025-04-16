@@ -54,6 +54,6 @@ USER bun
 ENV NO_SANDBOX=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 ENV DATABASE_URL="file:/app/data.db"
-ENV FONTS_DIR=/app/assets
+ENV FONTS_DIR=/app/assets/fonts
 
 CMD ["sh", "-c", "bun /app/bin.js"]
