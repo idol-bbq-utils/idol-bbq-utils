@@ -102,27 +102,24 @@ abstract class Forwarder extends BaseForwarder {
         }
         const _log = this.log
         _log?.debug(`trying to send text with length ${text.length}`)
-        return new Promise(async (resolve, reject) => {
-            let text_to_be_sent = text
-            let i = 0
-            let texts = []
-            while (text_to_be_sent.length > this.BASIC_TEXT_LIMIT) {
-                const current_chunk = text_to_be_sent.slice(0, this.TEXT_LIMIT)
-                texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${current_chunk}${CHUNK_SEPARATOR_NEXT}`)
-                text_to_be_sent = text_to_be_sent.slice(this.TEXT_LIMIT)
-                i = i + 1
-            }
-            texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${text_to_be_sent}`)
-            await pRetry(() => this.realSend(texts, props), {
-                retries: RETRY_LIMIT,
-                onFailedAttempt(e) {
-                    _log?.error(`send texts failed, retrying...: ${e.originalError.message}`)
-                },
-            }).catch((e) => {
-                _log?.error(`send texts failed: ${e.message}`)
-            })
-            resolve(true)
+
+        let text_to_be_sent = text
+        let i = 0
+        let texts = []
+        while (text_to_be_sent.length > this.BASIC_TEXT_LIMIT) {
+            const current_chunk = text_to_be_sent.slice(0, this.TEXT_LIMIT)
+            texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${current_chunk}${CHUNK_SEPARATOR_NEXT}`)
+            text_to_be_sent = text_to_be_sent.slice(this.TEXT_LIMIT)
+            i = i + 1
+        }
+        texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${text_to_be_sent}`)
+        await pRetry(() => this.realSend(texts, props), {
+            retries: RETRY_LIMIT,
+            onFailedAttempt(e) {
+                _log?.error(`send texts failed, retrying...: ${e.originalError.message}`)
+            },
         })
+        return
     }
 
     textFilter(text: string, regexps: ForwardToPlatformConfig['replace_regex']): string {
