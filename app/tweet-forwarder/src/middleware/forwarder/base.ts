@@ -48,6 +48,7 @@ abstract class BaseForwarder extends BaseCompatibleModel {
             }>
             timestamp?: number
             runtime_config?: ForwardToPlatformCommonConfig
+            original_text?: string
         },
     ): Promise<any>
 }
@@ -71,7 +72,7 @@ abstract class Forwarder extends BaseForwarder {
     }
 
     async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
-        const { timestamp, runtime_config: _runtime_config } = props || {}
+        const { timestamp, runtime_config: _runtime_config, original_text } = props || {}
         const runtime_config = {
             ...this.config,
             ..._runtime_config,
@@ -84,14 +85,14 @@ abstract class Forwarder extends BaseForwarder {
         }
         if (accept_keywords) {
             const regex = new RegExp(accept_keywords.join('|'), 'i')
-            if (!regex.test(text)) {
+            if (!regex.test(text) || (original_text && !regex.test(original_text))) {
                 this.log?.warn(`blocked: accept keywords not matched`)
                 return Promise.resolve()
             }
         }
         if (filter_keywords) {
             const regex = new RegExp(filter_keywords.join('|'), 'i')
-            if (regex.test(text)) {
+            if (regex.test(text) || (original_text && regex.test(original_text))) {
                 this.log?.warn(`blocked: filter keywords matched`)
                 return Promise.resolve()
             }

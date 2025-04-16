@@ -489,8 +489,9 @@ class ForwarderPools extends BaseCompatibleModel {
                     currentArticle = currentArticle.ref
                 }
             }
+            const fullText = articleToText(article)
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
-            const text = articleToImgSuccess ? formatMetaline(article) : articleToText(article)
+            const text = articleToImgSuccess ? formatMetaline(article) : fullText
             // 对所有订阅者进行转发
             for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
@@ -499,6 +500,7 @@ class ForwarderPools extends BaseCompatibleModel {
                         media: maybe_media_files,
                         timestamp: article.created_at,
                         runtime_config,
+                        original_text: articleToImgSuccess ? fullText : undefined,
                     })
                     let currentArticle: ArticleWithId | null = article
                     while (currentArticle) {
