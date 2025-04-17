@@ -86,17 +86,29 @@ abstract class Forwarder extends BaseForwarder {
         // 白名单
         if (accept_keywords) {
             const regex = new RegExp(accept_keywords.join('|'), 'i')
-            // 如果需要转发的内容不包含关键词 或者 原文不包含关键词，则不转发
-            if (!regex.test(text) || (original_text && !regex.test(original_text))) {
-                this.log?.warn(`blocked: accept keywords not matched`)
+            let blocked = false
+            // 如果需要转发的内容不包含关键词
+            // 如果原文为空则ok，否则检查原文是否包含关键词
+            // 如果原文也不包含关键词，则不转发
+            if (!regex.test(text)) {
+                blocked = true
+            }
+            blocked = original_text ? !regex.test(original_text) : blocked
+            if (blocked) {
+                this.log?.warn(`blocked: accept keywords matched`)
                 return Promise.resolve()
             }
         }
         // 黑名单
         if (filter_keywords) {
             const regex = new RegExp(filter_keywords.join('|'), 'i')
+            let blocked = false
             // 如果需要转发的内容包含关键词 或者 原文包含关键词，则不转发
-            if (regex.test(text) || (original_text && regex.test(original_text))) {
+            if (regex.test(text)) {
+                blocked = true
+            }
+            blocked = original_text ? regex.test(original_text) : blocked
+            if (blocked) {
                 this.log?.warn(`blocked: filter keywords matched`)
                 return Promise.resolve()
             }
