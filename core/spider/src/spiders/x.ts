@@ -261,7 +261,7 @@ namespace XApiJsonParser {
             .filter(Boolean)
     }
 
-    function tweetParser(result: any): GenericArticle<Platform> {
+    function tweetParser(result: any): GenericArticle<Platform.X> | null {
         // TweetWithVisibilityResults --> result.tweet
         const legacy = result.legacy || result.tweet?.legacy
         const userLegacy = (result.core || result.tweet?.core)?.user_results?.result?.legacy
@@ -290,9 +290,11 @@ namespace XApiJsonParser {
             extra: Card.cardParser(result.card?.legacy),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
-
         // 处理转发类型
         if (legacy?.retweeted_status_result) {
+            if (!legacy.retweeted_status_result.result) {
+                return null
+            }
             tweet.type = ArticleTypeEnum.RETWEET
             tweet.content = ''
             tweet.ref = tweetParser(legacy.retweeted_status_result.result)
@@ -307,7 +309,7 @@ namespace XApiJsonParser {
                 tweet.content = tweet.content.replace(url, '')
             }
         }
-        return tweet
+        return tweet as GenericArticle<Platform.X>
     }
 
     export function tweetsArticleParser(json: any) {
@@ -316,7 +318,7 @@ namespace XApiJsonParser {
             .filter((t: { entryId: string }) => t.entryId.startsWith('tweet-'))
             .map((t: { content: any }) => t.content?.itemContent?.tweet_results?.result)
             .filter(Boolean)
-        return tweets.map(tweetParser)
+        return tweets.map(tweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
     }
 
     export function tweetsRepliesParser(json: any) {
