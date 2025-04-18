@@ -1,8 +1,10 @@
-import { GenericArticle, GenericFollows, GenericMediaInfo, Platform, TaskType, TaskTypeResult } from '@/types'
+import { Platform } from '@/types'
+import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
 import { BaseSpider, waitForResponse } from './base'
 import { Page } from 'puppeteer-core'
 
 import { JSONPath } from 'jsonpath-plus'
+import { defaultViewport } from './base'
 
 enum ArticleTypeEnum {
     /**
@@ -10,9 +12,13 @@ enum ArticleTypeEnum {
      */
     POST = 'post',
     /**
-     * as known as highlights
+     * https://www.instagram.com/stories/username
      */
-    STORIES = 'stories',
+    STORY = 'story',
+    /**
+     * https://www.instagram.com/stories/highlights/username
+     */
+    HIGHLIGHTS = 'highlights',
     /**
      * TODO
      *
@@ -40,13 +46,16 @@ class InstagramSpider extends BaseSpider {
         const { id } = result
         const _url = `${this.BASE_URL}${id}`
         if (task_type === 'article') {
-            this.log?.info('Trying to grab posts and highlights.')
-            return (await InsApiJsonParser.grabPosts(page, _url)) as TaskTypeResult<T, Platform.Instagram>
+            this.log?.info('Trying to grab posts.')
+            const res = await InsApiJsonParser.grabPosts(page, _url)
+            this.log?.info(`Trying to grab stories.`)
+            const stories = await InsApiJsonParser.grabStories(page, `${this.BASE_URL}stories/${id}/`)
+            return res.concat(stories) as TaskTypeResult<T, Platform.Instagram>
         }
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return (await InsApiJsonParser.grabFollowsNumer(page, _url)) as TaskTypeResult<T, Platform.Instagram>
+            return (await InsApiJsonParser.grabFollowsNumber(page, _url)) as TaskTypeResult<T, Platform.Instagram>
         }
 
         throw new Error('Invalid task type')
@@ -158,12 +167,30 @@ namespace InsApiJsonParser {
             created_at: 0,
             content: node?.title,
             url: `https://www.instagram.com/stories/highlights/${id}/`,
-            type: ArticleTypeEnum.STORIES,
+            type: ArticleTypeEnum.HIGHLIGHTS,
             ref: null,
             has_media: true,
             media: null,
             extra: null,
             u_avatar: null,
+        }
+    }
+    const STORY_ACCESSIBILITY_CAPTION_REGEX = /(?<=.*?\d+\.\s).*/
+    function storyParser(item: any): GenericArticle<Platform.Instagram> {
+        return {
+            platform: Platform.Instagram,
+            a_id: item?.id.split('_')[0],
+            u_id: '',
+            username: '',
+            created_at: item?.taken_at,
+            content: item?.accessibility_caption?.match(STORY_ACCESSIBILITY_CAPTION_REGEX)?.[0] || null,
+            url: '',
+            type: ArticleTypeEnum.STORY,
+            ref: null,
+            has_media: true,
+            media: mediaParser(item),
+            extra: null,
+            u_avatar: '',
         }
     }
 
@@ -190,6 +217,34 @@ namespace InsApiJsonParser {
         }
     }
 
+    const USERNAME_REGEX_FROM_OG_TITLE =
+        /(?:趁\s*(?<username>.*?)\s*的这条快拍|Watch this story by (?<username>.*?) on Instagram)/i
+    async function storiesParser(json: any, page: Page): Promise<Array<GenericArticle<Platform.Instagram>>> {
+        const reels_media = JSONPath({ path: '$..reels_media', json })[0]
+        const res = reels_media
+            .map((i: any) => {
+                const stories = i.items
+                    .map((item: any) => storyParser(item))
+                    .map((item: any) => {
+                        return {
+                            ...item,
+                            u_id: i.user?.username,
+                            url: `https://www.instagram.com/stories/${i.user?.username}/${item.a_id}`,
+                            u_avatar: i.user?.profile_pic_url,
+                        }
+                    })
+                return stories
+            })
+            .flat()
+        const og_title = await page.$('meta[property="og:title"]')
+        const title = await og_title?.evaluate((el) => el.getAttribute('content'))
+        const username = title.match(USERNAME_REGEX_FROM_OG_TITLE).groups?.username
+        for (const item of res) {
+            item.username = username
+        }
+        return res
+    }
+
     /**
      * @param url https://www.instagram.com/username
      * @description grab common posts from user page
@@ -203,10 +258,7 @@ namespace InsApiJsonParser {
                 height: number
             }
         } = {
-            viewport: {
-                width: 954,
-                height: 2,
-            },
+            viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.Instagram>>> {
         let reasonable_jsons: any = {
@@ -233,7 +285,7 @@ namespace InsApiJsonParser {
                 }
             }
         })
-        await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+        await page.setViewport(config.viewport ?? defaultViewport)
         await page.goto(url)
         try {
             await checkLogin(page)
@@ -243,21 +295,60 @@ namespace InsApiJsonParser {
             throw error
         }
 
-        const { success, error } = await waitForTweets
-        if (!success) {
-            throw error
+        const data = await waitForTweets
+        if (!data.success) {
+            throw data.error
         }
         const posts = postsParser(reasonable_jsons[PROFILE_POSTS_KEY])
         const highlights = highlightsParser(reasonable_jsons[PROFILE_HIGHLIGHTS_KEY]).map((h) => {
-            h.username = posts[0]?.username
-            h.u_avatar = posts[0]?.u_avatar
+            h.username = posts[0]?.username ?? ''
+            h.u_avatar = posts[0]?.u_avatar ?? ''
             return h
         })
-        return posts.concat(highlights)
+        return posts
     }
 
-    export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
-        let follows_json: any
+    /** 由于使用了bun做运行时，无法使用xpath做内容筛选
+     *
+     * https://github.com/puppeteer/puppeteer/issues/12570
+     *
+     * https://github.com/oven-sh/bun/issues/13853
+     */
+    export async function grabStories(
+        page: Page,
+        url: string,
+        config: {
+            viewport?: {
+                width: number
+                height: number
+            }
+        } = {
+            viewport: defaultViewport,
+        },
+    ): Promise<Array<GenericArticle<Platform.Instagram>>> {
+        await page.setViewport(config.viewport ?? defaultViewport)
+        await page.goto(url)
+        try {
+            await checkLogin(page)
+            await checkSomethingWrong(page)
+        } catch (error) {
+            throw error
+        }
+        /**
+         * Xpath selector for stories json, but not working in bun with puppeteer version after 22.10+
+         */
+        // const stores_json = await page.$('::-p-xpath(//script[@type="application/json"])')
+        const json_script_tags = await page.$$('script[type="application/json"]')
+        for (const json_script_tag of json_script_tags) {
+            const text = await json_script_tag.evaluate((el) => el.innerText)
+            if (text.includes('xdt_api__v1__feed__reels_media')) {
+                return await storiesParser(JSON.parse(text), page)
+            }
+        }
+        return []
+    }
+
+    export async function grabFollowsNumber(page: Page, url: string): Promise<GenericFollows> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('graphql/query') && response.request().method() === 'POST') {
@@ -270,8 +361,7 @@ namespace InsApiJsonParser {
                     await response
                         .json()
                         .then((json) => {
-                            follows_json = json
-                            done()
+                            done(json)
                         })
                         .catch((e) => {
                             fail(e)
@@ -287,10 +377,11 @@ namespace InsApiJsonParser {
             cleanup()
             throw error
         }
-        const { success, error } = await waitForTweets
-        if (!success) {
-            throw error
+        const data = await waitForTweets
+        if (!data.success) {
+            throw data.error
         }
+        const follows_json = data.data
         return followsParser(follows_json)
     }
 }

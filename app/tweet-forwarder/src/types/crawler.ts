@@ -1,6 +1,6 @@
-import { TaskType } from '@idol-bbq-utils/spider/types'
-import { CommonCfgConfig } from './common'
-import { Translator } from './translator'
+import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { CommonCfgConfig } from './common'
+import type { Translator } from './translator'
 
 interface CrawlerConfig extends CommonCfgConfig {
     /**
@@ -60,4 +60,4 @@ interface Crawler {
     cfg_crawler?: CrawlerConfig
 }
 
-export { Crawler, CrawlerConfig }
+export type { Crawler, CrawlerConfig }

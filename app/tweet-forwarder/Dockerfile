@@ -1,40 +1,32 @@
 ARG CHROME_VERSION=130.0.6723.58
 ARG GALLERY_DL_VERSION=v1.28.5
 
-FROM node:20-slim AS base
-
+FROM oven/bun:1.2.8-slim AS base
 FROM base AS builder
 
-RUN npm install -g pnpm@9.12.2
-
 RUN apt-get update \
+    # For prisma client dependencies
     && apt-get install -y openssl
 
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml lerna.json tsconfig.json ./
+COPY package.json bun.lock tsconfig.json ./
 COPY ./app/tweet-forwarder ./app/tweet-forwarder
 COPY ./core ./core
+COPY ./assets/fonts ./assets/fonts
 
 ENV PUPPETEER_SKIP_DOWNLOAD true
 ENV DATABASE_URL="file:/app/data.db"
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder generate
-RUN pnpm lerna run --scope=@idol-bbq-utils/tweet-forwarder build --include-dependencies
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --production
-
+RUN bun install --filter "./app/tweet-forwarder" --filter "./core/*" --frozen-lockfile --production
+RUN bun --filter "@idol-bbq-utils/tweet-forwarder" db:generate-client
+RUN bun --filter "@idol-bbq-utils/tweet-forwarder" build
 
 FROM base AS runner
 
 ARG CHROME_VERSION
 ARG GALLERY_DL_VERSION
-
 RUN apt-get update \
     && apt-get install -y wget gnupg \
-    && apt-get update \
-    && apt-get install -y fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
-      --no-install-recommends \
     # Required for Chrome
     && apt-get install -y fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libcurl4 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libvulkan1 libxcomposite1 libxdamage1 libxfixes3 libxkbcommon0 libxrandr2 xdg-utils \
       --no-install-recommends \
@@ -50,14 +42,18 @@ RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSI
     && chmod +x /usr/local/bin/gallery-dl
  
 WORKDIR /app
+COPY --from=builder /app/app/tweet-forwarder/build/main.js /app/bin.js
+COPY --from=builder /app/app/tweet-forwarder/build/resvgjs* /app/
+COPY --from=builder /app/app/tweet-forwarder/prisma/client /app/prisma/client
+COPY --from=builder /app/assets/fonts /app/assets/fonts
 
-COPY --from=builder /app/ .
-RUN chown -R node:node /app/
+RUN chown -R bun:bun /app/
 
-USER node
+USER bun
 
 ENV NO_SANDBOX=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 ENV DATABASE_URL="file:/app/data.db"
+ENV FONTS_DIR=/app/assets/fonts
 
-CMD ["node", "app/tweet-forwarder/lib/main.js"]
+CMD ["sh", "-c", "bun /app/bin.js"]

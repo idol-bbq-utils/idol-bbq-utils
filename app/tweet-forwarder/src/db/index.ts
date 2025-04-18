@@ -1,29 +1,13 @@
-import {
-    ArticleExtractType,
-    GenericArticle,
-    GenericFollows,
-    GenericMediaInfo,
-    Platform,
-} from '@idol-bbq-utils/spider/types'
+import { Platform } from '@idol-bbq-utils/spider/types'
+import type { ArticleExtractType, GenericArticle, GenericFollows, GenericMediaInfo } from '@idol-bbq-utils/spider/types'
 import { prisma, Prisma } from './client'
 import { getSubtractTime } from '@/utils/time'
-
-type MediaInfo = GenericMediaInfo & { translation?: string; translated_by?: string }
-type Article = Omit<GenericArticle<Platform>, 'media' | 'ref'> & {
-    translation?: string
-    translated_by?: string
-    media: Array<MediaInfo> | null
-    ref: Article | null
-}
+import type { Article } from '@idol-bbq-utils/render/types'
 
 type ArticleWithId = Article & { id: number }
 
 type DBArticle = Prisma.crawler_articleGetPayload<{}>
 type DBFollows = Prisma.crawler_followsGetPayload<{}>
-type DBArticleExtractType = ArticleExtractType<Platform> & {
-    translation?: string
-    translated_by?: string
-}
 namespace DB {
     export namespace Article {
         export async function checkExist(article: Article) {
@@ -114,7 +98,7 @@ namespace DB {
 
         async function getFullChainArticle(article: DBArticle) {
             let currentRefId = article.ref
-            let currentArticle = article as ArticleWithId
+            let currentArticle = article as unknown as ArticleWithId
             while (currentRefId) {
                 const foundArticle = await prisma.crawler_article.findUnique({
                     where: {
@@ -122,10 +106,10 @@ namespace DB {
                     },
                 })
                 currentRefId = foundArticle?.ref || null
-                currentArticle.ref = foundArticle as ArticleWithId
-                currentArticle = foundArticle as ArticleWithId
+                currentArticle.ref = foundArticle as unknown as ArticleWithId
+                currentArticle = foundArticle as unknown as ArticleWithId
             }
-            return article as ArticleWithId
+            return article as unknown as ArticleWithId
         }
 
         export async function getArticlesByName(u_id: string, platform: Platform, count = 10) {
@@ -219,4 +203,4 @@ namespace DB {
 }
 
 export default DB
-export type { Article, ArticleWithId, MediaInfo, DBFollows, DBArticleExtractType }
+export type { Article, ArticleWithId, DBFollows }

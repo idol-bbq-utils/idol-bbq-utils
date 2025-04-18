@@ -5,8 +5,8 @@
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
     "license": "MIT",
-    "main": "lib/index.js",
-    "types": "lib/index.d.ts",
+    "main": "src/index.ts",
+    "types": "src/index.ts",
     "directories": {
         "lib": "lib"
     },
@@ -19,11 +19,6 @@
     "repository": {
         "type": "git",
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
-    },
-    "scripts": {
-        "build": "tsc && tsc-alias",
-        "build:production": "tsc --build tsconfig.prod.json && tsc-alias",
-        "test": "pnpm build && node lib/test.js"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"

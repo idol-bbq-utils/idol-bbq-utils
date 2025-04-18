@@ -6,14 +6,15 @@ import { CronJob } from 'cron'
 import { BaseTranslator, TRANSLATION_ERROR_FALLBACK } from '@/middleware/translator/base'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
-import { Crawler } from '@/types/crawler'
-import { AppConfig } from '@/types'
-import { TaskType } from '@idol-bbq-utils/spider/types'
-import { BaseSpider } from 'node_modules/@idol-bbq-utils/spider/lib/spiders/base'
+import type { Crawler } from '@/types/crawler'
+import type { AppConfig } from '@/types'
+import type { TaskType } from '@idol-bbq-utils/spider/types'
+import { BaseSpider } from '@idol-bbq-utils/spider'
 import { TranslatorProvider } from '@/types/translator'
 import { getTranslator } from '@/middleware/translator'
 import { pRetry } from '@idol-bbq-utils/utils'
-import DB, { Article, DBArticleExtractType } from '@/db'
+import DB from '@/db'
+import type { Article } from '@/db'
 import { RETRY_LIMIT } from '@/config'
 import { delay } from '@/utils/time'
 import { shuffle } from 'lodash'
@@ -235,7 +236,7 @@ class SpiderPools extends BaseCompatibleModel {
         const page = await this.browser.newPage()
         const cookie_file = cfg_crawler?.cookie_file
         const user_agent = cfg_crawler?.user_agent
-        cookie_file && (await page.setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
+        cookie_file && (await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
         await page.setUserAgent(user_agent || UserAgent.CHROME)
 
         let result: Array<CrawlerTaskResult> = []
@@ -450,7 +451,7 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (currentArticle.extra) {
-                    const extra_ref = currentArticle.extra as DBArticleExtractType
+                    const extra_ref = currentArticle.extra
                     let { content, translation } = extra_ref
                     if (content && !BaseTranslator.isValidTranslation(translation)) {
                         const content_translation = await pRetry(() => translator.translate(content), {

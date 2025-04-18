@@ -1,5 +1,9 @@
 *.yaml
 *.yml
+*.md
 lib/
 dist/
 prisma/
+build/
+docs/
+test/**/*.json

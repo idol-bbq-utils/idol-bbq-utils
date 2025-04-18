@@ -1,6 +1,6 @@
-import { TaskType } from '@idol-bbq-utils/spider/types'
-import { CommonCfgConfig } from './common'
-import { Media } from './media'
+import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { CommonCfgConfig } from './common'
+import type { Media } from './media'
 
 enum ForwardToPlatformEnum {
     None = 'none',
@@ -50,7 +50,7 @@ type TaskConfigMap = {
 type TaskConfig<T extends TaskType> = TaskConfigMap[T]
 
 interface ForwardToPlatformCommonConfig {
-    replace_regex?: string | Array<string> | Array<Array<string>>
+    replace_regex?: string | [string, string] | Array<[string, string]>
     /**
      *
      * if 1d, the forwarder will only forward the article that created within 1 day
@@ -64,6 +64,8 @@ interface ForwardToPlatformCommonConfig {
      * ```
      */
     block_until?: string
+    accept_keywords?: Array<string>
+    filter_keywords?: Array<string>
 }
 
 type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> = PlatformConfigMap[T] &
@@ -72,6 +74,7 @@ type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatform
 interface ForwarderConfig extends CommonCfgConfig {
     cron?: string
     media?: Media
+    render_type?: 'text' | 'img'
 }
 
 interface ForwardTo<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
@@ -114,17 +117,21 @@ interface Forwarder<T extends TaskType> {
      */
     cfg_task?: TaskConfig<T>
     /**
-     * Array of forwarder target's id, if empty will use all targets
+     * Array of forwarder target's id or id with runtime config, if empty will use all targets
      */
-    subscribers?: Array<string>
+    subscribers?: Array<
+        | string
+        | {
+              id: string
+              cfg_forward_target?: ForwardToPlatformCommonConfig
+          }
+    >
+
     cfg_forwarder?: ForwarderConfig
+
+    cfg_forward_target?: ForwardToPlatformCommonConfig
 }
 
-export {
-    ForwardTo,
-    Forwarder,
-    ForwarderConfig,
-    ForwardToPlatformEnum,
-    ForwardToPlatformConfig,
-    ForwardToPlatformCommonConfig,
-}
+export { ForwardToPlatformEnum }
+
+export type { ForwardTo, Forwarder, ForwarderConfig, ForwardToPlatformConfig, ForwardToPlatformCommonConfig }

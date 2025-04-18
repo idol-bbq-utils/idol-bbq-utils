@@ -1,6 +1,6 @@
 import { ChatSession, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai'
 import { BaseTranslator } from './base'
-import { TranslatorConfig, TranslatorProvider } from '@/types/translator'
+import { type TranslatorConfig, TranslatorProvider } from '@/types/translator'
 import { Logger } from '@idol-bbq-utils/log'
 
 class GoogleLLMTranslator extends BaseTranslator {
@@ -15,7 +15,7 @@ class GoogleLLMTranslator extends BaseTranslator {
         super(api_key, log, config)
         this.genAI = new GoogleGenerativeAI(api_key)
         this.model = this.genAI.getGenerativeModel({
-            model: this.config?.model_id || 'gemini-1.0-pro',
+            model: this.config?.model_id || 'gemini-2.0-flash',
             safetySettings: [
                 {
                     category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
@@ -36,6 +36,7 @@ class GoogleLLMTranslator extends BaseTranslator {
             ],
         })
         this.prompt = config?.prompt || this.TRANSLATION_PROMPT
+        this.NAME = config?.name || this.NAME
     }
     public async init() {
         await super.init()

@@ -1,8 +1,10 @@
-import { ArticleExtractType, GenericArticle, GenericFollows, Platform, TaskType, TaskTypeResult } from '@/types'
+import { Platform } from '@/types'
+import type { ArticleExtractType, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
 import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 import { JSONPath } from 'jsonpath-plus'
 import { waitForResponse } from '@/spiders/base'
+import { defaultViewport } from './base'
 
 enum ArticleTypeEnum {
     /**
@@ -73,7 +75,7 @@ namespace XApiJsonParser {
                 return
             }
             media = media.sort((a, b) => b.height - a.height)
-            return media[0].url
+            return media[0]?.url
         }
 
         interface BindingValue {
@@ -95,7 +97,7 @@ namespace XApiJsonParser {
                 if (!match) return
 
                 const [, indexStr, type] = match
-                const index = parseInt(indexStr, 10)
+                const index = parseInt(indexStr || '0', 10)
 
                 if (!resultMap.has(index)) {
                     resultMap.set(index, {})
@@ -241,18 +243,25 @@ namespace XApiJsonParser {
                     }
                 }
                 if (type === 'video' || type === 'animated_gif') {
-                    return {
-                        type: 'video',
-                        url: video_info?.variants
-                            ?.filter((i: { bitrate?: number }) => i.bitrate !== undefined)
-                            .sort((a: { bitrate: number }, b: { bitrate: number }) => b.bitrate - a.bitrate)[0].url,
-                    }
+                    return [
+                        {
+                            type: 'video',
+                            url: video_info?.variants
+                                ?.filter((i: { bitrate?: number }) => i.bitrate !== undefined)
+                                .sort((a: { bitrate: number }, b: { bitrate: number }) => b.bitrate - a.bitrate)[0].url,
+                        },
+                        {
+                            type: 'video_thumbnail',
+                            url: media_url_https,
+                        },
+                    ]
                 }
             })
+            .flat()
             .filter(Boolean)
     }
 
-    function tweetParser(result: any): GenericArticle<Platform> {
+    function tweetParser(result: any): GenericArticle<Platform.X> | null {
         // TweetWithVisibilityResults --> result.tweet
         const legacy = result.legacy || result.tweet?.legacy
         const userLegacy = (result.core || result.tweet?.core)?.user_results?.result?.legacy
@@ -281,14 +290,18 @@ namespace XApiJsonParser {
             extra: Card.cardParser(result.card?.legacy),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
-
         // 处理转发类型
         if (legacy?.retweeted_status_result) {
+            if (!legacy.retweeted_status_result.result) {
+                return null
+            }
             tweet.type = ArticleTypeEnum.RETWEET
             tweet.content = ''
             tweet.ref = tweetParser(legacy.retweeted_status_result.result)
             // 转发类型推文media按照ref为准
             tweet.media = null
+            tweet.has_media = false
+            tweet.extra = null
         }
 
         if (tweet.media) {
@@ -296,7 +309,7 @@ namespace XApiJsonParser {
                 tweet.content = tweet.content.replace(url, '')
             }
         }
-        return tweet
+        return tweet as GenericArticle<Platform.X>
     }
 
     export function tweetsArticleParser(json: any) {
@@ -305,7 +318,7 @@ namespace XApiJsonParser {
             .filter((t: { entryId: string }) => t.entryId.startsWith('tweet-'))
             .map((t: { content: any }) => t.content?.itemContent?.tweet_results?.result)
             .filter(Boolean)
-        return tweets.map(tweetParser)
+        return tweets.map(tweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
     }
 
     export function tweetsRepliesParser(json: any) {
@@ -365,13 +378,9 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: {
-                width: 954,
-                height: 2,
-            },
+            viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
-        let tweets_json
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('UserTweets') && response.request().method() === 'GET') {
@@ -382,8 +391,7 @@ namespace XApiJsonParser {
                 response
                     .json()
                     .then((json) => {
-                        tweets_json = json
-                        done()
+                        done(json)
                     })
                     .catch((error) => {
                         fail(error)
@@ -391,7 +399,7 @@ namespace XApiJsonParser {
             }
         })
         try {
-            await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+            await page.setViewport(config.viewport ?? defaultViewport)
             await page.goto(url)
             await checkLogin(page)
             await checkSomethingWrong(page)
@@ -399,10 +407,11 @@ namespace XApiJsonParser {
             cleanup()
             throw error
         }
-        const { success, error } = await waitForTweets
-        if (!success) {
-            throw error
+        const data = await waitForTweets
+        if (!data.success) {
+            throw data.error
         }
+        const tweets_json = data.data
 
         return XApiJsonParser.tweetsArticleParser(tweets_json)
     }
@@ -420,13 +429,9 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: {
-                width: 954,
-                height: 2,
-            },
+            viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.X>>> {
-        let tweets_json
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('UserTweetsAndReplies') && response.request().method() === 'GET') {
@@ -437,15 +442,14 @@ namespace XApiJsonParser {
                 response
                     .json()
                     .then((json) => {
-                        tweets_json = json
-                        done()
+                        done(json)
                     })
                     .catch((error) => {
                         fail(error)
                     })
             }
         })
-        await page.setViewport(config.viewport ?? { width: 954, height: 2 })
+        await page.setViewport(config.viewport ?? defaultViewport)
         await page.goto(url)
         try {
             await checkLogin(page)
@@ -454,10 +458,12 @@ namespace XApiJsonParser {
             cleanup()
             throw error
         }
-        const { success, error } = await waitForTweets
-        if (!success) {
-            throw error
+
+        const data = await waitForTweets
+        if (!data.success) {
+            throw data.error
         }
+        const tweets_json = data.data
         return XApiJsonParser.tweetsRepliesParser(tweets_json)
     }
 
@@ -465,7 +471,6 @@ namespace XApiJsonParser {
      * @param url https://x.com/username
      */
     export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
-        let user_json
         const { promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('UserByScreenName') && response.request().method() === 'GET') {
@@ -476,21 +481,21 @@ namespace XApiJsonParser {
                 response
                     .json()
                     .then((json) => {
-                        user_json = json
-                        done()
+                        done(json)
                     })
                     .catch((error) => {
                         fail(error)
                     })
             }
         })
-        await page.setViewport({ width: 1080, height: 2 })
+        await page.setViewport(defaultViewport)
         await page.goto(url)
 
-        const { success, error } = await waitForTweets
-        if (!success) {
-            throw error
+        const data = await waitForTweets
+        if (!data.success) {
+            throw data.error
         }
+        const user_json = data.data
         return XApiJsonParser.tweetsFollowsParser(user_json)
     }
 

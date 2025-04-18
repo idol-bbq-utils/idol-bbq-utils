@@ -1,4 +1,4 @@
-import { CommonCfgConfig } from './common'
+import type { CommonCfgConfig } from './common'
 
 type ByteDance_LLM = 'doubao-pro-128k'
 type BigModel_LLM = 'glm-4-flash'
@@ -13,7 +13,7 @@ enum TranslatorProvider {
      */
     None = 'None',
     /**
-     * default model id gemini
+     * default model id gemini-2.0-flash
      */
     Google = 'Google',
     /**

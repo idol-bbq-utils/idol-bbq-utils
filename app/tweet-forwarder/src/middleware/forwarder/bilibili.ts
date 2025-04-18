@@ -3,7 +3,7 @@ import { Forwarder } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import FormData from 'form-data'
 import fs from 'fs'
-import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
+import { type ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
 
 interface BiliImageUploaded {
     img_src: string
@@ -34,7 +34,7 @@ class BiliForwarder extends Forwarder {
         let pics: Array<BiliImageUploaded> = (
             await Promise.all(
                 media.map(async (item) => {
-                    if (item.media_type === 'photo') {
+                    if (item.media_type === 'photo' || item.media_type === 'video_thumbnail') {
                         try {
                             _log?.debug(`Uploading photo ${item.path}`)
                             const obj = await pRetry(() => this.uploadPhoto(item.path), {
@@ -75,7 +75,7 @@ class BiliForwarder extends Forwarder {
         }
         _res.forEach((res) => {
             if (res.data.code !== 0) {
-                throw new Error(`Send text to ${this.NAME} failed. ${res.data.message}`)
+                throw new Error(`Send text to ${this.NAME} failed. ${res.data.message}: ${JSON.stringify(res.data)}`)
             }
         })
         return _res

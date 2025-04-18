@@ -20,4 +20,5 @@ function getForwarder(platform: ForwardToPlatformEnum): ForwarderConstructor | n
     return null
 }
 
-export { ForwarderConstructor, getForwarder }
+export { getForwarder }
+export type { ForwarderConstructor }

@@ -1,11 +1,18 @@
-import fs from 'fs'
+import fs, { writeFile, writeFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { CACHE_DIR_ROOT, log } from '@/config'
 import https from 'https'
 import path from 'path'
-import { MediaToolConfigMap } from '@/types/media'
+import type { MediaToolConfigMap } from '@/types/media'
+import type { MediaType } from '@idol-bbq-utils/spider/types'
 
 const MATCH_FILE_NAME = /(?<filename>[^/]+)\.(?<ext>[^.]+)$/
+
+function writeImgToFile(buffer: Buffer<ArrayBufferLike>, filename: string): string {
+    const dest = `${CACHE_DIR_ROOT}/media/plain/${filename}`
+    writeFileSync(dest, buffer)
+    return dest
+}
 
 function download(url: string, dest: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -93,7 +100,7 @@ function galleryDownloadMediaFile(
     }
 }
 
-function getMediaType(path: string) {
+function getMediaType(path: string): MediaType {
     const ext = path.split('.').pop() || ''
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
         return 'photo'
@@ -116,4 +123,4 @@ const mimeToExt = {
     'video/x-flv': 'flv',
 }
 
-export { getMediaType, plainDownloadMediaFile, galleryDownloadMediaFile }
+export { getMediaType, plainDownloadMediaFile, galleryDownloadMediaFile, writeImgToFile }

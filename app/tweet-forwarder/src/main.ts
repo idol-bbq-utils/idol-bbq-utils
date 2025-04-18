@@ -1,9 +1,9 @@
-import puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer-core'
 import { SpiderPools, SpiderTaskScheduler } from './managers/spider-manager'
 import { configParser, log } from './config'
 import EventEmitter from 'events'
 import { ForwarderPools, ForwarderTaskScheduler } from './managers/forwarder-manager'
-import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from './utils/base'
+import { BaseCompatibleModel, TaskScheduler } from './utils/base'
 
 async function main() {
     const taskSchedulers: Array<TaskScheduler.TaskScheduler> = []

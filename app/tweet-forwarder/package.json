@@ -5,8 +5,7 @@
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
     "license": "MIT",
-    "main": "lib/index.js",
-    "types": "lib/index.d.ts",
+    "main": "src/main.ts",
     "directories": {
         "lib": "lib"
     },
@@ -21,11 +20,11 @@
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
     },
     "scripts": {
-        "generate": "pnpm prisma migrate dev --name init",
-        "build": "tsc && tsc-alias",
-        "dev": "pnpm build && node lib/main.js",
-        "test": "jest --testPathIgnorePatterns \"playground/*\" --",
-        "run": "node lib/main.js"
+        "db:generate-client": "bunx prisma generate",
+        "db:init": "bunx prisma migrate dev --name init",
+        "build": "bun build src/main.ts --outdir=./build --target=bun --minify",
+        "dev": "bun src/main.ts",
+        "start": "bun src/main.ts"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
@@ -35,16 +34,16 @@
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
         "@prisma/client": "^6.3.0",
         "axios": "^1.7.2",
-        "cron": "^3.1.7",
+        "cron": "^4.1.4",
         "dayjs": "^1.11.11",
         "dotenv": "^16.4.5",
         "fluent-ffmpeg": "^2.1.3",
         "form-data": "^4.0.0",
         "lodash": "^4.17.21",
-        "puppeteer": "^23.6.0",
-        "puppeteer-core": "^23.6.0",
+        "puppeteer-core": "^24.6.0",
         "telegraf": "^4.16.3",
         "yaml": "^2.4.5"
     },

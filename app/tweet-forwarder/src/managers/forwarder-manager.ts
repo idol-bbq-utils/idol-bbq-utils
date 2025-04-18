@@ -3,24 +3,22 @@ import { Spider } from '@idol-bbq-utils/spider'
 import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
-import { AppConfig } from '@/types'
-import { Platform, TaskType } from '@idol-bbq-utils/spider/types'
-import DB, { Article, ArticleWithId, DBArticleExtractType, DBFollows } from '@/db'
+import type { AppConfig } from '@/types'
+import { Platform, type MediaType, type TaskType } from '@idol-bbq-utils/spider/types'
+import DB from '@/db'
+import type { Article, ArticleWithId, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
-import { MediaTool, MediaToolEnum } from '@/types/media'
-import { Forwarder as RealForwarder } from '@/types/forwarder'
+import { type MediaTool, MediaToolEnum } from '@/types/media'
+import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
-import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile } from '@/middleware/media'
-import { formatTime } from '@/utils/time'
-import { platformArticleMapToActionText, platformNameMap } from '@idol-bbq-utils/spider/const'
-import { existsSync, unlink, unlinkSync } from 'fs'
+import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile, writeImgToFile } from '@/middleware/media'
+import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
+import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
 import { orderBy } from 'lodash'
 
 type Forwarder = RealForwarder<TaskType>
-
-const TAB = ' '.repeat(4)
 
 interface TaskResult {
     taskId: string
@@ -151,9 +149,11 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
     }
 }
 
-/**
- * Forward Target 会订阅
- */
+type ForwardToIdWithRuntimeConfig = Record<string, ForwardToPlatformCommonConfig | undefined>
+type ForwardToInstanceWithRuntimeConfig = {
+    forwarder: BaseForwarder
+    runtime_config?: ForwardToPlatformCommonConfig
+}
 class ForwarderPools extends BaseCompatibleModel {
     NAME = 'ForwarderPools'
     log?: Logger
@@ -187,11 +187,12 @@ class ForwarderPools extends BaseCompatibleModel {
             /**
              * id for forward_to
              */
-            to: Set<string>
+            to: ForwardToIdWithRuntimeConfig
             cfg_forwarder: Forwarder['cfg_forwarder']
         }
     > = new Map()
     private props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>
+    private ArticleConverter = new ImgConverter()
     // private workers:
     constructor(props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>, emitter: EventEmitter, log?: Logger) {
         super()
@@ -243,6 +244,7 @@ class ForwarderPools extends BaseCompatibleModel {
             cfg_forwarder,
             name,
             subscribers,
+            cfg_forward_target,
         } = task.data as Forwarder
         ctx.log = this.log?.child({ label: name, trace_id: taskId })
         // prepare
@@ -279,6 +281,7 @@ class ForwarderPools extends BaseCompatibleModel {
                             websites,
                             cfg_forwarder,
                             subscribers,
+                            cfg_forward_target,
                         },
                     },
                 })
@@ -320,10 +323,11 @@ class ForwarderPools extends BaseCompatibleModel {
     }
 
     async processArticleTask(ctx: TaskScheduler.TaskCtx) {
-        const { websites, subscribers, cfg_forwarder } = ctx.task.data as {
+        const { websites, subscribers, cfg_forwarder, cfg_forward_target } = ctx.task.data as {
             websites: Array<string>
             subscribers: Forwarder['subscribers']
             cfg_forwarder: Forwarder['cfg_forwarder']
+            cfg_forward_target: Forwarder['cfg_forward_target']
         }
         const batchId = crypto
             .createHash('md5')
@@ -332,7 +336,7 @@ class ForwarderPools extends BaseCompatibleModel {
         for (const website of websites) {
             // 单次爬虫任务
             const url = new URL(website)
-            const forwarders = this.getOrInitForwarders(batchId, subscribers, cfg_forwarder)
+            const forwarders = this.getOrInitForwarders(batchId, subscribers, cfg_forwarder, cfg_forward_target)
             if (forwarders.length === 0) {
                 continue
             }
@@ -346,7 +350,7 @@ class ForwarderPools extends BaseCompatibleModel {
     async processSingleArticleTask(
         ctx: TaskScheduler.TaskCtx,
         url: string,
-        forwarders: Array<BaseForwarder>,
+        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
         cfg_forwarder: Forwarder['cfg_forwarder'],
     ) {
         const { u_id, platform } = Spider.extractBasicInfo(url) ?? {}
@@ -364,18 +368,19 @@ class ForwarderPools extends BaseCompatibleModel {
          */
         const articles_forwarders = [] as Array<{
             article: ArticleWithId
-            to: Array<BaseForwarder>
+            to: Array<ForwardToInstanceWithRuntimeConfig>
         }>
         for (const article of articles) {
-            const to = [] as Array<BaseForwarder>
-            for (const f of forwarders) {
+            const to = [] as Array<ForwardToInstanceWithRuntimeConfig>
+            for (const forwarder of forwarders) {
+                const { forwarder: f } = forwarder
                 const id = f.id
                 /**
                  * 同一个宏任务循环中，此时可能会有同一个网站运行了两次及以上的定时任务，此时checkExist都是false
                  */
                 const exist = await DB.ForwardBy.checkExist(article.id, id, 'article')
                 if (!exist) {
-                    to.push(f)
+                    to.push(forwarder)
                 }
             }
             if (to.length > 0) {
@@ -393,35 +398,63 @@ class ForwarderPools extends BaseCompatibleModel {
         ctx.log?.info(`Ready to send articles for ${url}`)
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
-            ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.id).join(', ')}`)
+            let articleToImgSuccess = false
+            ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.forwarder.id).join(', ')}`)
             let maybe_media_files = [] as Array<{
                 path: string
-                media_type: string
+                media_type: MediaType
             }>
+            if (cfg_forwarder?.render_type === 'img') {
+                try {
+                    const imgBuffer = await this.ArticleConverter.articleToImg(article, process.env.FONTS_DIR)
+                    ctx.log?.debug(`Converted article ${article.a_id} to img successfully`)
+                    const path = writeImgToFile(imgBuffer, `${ctx.taskId}-${article.a_id}-rendered.png`)
+
+                    maybe_media_files.push({
+                        path,
+                        media_type: 'photo',
+                    })
+                    articleToImgSuccess = true
+                } catch (e) {
+                    ctx.log?.error(`Error while converting article to img: ${e}`)
+                }
+            }
             // article to photo
 
             // 下载媒体文件
             if (cfg_forwarder?.media) {
                 const media = cfg_forwarder.media
-                let paths = [] as Array<string>
 
                 let currentArticle: Article | null = article
                 while (currentArticle) {
-                    let new_files = [] as Array<string>
+                    let new_files = [] as Array<{
+                        path: string
+                        media_type: MediaType
+                    }>
                     if (currentArticle.has_media) {
                         ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
                         // handle media
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
                             ctx.log?.debug(`Downloading media with http downloader`)
                             new_files = await Promise.all(
-                                currentArticle.media?.map(({ url }) => plainDownloadMediaFile(url, ctx.taskId)),
+                                currentArticle.media?.map(async ({ url, type }) => {
+                                    const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                    return {
+                                        path,
+                                        media_type: type,
+                                    }
+                                }),
                             )
 
                             if (currentArticle.extra?.media) {
                                 const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(({ url }) =>
-                                        plainDownloadMediaFile(url, ctx.taskId),
-                                    ),
+                                    currentArticle.extra.media.map(async ({ url, type }) => {
+                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                        return {
+                                            path,
+                                            media_type: type,
+                                        }
+                                    }),
                                 )
                                 new_files = new_files.concat(extra_files)
                             }
@@ -431,40 +464,49 @@ class ForwarderPools extends BaseCompatibleModel {
                             new_files = await galleryDownloadMediaFile(
                                 currentArticle.url,
                                 media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
-                            )
+                            ).map((path) => ({
+                                path,
+                                media_type: getMediaType(path),
+                            }))
                             if (currentArticle.extra?.media) {
                                 const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(({ url }) =>
-                                        plainDownloadMediaFile(url, ctx.taskId),
-                                    ),
+                                    currentArticle.extra.media.map(async ({ url }) => {
+                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                        return {
+                                            path,
+                                            media_type: getMediaType(path),
+                                        }
+                                    }),
                                 )
                                 new_files = new_files.concat(extra_files)
                             }
                         }
                         if (new_files.length > 0) {
                             ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
-                            paths = paths.concat(new_files)
+                            maybe_media_files = maybe_media_files.concat(new_files)
                         }
                     }
                     currentArticle = currentArticle.ref
                 }
-                // maybe fallback to default
-                maybe_media_files = paths.map((path) => ({
-                    path,
-                    media_type: getMediaType(path),
-                }))
             }
+            const fullText = articleToText(article)
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
-            const text = this.articleToText(article)
+            const text = articleToImgSuccess ? formatMetaline(article) : fullText
             // 对所有订阅者进行转发
-            for (const target of to) {
+            for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
                 try {
                     await target.send(text, {
                         media: maybe_media_files,
                         timestamp: article.created_at,
+                        runtime_config,
+                        original_text: articleToImgSuccess ? fullText : undefined,
                     })
-                    await DB.ForwardBy.save(article.id, target.id, 'article')
+                    let currentArticle: ArticleWithId | null = article
+                    while (currentArticle) {
+                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                        currentArticle = currentArticle.ref as ArticleWithId | null
+                    }
                 } catch (e) {
                     ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                 }
@@ -489,7 +531,11 @@ class ForwarderPools extends BaseCompatibleModel {
     /**
      * 一次性任务，并不需要保存转发状态
      */
-    async processFollowsTask(ctx: TaskScheduler.TaskCtx, websites: Array<string>, forwarders: Array<BaseForwarder>) {
+    async processFollowsTask(
+        ctx: TaskScheduler.TaskCtx,
+        websites: Array<string>,
+        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
+    ) {
         if (websites.length === 0) {
             ctx.log?.error(`No websites found`)
             return
@@ -524,40 +570,15 @@ class ForwarderPools extends BaseCompatibleModel {
         }
 
         // 开始转发
-        // follows to texts
-        const texts = [] as Array<string>
-        // convert to string
-        for (let [platform, follows] of results.entries()) {
-            // 按粉丝数量大的排序
-            follows = orderBy(follows, (f) => f[0].followers, 'desc')
-            const [cur, pre] = follows[0]
-            let text_to_send =
-                `${pre?.created_at ? `${formatTime(pre.created_at)}\n⬇️\n` : ''}${formatTime(cur.created_at)}\n\n` +
-                follows
-                    .map(([cur, pre]) => {
-                        let text = `${cur.username}\n${' '.repeat(4)}`
-                        if (pre?.followers) {
-                            text += `${pre.followers.toString().padStart(2)}  --->  `
-                        }
-                        if (cur.followers) {
-                            text += `${cur.followers.toString().padEnd(2)}`
-                        }
-                        const offset = (cur.followers || 0) - (pre?.followers || 0)
-                        text += `${TAB}${offset >= 0 ? '+' : ''}${offset.toString()}`
-                        return text
-                    })
-                    .join('\n')
-            if (task_title) {
-                text_to_send = `${task_title}\n${text_to_send}`
-            }
-            texts.push(text_to_send)
+        let texts_to_send = followsToText(orderBy(Array.from(results.entries()), (i) => i[0], 'asc'))
+        if (task_title) {
+            texts_to_send = `${task_title}\n${texts_to_send}`
         }
-        // 对所有订阅者进行转发
-        const texts_to_send = texts.join('\n\n')
-        for (const target of forwarders) {
+        for (const { forwarder: target, runtime_config } of forwarders) {
             try {
                 await target.send(texts_to_send, {
                     timestamp: dayjs().unix(),
+                    runtime_config,
                 })
                 /**
                  * 假设follows并不需要保存转发状态，因为任务基本上是一天一次
@@ -578,11 +599,33 @@ class ForwarderPools extends BaseCompatibleModel {
      * 如果没有找到，则新创建一个映射
      * 并注册新的订阅者
      */
-    getOrInitForwarders(id: string, subscribers: Forwarder['subscribers'], cfg: Forwarder['cfg_forwarder']) {
+    getOrInitForwarders(
+        id: string,
+        subscribers: Forwarder['subscribers'],
+        cfg: Forwarder['cfg_forwarder'],
+        cfg_forward_target?: Forwarder['cfg_forward_target'],
+    ): Array<ForwardToInstanceWithRuntimeConfig> {
+        const common_cfg = cfg_forward_target
         let wrap = this.subscribers.get(id)
         if (!wrap) {
             const newWrap = {
-                to: new Set(subscribers || this.forward_to.keys()),
+                to: subscribers
+                    ? subscribers.reduce((acc, s) => {
+                          if (typeof s === 'string') {
+                              acc[s] = common_cfg
+                          }
+                          if (typeof s === 'object') {
+                              acc[s.id] = {
+                                  ...common_cfg,
+                                  ...s.cfg_forward_target,
+                              }
+                          }
+                          return acc
+                      }, {} as ForwardToIdWithRuntimeConfig)
+                    : this.forward_to.keys().reduce((acc, id) => {
+                          acc[id] = undefined
+                          return acc
+                      }, {} as ForwardToIdWithRuntimeConfig),
                 cfg_forwarder: cfg,
             }
             this.subscribers.set(id, newWrap)
@@ -592,92 +635,30 @@ class ForwarderPools extends BaseCompatibleModel {
         /**
          * 注册新的订阅者
          */
-        subscribers?.forEach((id) => {
-            if (!to?.has(id)) {
-                to.add(id)
+        subscribers?.forEach((s) => {
+            const id = typeof s === 'string' ? s : s.id
+            if (!(id in to)) {
+                to[id] =
+                    typeof s === 'string'
+                        ? common_cfg
+                        : {
+                              ...common_cfg,
+                              ...s.cfg_forward_target,
+                          }
             }
         })
-        return Array.from(to)
-            .map((id) => this.forward_to.get(id))
+        return Object.entries(to)
+            .map(([id, cfg]) => {
+                const forwarder = this.forward_to.get(id)
+                if (!forwarder) {
+                    return undefined
+                }
+                return {
+                    forwarder,
+                    runtime_config: cfg,
+                }
+            })
             .filter((i) => i !== undefined)
-    }
-
-    /**
-     * 原文 -> 媒体文件alt -> extra
-     */
-    private articleToText(article: Article) {
-        let currentArticle: Article | null = article
-        let format_article = ''
-        while (currentArticle) {
-            const metaline = this.formatMetaline(currentArticle)
-            format_article += `${metaline}`
-            if (currentArticle.content) {
-                format_article += '\n\n'
-            }
-            if (currentArticle.translated_by) {
-                /***** 翻译原文 *****/
-                let translation = currentArticle.translation || ''
-                /***** 翻译原文结束 *****/
-
-                /***** 图片描述翻译 *****/
-                let media_translations: Array<string> = []
-                for (const [idx, media] of (currentArticle.media || []).entries()) {
-                    if (media.type === 'photo' && media.translation) {
-                        media_translations.push(`图片${idx + 1} alt: ${media.translation as string}`)
-                    }
-                }
-                if (media_translations.length > 0) {
-                    translation = `${translation}\n\n${media_translations.join(`\n---\n`)}`
-                }
-                /***** 图片描述结束 *****/
-
-                /***** extra描述 *****/
-                if (currentArticle.extra) {
-                    const extra = currentArticle.extra as DBArticleExtractType
-                    if (extra.translation) {
-                        translation = `${translation}\n~~~\n${extra.translation}`
-                    }
-                }
-                /***** extra描述结束 *****/
-
-                format_article += `${translation}\n${'-'.repeat(6)}↑${(currentArticle.translated_by || '大模型') + '渣翻'}--↓原文${'-'.repeat(6)}\n`
-            }
-
-            /* 原文 */
-            let raw_article = currentArticle.content
-            let raw_alts = []
-            for (const [idx, media] of (currentArticle.media || []).entries()) {
-                if (media.type === 'photo' && media.alt) {
-                    raw_alts.push(`photo${idx + 1} alt: ${media.alt as string}`)
-                }
-            }
-            if (raw_alts.length > 0) {
-                raw_article = `${raw_article}\n\n${raw_alts.join(`\n---\n`)}`
-            }
-            if (currentArticle.extra) {
-                const extra = currentArticle.extra as DBArticleExtractType
-                // card parser
-                if (extra.content) {
-                    raw_article = `${raw_article}\n~~~\n${extra.content}`
-                }
-            }
-            format_article += `${raw_article}`
-            if (currentArticle.ref) {
-                format_article += `\n\n${'-'.repeat(12)}\n\n`
-            }
-            // get ready for next run
-            currentArticle = currentArticle.ref
-        }
-        return format_article
-    }
-
-    private formatMetaline(article: Article) {
-        let metaline =
-            [article.username, article.u_id, `来自${platformNameMap[article.platform]}`].filter(Boolean).join(TAB) +
-            '\n'
-        const action = platformArticleMapToActionText[article.platform][article.type]
-        metaline += [formatTime(article.created_at), `${action}：`].join(TAB)
-        return metaline
     }
 }
 

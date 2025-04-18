@@ -1,9 +1,8 @@
-import { AppConfig } from './types'
+import type { AppConfig } from './types'
 import fs from 'fs'
 import os from 'os'
 import YAML from 'yaml'
 import { createLogger, Logger, winston, format } from '@idol-bbq-utils/log'
-import dayjs from 'dayjs'
 
 const CACHE_DIR_ROOT = process.env.CACHE_DIR || `${os.tmpdir()}/tweet-forwarder`
 const RETRY_LIMIT = 2
@@ -28,7 +27,7 @@ const log: Logger = createLogger({
             filename: `${CACHE_DIR_ROOT}/logs/tweet-forwarder-%DATE%.log`,
             datePattern: 'YYYY-MM-DD_HH',
             maxSize: '20m',
-            maxFiles: '14d',
+            maxFiles: '3d',
         }),
     ],
 })

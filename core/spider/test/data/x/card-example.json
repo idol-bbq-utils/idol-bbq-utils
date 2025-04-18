@@ -1,0 +1,2162 @@
+[
+    {
+        "rest_id": "https://t.co/VyiBfmth52",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "player_url",
+                    "value": {
+                        "string_value": "https://www.youtube.com/embed/XzFU63pI6Qc",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 197,
+                            "width": 351,
+                            "url": "https://pbs.twimg.com/cards/player-placeholder.png"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "player_image",
+                    "value": {
+                        "image_value": {
+                            "height": 197,
+                            "width": 351,
+                            "url": "https://pbs.twimg.com/cards/player-placeholder.png"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "app_star_rating",
+                    "value": {
+                        "string_value": "4.67842",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "description",
+                    "value": {
+                        "string_value": "アッシュくんのおててってなんでこんなにかわいいんですかね しかも触り心地もふわふわさらさらで最高です すばらしいですTwitterではほぼ毎日アッシュくんの写真を投稿しております！みてね〜https://twitter.com/ssk_ktk828#佐々木琴子#猫 #保護猫",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_width",
+                    "value": {
+                        "string_value": "1280",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "domain",
+                    "value": {
+                        "string_value": "www.youtube.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_is_free",
+                    "value": {
+                        "string_value": "true",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "site",
+                    "value": {
+                        "scribe_key": "publisher_id",
+                        "type": "USER",
+                        "user_value": {
+                            "id_str": "10228272",
+                            "path": []
+                        }
+                    }
+                },
+                {
+                    "key": "app_num_ratings",
+                    "value": {
+                        "string_value": "41,197,666",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_price_amount",
+                    "value": {
+                        "string_value": "0.0",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_height",
+                    "value": {
+                        "string_value": "720",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "vanity_url",
+                    "value": {
+                        "scribe_key": "vanity_url",
+                        "string_value": "youtube.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_name",
+                    "value": {
+                        "string_value": "YouTube",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 197,
+                            "width": 351,
+                            "url": "https://pbs.twimg.com/cards/player-placeholder.png"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "title",
+                    "value": {
+                        "string_value": "かわいいおててアッシュくん",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_price_currency",
+                    "value": {
+                        "string_value": "USD",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://t.co/VyiBfmth52",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 197,
+                            "width": 351,
+                            "url": "https://pbs.twimg.com/cards/player-placeholder.png"
+                        },
+                        "type": "IMAGE"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "player",
+            "url": "https://t.co/VyiBfmth52",
+            "user_refs_results": [
+                {
+                    "result": {
+                        "__typename": "User",
+                        "id": "VXNlcjoxMDIyODI3Mg==",
+                        "rest_id": "10228272",
+                        "affiliates_highlighted_label": {},
+                        "has_graduated_access": true,
+                        "parody_commentary_fan_label": "None",
+                        "is_blue_verified": true,
+                        "profile_image_shape": "Square",
+                        "legacy": {
+                            "following": false,
+                            "can_dm": false,
+                            "can_media_tag": true,
+                            "created_at": "Tue Nov 13 21:43:46 +0000 2007",
+                            "default_profile": false,
+                            "default_profile_image": false,
+                            "description": "like and subscribe.",
+                            "entities": {
+                                "description": {
+                                    "urls": []
+                                },
+                                "url": {
+                                    "urls": [
+                                        {
+                                            "display_url": "youtube.com",
+                                            "expanded_url": "http://youtube.com",
+                                            "url": "https://t.co/bUisN3Y1A6",
+                                            "indices": [0, 23]
+                                        }
+                                    ]
+                                }
+                            },
+                            "fast_followers_count": 0,
+                            "favourites_count": 6098,
+                            "followers_count": 79520663,
+                            "friends_count": 1152,
+                            "has_custom_timelines": true,
+                            "is_translator": false,
+                            "listed_count": 77872,
+                            "location": "San Bruno, CA",
+                            "media_count": 15966,
+                            "name": "YouTube",
+                            "normal_followers_count": 79520663,
+                            "pinned_tweet_ids_str": [],
+                            "possibly_sensitive": false,
+                            "profile_banner_url": "https://pbs.twimg.com/profile_banners/10228272/1741475059",
+                            "profile_image_url_https": "https://pbs.twimg.com/profile_images/1427292844612595720/RC1YSvuT_normal.jpg",
+                            "profile_interstitial_type": "",
+                            "screen_name": "YouTube",
+                            "statuses_count": 59875,
+                            "translator_type": "regular",
+                            "url": "https://t.co/bUisN3Y1A6",
+                            "verified": false,
+                            "verified_type": "Business",
+                            "want_retweets": false,
+                            "withheld_in_countries": []
+                        },
+                        "tipjar_settings": {}
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "rest_id": "https://t.co/9JmJXGXlXH",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "domain",
+                    "value": {
+                        "string_value": "www.instagram.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "site",
+                    "value": {
+                        "scribe_key": "publisher_id",
+                        "type": "USER",
+                        "user_value": {
+                            "id_str": "180505807",
+                            "path": []
+                        }
+                    }
+                },
+                {
+                    "key": "vanity_url",
+                    "value": {
+                        "scribe_key": "vanity_url",
+                        "string_value": "instagram.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "title",
+                    "value": {
+                        "string_value": "佐々木琴子 (@sasaki_kotoko828) • Instagram photos and videos",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://t.co/9JmJXGXlXH",
+                        "type": "STRING"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "summary_large_image",
+            "url": "https://t.co/9JmJXGXlXH",
+            "user_refs_results": [
+                {
+                    "result": {
+                        "__typename": "User",
+                        "id": "VXNlcjoxODA1MDU4MDc=",
+                        "rest_id": "180505807",
+                        "affiliates_highlighted_label": {
+                            "label": {
+                                "url": {
+                                    "url": "https://twitter.com/Meta",
+                                    "urlType": "DeepLink"
+                                },
+                                "badge": {
+                                    "url": "https://pbs.twimg.com/profile_images/1453818753880190978/HqrrEcrI_bigger.png"
+                                },
+                                "description": "Meta",
+                                "userLabelType": "BusinessLabel",
+                                "userLabelDisplayType": "Badge"
+                            }
+                        },
+                        "has_graduated_access": true,
+                        "parody_commentary_fan_label": "None",
+                        "is_blue_verified": true,
+                        "profile_image_shape": "Square",
+                        "legacy": {
+                            "following": false,
+                            "can_dm": false,
+                            "can_media_tag": true,
+                            "created_at": "Thu Aug 19 20:11:11 +0000 2010",
+                            "default_profile": false,
+                            "default_profile_image": false,
+                            "description": "Discover what's new on Instagram \uD83D\uDD0E✨",
+                            "entities": {
+                                "description": {
+                                    "urls": []
+                                },
+                                "url": {
+                                    "urls": [
+                                        {
+                                            "display_url": "help.instagram.com",
+                                            "expanded_url": "http://help.instagram.com",
+                                            "url": "https://t.co/tydS4erjVY",
+                                            "indices": [0, 23]
+                                        }
+                                    ]
+                                }
+                            },
+                            "fast_followers_count": 0,
+                            "favourites_count": 1575,
+                            "followers_count": 32259589,
+                            "friends_count": 233,
+                            "has_custom_timelines": true,
+                            "is_translator": false,
+                            "listed_count": 30139,
+                            "location": "",
+                            "media_count": 4995,
+                            "name": "Instagram",
+                            "normal_followers_count": 32259589,
+                            "pinned_tweet_ids_str": [],
+                            "possibly_sensitive": false,
+                            "profile_banner_url": "https://pbs.twimg.com/profile_banners/180505807/1680643771",
+                            "profile_image_url_https": "https://pbs.twimg.com/profile_images/1526231349354303489/3Bg-2ZsT_normal.jpg",
+                            "profile_interstitial_type": "",
+                            "screen_name": "instagram",
+                            "statuses_count": 16612,
+                            "translator_type": "regular",
+                            "url": "https://t.co/tydS4erjVY",
+                            "verified": false,
+                            "verified_type": "Business",
+                            "want_retweets": false,
+                            "withheld_in_countries": []
+                        },
+                        "tipjar_settings": {}
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "rest_id": "https://t.co/fY2AZeEaFB",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "photo_image_full_size_large",
+                    "value": {
+                        "image_value": {
+                            "height": 419,
+                            "width": 800,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=800x419"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image",
+                    "value": {
+                        "image_value": {
+                            "height": 150,
+                            "width": 267,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=280x150"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "description",
+                    "value": {
+                        "string_value": "佐々木琴子さんのソロラジオ番組が4月1日より配信開始！ いつも応援してくれているファンの方も、 はじめての方もこれからよろしくお願いします！",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "domain",
+                    "value": {
+                        "string_value": "www.onsen.ag",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 320,
+                            "width": 569,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=800x320_1"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 202,
+                            "width": 386,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=386x202"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 1080,
+                            "width": 1920,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_small",
+                    "value": {
+                        "image_value": {
+                            "height": 202,
+                            "width": 386,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=386x202"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 419,
+                            "width": 800,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=800x419"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 81,
+                            "width": 144,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=144x144"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 1080,
+                            "width": 1920,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_original",
+                    "value": {
+                        "image_value": {
+                            "height": 1080,
+                            "width": 1920,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "vanity_url",
+                    "value": {
+                        "scribe_key": "vanity_url",
+                        "string_value": "onsen.ag",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size",
+                    "value": {
+                        "image_value": {
+                            "height": 314,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=600x314"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 233,
+                                        "green": 228,
+                                        "red": 237
+                                    },
+                                    "percentage": 76.24
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 67,
+                                        "green": 78,
+                                        "red": 82
+                                    },
+                                    "percentage": 8.54
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 112,
+                                        "green": 143,
+                                        "red": 190
+                                    },
+                                    "percentage": 8.44
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 246,
+                                        "green": 217,
+                                        "red": 232
+                                    },
+                                    "percentage": 2.63
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 154,
+                                        "green": 194,
+                                        "red": 159
+                                    },
+                                    "percentage": 1.8
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "title",
+                    "value": {
+                        "string_value": "佐々木琴子のここだけのこと",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 233,
+                                        "green": 228,
+                                        "red": 237
+                                    },
+                                    "percentage": 76.24
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 67,
+                                        "green": 78,
+                                        "red": 82
+                                    },
+                                    "percentage": 8.54
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 112,
+                                        "green": 143,
+                                        "red": 190
+                                    },
+                                    "percentage": 8.44
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 246,
+                                        "green": 217,
+                                        "red": 232
+                                    },
+                                    "percentage": 2.63
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 154,
+                                        "green": 194,
+                                        "red": 159
+                                    },
+                                    "percentage": 1.8
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 1080,
+                            "width": 1920,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image",
+                    "value": {
+                        "image_value": {
+                            "height": 314,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=600x314"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 233,
+                                        "green": 228,
+                                        "red": 237
+                                    },
+                                    "percentage": 76.24
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 67,
+                                        "green": 78,
+                                        "red": 82
+                                    },
+                                    "percentage": 8.54
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 112,
+                                        "green": 143,
+                                        "red": 190
+                                    },
+                                    "percentage": 8.44
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 246,
+                                        "green": 217,
+                                        "red": 232
+                                    },
+                                    "percentage": 2.63
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 154,
+                                        "green": 194,
+                                        "red": 159
+                                    },
+                                    "percentage": 1.8
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 1080,
+                            "width": 1920,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://t.co/fY2AZeEaFB",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 1080,
+                            "width": 1920,
+                            "url": "https://pbs.twimg.com/card_img/1906942142041513984/Y5BScotf?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "summary_large_image",
+            "url": "https://t.co/fY2AZeEaFB",
+            "user_refs_results": []
+        }
+    },
+    {
+        "rest_id": "https://t.co/kwUpoTRpT3",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "player_url",
+                    "value": {
+                        "string_value": "https://www.youtube.com/embed/j4MJY87zuAs",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 320,
+                            "width": 569,
+                            "url": "https://pbs.twimg.com/card_img/1907663062620057601/v7jCRqUM?format=jpg&name=800x320_1"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "player_image",
+                    "value": {
+                        "image_value": {
+                            "height": 158,
+                            "width": 280,
+                            "url": "https://pbs.twimg.com/card_img/1907663062620057601/v7jCRqUM?format=jpg&name=280x280"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "app_star_rating",
+                    "value": {
+                        "string_value": "4.67842",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "description",
+                    "value": {
+                        "string_value": "お昼寝はおふとんの上ですることが多いのですがこの日はおふとんの中でお昼寝をしようとしてました かわいいですTwitterではほぼ毎日アッシュくんの写真を投稿しております！みてね〜https://twitter.com/ssk_ktk828#佐々木琴子#猫 #保護猫",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_width",
+                    "value": {
+                        "string_value": "960",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "domain",
+                    "value": {
+                        "string_value": "www.youtube.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_is_free",
+                    "value": {
+                        "string_value": "true",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "site",
+                    "value": {
+                        "scribe_key": "publisher_id",
+                        "type": "USER",
+                        "user_value": {
+                            "id_str": "10228272",
+                            "path": []
+                        }
+                    }
+                },
+                {
+                    "key": "player_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 720,
+                            "width": 1280,
+                            "url": "https://pbs.twimg.com/card_img/1907663062620057601/v7jCRqUM?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "app_num_ratings",
+                    "value": {
+                        "string_value": "41,197,666",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_price_amount",
+                    "value": {
+                        "string_value": "0.0",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_height",
+                    "value": {
+                        "string_value": "720",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "vanity_url",
+                    "value": {
+                        "scribe_key": "vanity_url",
+                        "string_value": "youtube.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_name",
+                    "value": {
+                        "string_value": "YouTube",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 81,
+                            "width": 144,
+                            "url": "https://pbs.twimg.com/card_img/1907663062620057601/v7jCRqUM?format=jpg&name=144x144"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "title",
+                    "value": {
+                        "string_value": "おふとんの中のアッシュくん",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_price_currency",
+                    "value": {
+                        "string_value": "USD",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://t.co/kwUpoTRpT3",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 121,
+                                        "green": 129,
+                                        "red": 138
+                                    },
+                                    "percentage": 68.25
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 17,
+                                        "green": 18,
+                                        "red": 19
+                                    },
+                                    "percentage": 31.69
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "player_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 720,
+                            "width": 1280,
+                            "url": "https://pbs.twimg.com/card_img/1907663062620057601/v7jCRqUM?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "player",
+            "url": "https://t.co/kwUpoTRpT3",
+            "user_refs_results": [
+                {
+                    "result": {
+                        "__typename": "User",
+                        "id": "VXNlcjoxMDIyODI3Mg==",
+                        "rest_id": "10228272",
+                        "affiliates_highlighted_label": {},
+                        "has_graduated_access": true,
+                        "parody_commentary_fan_label": "None",
+                        "is_blue_verified": true,
+                        "profile_image_shape": "Square",
+                        "legacy": {
+                            "following": false,
+                            "can_dm": false,
+                            "can_media_tag": true,
+                            "created_at": "Tue Nov 13 21:43:46 +0000 2007",
+                            "default_profile": false,
+                            "default_profile_image": false,
+                            "description": "like and subscribe.",
+                            "entities": {
+                                "description": {
+                                    "urls": []
+                                },
+                                "url": {
+                                    "urls": [
+                                        {
+                                            "display_url": "youtube.com",
+                                            "expanded_url": "http://youtube.com",
+                                            "url": "https://t.co/bUisN3Y1A6",
+                                            "indices": [0, 23]
+                                        }
+                                    ]
+                                }
+                            },
+                            "fast_followers_count": 0,
+                            "favourites_count": 6098,
+                            "followers_count": 79520046,
+                            "friends_count": 1152,
+                            "has_custom_timelines": true,
+                            "is_translator": false,
+                            "listed_count": 77870,
+                            "location": "San Bruno, CA",
+                            "media_count": 15966,
+                            "name": "YouTube",
+                            "normal_followers_count": 79520046,
+                            "pinned_tweet_ids_str": [],
+                            "possibly_sensitive": false,
+                            "profile_banner_url": "https://pbs.twimg.com/profile_banners/10228272/1741475059",
+                            "profile_image_url_https": "https://pbs.twimg.com/profile_images/1427292844612595720/RC1YSvuT_normal.jpg",
+                            "profile_interstitial_type": "",
+                            "screen_name": "YouTube",
+                            "statuses_count": 59875,
+                            "translator_type": "regular",
+                            "url": "https://t.co/bUisN3Y1A6",
+                            "verified": false,
+                            "verified_type": "Business",
+                            "want_retweets": false,
+                            "withheld_in_countries": []
+                        },
+                        "tipjar_settings": {}
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "rest_id": "https://t.co/TR3TsawiL2",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "photo_image_full_size_large",
+                    "value": {
+                        "image_value": {
+                            "height": 419,
+                            "width": 800,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=800x419"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image",
+                    "value": {
+                        "image_value": {
+                            "height": 147,
+                            "width": 280,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=280x150"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "description",
+                    "value": {
+                        "string_value": "蓮ノ空女学院スクールアイドルクラブ 102nd Graduation Album「～Star Sign Memories～ Otomune Kozue【通常盤】」2025.06.04発売",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "domain",
+                    "value": {
+                        "string_value": "www.lovelive-anime.jp",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 315,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=600x600"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 202,
+                            "width": 386,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=386x202"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_small",
+                    "value": {
+                        "image_value": {
+                            "height": 202,
+                            "width": 386,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=386x202"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 419,
+                            "width": 800,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=800x419"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 76,
+                            "width": 144,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=144x144"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_original",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "vanity_url",
+                    "value": {
+                        "scribe_key": "vanity_url",
+                        "string_value": "lovelive-anime.jp",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size",
+                    "value": {
+                        "image_value": {
+                            "height": 314,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=600x314"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 231,
+                                        "green": 235,
+                                        "red": 248
+                                    },
+                                    "percentage": 68.1
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 59,
+                                        "green": 59,
+                                        "red": 107
+                                    },
+                                    "percentage": 23.38
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 98,
+                                        "green": 104,
+                                        "red": 110
+                                    },
+                                    "percentage": 2.95
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 244,
+                                        "green": 241,
+                                        "red": 220
+                                    },
+                                    "percentage": 1.59
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 183,
+                                        "green": 159,
+                                        "red": 184
+                                    },
+                                    "percentage": 0.9
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "title",
+                    "value": {
+                        "string_value": "蓮ノ空女学院スクールアイドルクラブ 102nd Graduation Album「～Star Sign Memories～ Otomune Kozue【通常盤】」｜MUSIC｜「蓮ノ空女学院スク...",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 231,
+                                        "green": 235,
+                                        "red": 248
+                                    },
+                                    "percentage": 68.1
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 59,
+                                        "green": 59,
+                                        "red": 107
+                                    },
+                                    "percentage": 23.38
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 98,
+                                        "green": 104,
+                                        "red": 110
+                                    },
+                                    "percentage": 2.95
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 244,
+                                        "green": 241,
+                                        "red": 220
+                                    },
+                                    "percentage": 1.59
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 183,
+                                        "green": 159,
+                                        "red": 184
+                                    },
+                                    "percentage": 0.9
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image",
+                    "value": {
+                        "image_value": {
+                            "height": 314,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=600x314"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 231,
+                                        "green": 235,
+                                        "red": 248
+                                    },
+                                    "percentage": 68.1
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 59,
+                                        "green": 59,
+                                        "red": 107
+                                    },
+                                    "percentage": 23.38
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 98,
+                                        "green": 104,
+                                        "red": 110
+                                    },
+                                    "percentage": 2.95
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 244,
+                                        "green": 241,
+                                        "red": 220
+                                    },
+                                    "percentage": 1.59
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 183,
+                                        "green": 159,
+                                        "red": 184
+                                    },
+                                    "percentage": 0.9
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://t.co/TR3TsawiL2",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906677588309012481/yBAtnA1G?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "summary_large_image",
+            "url": "https://t.co/TR3TsawiL2",
+            "user_refs_results": []
+        }
+    },
+    {
+        "rest_id": "https://t.co/FX77ptysn4",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "photo_image_full_size_large",
+                    "value": {
+                        "image_value": {
+                            "height": 419,
+                            "width": 800,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=800x419"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image",
+                    "value": {
+                        "image_value": {
+                            "height": 147,
+                            "width": 280,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=280x150"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "description",
+                    "value": {
+                        "string_value": "朗読劇『新選組の恋〜春の在処〜』の公式ページです。脚本・演出：土城温美／2025年5月1日(木)～5月6日(火祝)／銀座・博品館劇場",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "domain",
+                    "value": {
+                        "string_value": "rodokugeki.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 315,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=600x600"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 202,
+                            "width": 386,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=386x202"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_small",
+                    "value": {
+                        "image_value": {
+                            "height": 202,
+                            "width": 386,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=386x202"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 419,
+                            "width": 800,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=800x419"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 76,
+                            "width": 144,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=144x144"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_original",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "vanity_url",
+                    "value": {
+                        "scribe_key": "vanity_url",
+                        "string_value": "rodokugeki.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size",
+                    "value": {
+                        "image_value": {
+                            "height": 314,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=600x314"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "thumbnail_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 20,
+                                        "green": 25,
+                                        "red": 47
+                                    },
+                                    "percentage": 60.94
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 19,
+                                        "green": 19,
+                                        "red": 68
+                                    },
+                                    "percentage": 12.81
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 162,
+                                        "green": 185,
+                                        "red": 206
+                                    },
+                                    "percentage": 10.59
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 56,
+                                        "green": 84,
+                                        "red": 123
+                                    },
+                                    "percentage": 8.49
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 111,
+                                        "green": 72,
+                                        "red": 189
+                                    },
+                                    "percentage": 1.03
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "title",
+                    "value": {
+                        "string_value": "朗読劇『新選組の恋〜春の在処〜』2025年5月【公式】",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 20,
+                                        "green": 25,
+                                        "red": 47
+                                    },
+                                    "percentage": 60.94
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 19,
+                                        "green": 19,
+                                        "red": 68
+                                    },
+                                    "percentage": 12.81
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 162,
+                                        "green": 185,
+                                        "red": 206
+                                    },
+                                    "percentage": 10.59
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 56,
+                                        "green": 84,
+                                        "red": 123
+                                    },
+                                    "percentage": 8.49
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 111,
+                                        "green": 72,
+                                        "red": 189
+                                    },
+                                    "percentage": 1.03
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "summary_photo_image",
+                    "value": {
+                        "image_value": {
+                            "height": 314,
+                            "width": 600,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=600x314"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 20,
+                                        "green": 25,
+                                        "red": 47
+                                    },
+                                    "percentage": 60.94
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 19,
+                                        "green": 19,
+                                        "red": 68
+                                    },
+                                    "percentage": 12.81
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 162,
+                                        "green": 185,
+                                        "red": 206
+                                    },
+                                    "percentage": 10.59
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 56,
+                                        "green": 84,
+                                        "red": 123
+                                    },
+                                    "percentage": 8.49
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 111,
+                                        "green": 72,
+                                        "red": 189
+                                    },
+                                    "percentage": 1.03
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "photo_image_full_size_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://t.co/FX77ptysn4",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "summary_photo_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 630,
+                            "width": 1200,
+                            "url": "https://pbs.twimg.com/card_img/1906633357058019328/mzVLELKB?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "summary_large_image",
+            "url": "https://t.co/FX77ptysn4",
+            "user_refs_results": []
+        }
+    },
+    {
+        "rest_id": "https://t.co/SXCks1qlFY",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "player_url",
+                    "value": {
+                        "string_value": "https://www.youtube.com/embed/04NuaOliQ3E",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_large",
+                    "value": {
+                        "image_value": {
+                            "height": 320,
+                            "width": 569,
+                            "url": "https://pbs.twimg.com/card_img/1904084276704083968/4dkA2-mj?format=jpg&name=800x320_1"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "player_image",
+                    "value": {
+                        "image_value": {
+                            "height": 158,
+                            "width": 280,
+                            "url": "https://pbs.twimg.com/card_img/1904084276704083968/4dkA2-mj?format=jpg&name=280x280"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "app_star_rating",
+                    "value": {
+                        "string_value": "4.67842",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "description",
+                    "value": {
+                        "string_value": "\uD83C\uDFAEこなのぷろふぃーる\uD83C\uDFAEhttps://apollobay.jp/talent/%e6%9c%88%e9%9f%b3%e3%81%93%e3%81%aa/\uD83D\uDCF1SNS\uD83D\uDCF1X @KonaTsukineTikTokhttps://www.tiktok.com/@tuknekona?is_from_webapp=1&s...",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_width",
+                    "value": {
+                        "string_value": "1280",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "domain",
+                    "value": {
+                        "string_value": "www.youtube.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_is_free",
+                    "value": {
+                        "string_value": "true",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "site",
+                    "value": {
+                        "scribe_key": "publisher_id",
+                        "type": "USER",
+                        "user_value": {
+                            "id_str": "10228272",
+                            "path": []
+                        }
+                    }
+                },
+                {
+                    "key": "player_image_original",
+                    "value": {
+                        "image_value": {
+                            "height": 720,
+                            "width": 1280,
+                            "url": "https://pbs.twimg.com/card_img/1904084276704083968/4dkA2-mj?format=jpg&name=orig"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "app_num_ratings",
+                    "value": {
+                        "string_value": "41,197,666",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_price_amount",
+                    "value": {
+                        "string_value": "0.0",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_height",
+                    "value": {
+                        "string_value": "720",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "vanity_url",
+                    "value": {
+                        "scribe_key": "vanity_url",
+                        "string_value": "youtube.com",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_name",
+                    "value": {
+                        "string_value": "YouTube",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_small",
+                    "value": {
+                        "image_value": {
+                            "height": 81,
+                            "width": 144,
+                            "url": "https://pbs.twimg.com/card_img/1904084276704083968/4dkA2-mj?format=jpg&name=144x144"
+                        },
+                        "type": "IMAGE"
+                    }
+                },
+                {
+                    "key": "title",
+                    "value": {
+                        "string_value": "こなもくやるかも",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "app_price_currency",
+                    "value": {
+                        "string_value": "USD",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://t.co/SXCks1qlFY",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "player_image_color",
+                    "value": {
+                        "image_color_value": {
+                            "palette": [
+                                {
+                                    "rgb": {
+                                        "blue": 49,
+                                        "green": 44,
+                                        "red": 52
+                                    },
+                                    "percentage": 45.81
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 72,
+                                        "green": 75,
+                                        "red": 129
+                                    },
+                                    "percentage": 19.7
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 135,
+                                        "green": 134,
+                                        "red": 152
+                                    },
+                                    "percentage": 12.91
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 106,
+                                        "green": 47,
+                                        "red": 82
+                                    },
+                                    "percentage": 4.21
+                                },
+                                {
+                                    "rgb": {
+                                        "blue": 220,
+                                        "green": 95,
+                                        "red": 206
+                                    },
+                                    "percentage": 2.44
+                                }
+                            ]
+                        },
+                        "type": "IMAGE_COLOR"
+                    }
+                },
+                {
+                    "key": "player_image_x_large",
+                    "value": {
+                        "image_value": {
+                            "height": 720,
+                            "width": 1280,
+                            "url": "https://pbs.twimg.com/card_img/1904084276704083968/4dkA2-mj?format=png&name=2048x2048_2_exp"
+                        },
+                        "type": "IMAGE"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "player",
+            "url": "https://t.co/SXCks1qlFY",
+            "user_refs_results": [
+                {
+                    "result": {
+                        "__typename": "User",
+                        "id": "VXNlcjoxMDIyODI3Mg==",
+                        "rest_id": "10228272",
+                        "affiliates_highlighted_label": {},
+                        "has_graduated_access": true,
+                        "parody_commentary_fan_label": "None",
+                        "is_blue_verified": true,
+                        "profile_image_shape": "Square",
+                        "legacy": {
+                            "following": false,
+                            "can_dm": false,
+                            "can_media_tag": true,
+                            "created_at": "Tue Nov 13 21:43:46 +0000 2007",
+                            "default_profile": false,
+                            "default_profile_image": false,
+                            "description": "like and subscribe.",
+                            "entities": {
+                                "description": {
+                                    "urls": []
+                                },
+                                "url": {
+                                    "urls": [
+                                        {
+                                            "display_url": "youtube.com",
+                                            "expanded_url": "http://youtube.com",
+                                            "url": "https://t.co/bUisN3Y1A6",
+                                            "indices": [0, 23]
+                                        }
+                                    ]
+                                }
+                            },
+                            "fast_followers_count": 0,
+                            "favourites_count": 6098,
+                            "followers_count": 79520100,
+                            "friends_count": 1152,
+                            "has_custom_timelines": true,
+                            "is_translator": false,
+                            "listed_count": 77870,
+                            "location": "San Bruno, CA",
+                            "media_count": 15966,
+                            "name": "YouTube",
+                            "normal_followers_count": 79520100,
+                            "pinned_tweet_ids_str": [],
+                            "possibly_sensitive": false,
+                            "profile_banner_url": "https://pbs.twimg.com/profile_banners/10228272/1741475059",
+                            "profile_image_url_https": "https://pbs.twimg.com/profile_images/1427292844612595720/RC1YSvuT_normal.jpg",
+                            "profile_interstitial_type": "",
+                            "screen_name": "YouTube",
+                            "statuses_count": 59875,
+                            "translator_type": "regular",
+                            "url": "https://t.co/bUisN3Y1A6",
+                            "verified": false,
+                            "verified_type": "Business",
+                            "want_retweets": false,
+                            "withheld_in_countries": []
+                        },
+                        "tipjar_settings": {}
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "rest_id": "card://1897290236222414848",
+        "legacy": {
+            "binding_values": [
+                {
+                    "key": "choice1_label",
+                    "value": {
+                        "string_value": "League of Legends",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "choice2_label",
+                    "value": {
+                        "string_value": "VALORANT",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "end_datetime_utc",
+                    "value": {
+                        "string_value": "2025-03-06T14:16:56Z",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "counts_are_final",
+                    "value": {
+                        "boolean_value": true,
+                        "type": "BOOLEAN"
+                    }
+                },
+                {
+                    "key": "choice2_count",
+                    "value": {
+                        "string_value": "3944",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "choice1_count",
+                    "value": {
+                        "string_value": "2803",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "last_updated_datetime_utc",
+                    "value": {
+                        "string_value": "2025-03-06T14:17:00Z",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "duration_minutes",
+                    "value": {
+                        "string_value": "1440",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "api",
+                    "value": {
+                        "string_value": "capi://passthrough/1",
+                        "type": "STRING"
+                    }
+                },
+                {
+                    "key": "card_url",
+                    "value": {
+                        "scribe_key": "card_url",
+                        "string_value": "https://twitter.com",
+                        "type": "STRING"
+                    }
+                }
+            ],
+            "card_platform": {
+                "platform": {
+                    "audience": {
+                        "name": "production"
+                    },
+                    "device": {
+                        "name": "Swift",
+                        "version": "12"
+                    }
+                }
+            },
+            "name": "poll2choice_text_only",
+            "url": "card://1897290236222414848",
+            "user_refs_results": []
+        }
+    }
+]

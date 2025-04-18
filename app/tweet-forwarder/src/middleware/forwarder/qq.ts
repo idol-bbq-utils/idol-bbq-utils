@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { Forwarder } from './base'
-import { ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
+import { type ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
 
 class QQForwarder extends Forwarder {
     static _PLATFORM = ForwardToPlatformEnum.QQ

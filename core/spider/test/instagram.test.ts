@@ -2,24 +2,16 @@ import puppeteer from 'puppeteer-core'
 import { Spider } from '../src'
 import { parseNetscapeCookieToPuppeteerCookie, UserAgent } from '../src/utils'
 import { readFileSync } from 'fs'
-import { XApiJsonParser } from '../src/spiders/x/user/graphql'
 import { createLogger, winston, format } from '@idol-bbq-utils/log'
-import { GenericFollows } from '../src/types'
-
-test('X Spider', async () => {
-    const url = 'https://x.com/X'
-    const spider = Spider.getSpider(url)
-    if (spider) {
-        let id = await new spider()._match_valid_url(url, spider)?.groups?.id
-        expect(id).toBe('X')
-    }
-})
+import type { GenericFollows } from '../src/types'
+import { InsApiJsonParser } from '../src/spiders/instagram'
+import { test, expect } from 'bun:test'
 
 /**
  * require network access & headless browser
  */
 test.skip('spider', async () => {
-    const url = 'https://x.com/X'
+    const url = 'https://www.instagram.com/instagram'
     const spider = Spider.getSpider(url)
     if (spider) {
         const spiderInstance = new spider(
@@ -46,7 +38,7 @@ test.skip('spider', async () => {
             }),
         ).init()
         let id = await spiderInstance._match_valid_url(url, spider)?.groups?.id
-        expect(id).toBe('X')
+        expect(id).toBe('instagram')
         const browser = await puppeteer.launch({
             headless: true,
             channel: 'chrome',
@@ -69,16 +61,18 @@ test.skip('spider', async () => {
     }
 })
 
-test('X API JSON Parser', async () => {
-    const x_json = JSON.parse(readFileSync('tests/data/x/x.json', 'utf-8'))
-    const x_result = JSON.parse(readFileSync('tests/data/x/x-result.json', 'utf-8'))
-    const x_replies_result = JSON.parse(readFileSync('tests/data/x/x-replies-result.json', 'utf-8'))
-    const x_follows = JSON.parse(readFileSync('tests/data/x/x-follows.json', 'utf-8'))
-    const x_follows_result = JSON.parse(readFileSync('tests/data/x/x-follows-result.json', 'utf-8'))
-    const x_response = XApiJsonParser.tweetsArticleParser(x_json)
-    const x_replies_response = XApiJsonParser.tweetsRepliesParser(x_json)
-    const x_follows_response = XApiJsonParser.tweetsFollowsParser(x_follows)
-    expect(x_response).toEqual(x_result)
-    expect(x_replies_response).toEqual(x_replies_result)
-    expect(x_follows_response).toEqual(x_follows_result)
+test('Instagram API JSON Parser', async () => {
+    const posts_json = JSON.parse(readFileSync('test/data/instagram/instagram-posts.json', 'utf-8'))
+    const hightlights_json = JSON.parse(readFileSync('test/data/instagram/instagram-highlights.json', 'utf-8'))
+    const profile_json = JSON.parse(readFileSync('test/data/instagram/instagram-profile.json', 'utf-8'))
+
+    const posts_json_result = JSON.parse(readFileSync('test/data/instagram/instagram-posts-result.json', 'utf-8'))
+    const hightlights_json_result = JSON.parse(
+        readFileSync('test/data/instagram/instagram-highlights-result.json', 'utf-8'),
+    )
+    const profile_json_result = JSON.parse(readFileSync('test/data/instagram/instagram-follows-result.json', 'utf-8'))
+
+    expect(InsApiJsonParser.postsParser(posts_json)).toEqual(posts_json_result)
+    expect(InsApiJsonParser.highlightsParser(hightlights_json)).toEqual(hightlights_json_result)
+    expect(InsApiJsonParser.followsParser(profile_json)).toEqual(profile_json_result)
 })
