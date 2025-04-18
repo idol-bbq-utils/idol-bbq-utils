@@ -1,6 +1,6 @@
 {
     "name": "@idol-bbq-utils/tweet-forwarder",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Integrate web crawlers, store and push data, and provide forwarding functionality.",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
@@ -32,9 +32,9 @@
     "dependencies": {
         "@google/generative-ai": "^0.14.1",
         "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
-        "@idol-bbq-utils/render": "workspace:^",
         "@prisma/client": "^6.3.0",
         "axios": "^1.7.2",
         "cron": "^4.1.4",

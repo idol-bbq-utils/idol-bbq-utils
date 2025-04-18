@@ -1,6 +1,6 @@
 {
     "name": "@idol-bbq-utils/render",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Render text to image/svg.",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
@@ -39,7 +39,7 @@
         "satori": "^0.12.2"
     },
     "devDependencies": {
-        "@types/react": "^19.1.0",
-        "@types/lodash": "^4.17.6"
+        "@types/lodash": "^4.17.6",
+        "@types/react": "^19.1.0"
     }
 }
