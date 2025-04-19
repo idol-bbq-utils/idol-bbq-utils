@@ -315,7 +315,7 @@ function estimatedArticleHeight(article: Article, level: number = 0): number {
     const basePadding = 16 * 2
     const articleHeightArray = [
         estimateTextLinesHeight(
-            `${article.username} @${article.u_id} · ${dayjs.unix(article.created_at).format('YY年MM月DD日 HH:mmZ')}`,
+            `${article.username} @${article.u_id} · ${dayjs.unix(article.created_at).format('YY年MM月DD日 HH:mmZ')} ${platformArticleMapToActionText[article.platform][article.type]}`,
             BASE_FONT_SIZE,
             getContentWidth(level) - (level === 0 ? 0 : 32), // maybe subtract the avatar width
         ), // metaline
