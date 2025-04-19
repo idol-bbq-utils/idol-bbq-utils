@@ -107,7 +107,7 @@ async function loadGoogleFont(fonts: string[], text: string) {
     return await Promise.all([getFontResponseBuffer(400), getFontResponseBuffer(700)])
 }
 
-const jaSymbols = ['～', '┈', '╮', '╯', '╰', '╭']
+const jaSymbols = ['～', '┈', '╮', '╯', '╰', '╭', '━', '┏', '┓', '┗', '┛']
 
 // ref: https://github.com/vercel/satori/blob/78182f836b67fff48f9b6e77b7251382c2779559/playground/pages/index.tsx#L97
 const loadDynamicAsset = withCache(async (emojiType: keyof typeof apis, _code: string, text: string) => {
