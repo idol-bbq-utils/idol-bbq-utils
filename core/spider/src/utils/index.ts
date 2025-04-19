@@ -24,7 +24,7 @@ function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<Cookie
             secure = fileds[3],
             expires = fileds[4],
             name = fileds[5] || '',
-            value = fileds[6] || ''
+            value = fileds[6]?.trim() || ''
         cookies.push({
             name,
             value,
@@ -38,5 +38,13 @@ function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<Cookie
     return cookies
 }
 
-export { parseNetscapeCookieToPuppeteerCookie }
+function getCookieString(cookies: Array<CookieData>): string {
+    return cookies
+        .map((cookie) => {
+            return `${cookie.name}=${cookie.value}`.trim()
+        })
+        .join(';')
+}
+
+export { parseNetscapeCookieToPuppeteerCookie, getCookieString }
 export * from './http'

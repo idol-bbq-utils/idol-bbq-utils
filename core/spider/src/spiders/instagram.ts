@@ -18,13 +18,13 @@ enum ArticleTypeEnum {
     /**
      * https://www.instagram.com/stories/highlights/username
      */
-    HIGHLIGHTS = 'highlights',
+    // HIGHLIGHTS = 'highlights',
     /**
      * TODO
      *
      * reels page
      */
-    REEL = 'reel',
+    // REEL = 'reel',
 }
 
 class InstagramSpider extends BaseSpider {
@@ -153,28 +153,28 @@ namespace InsApiJsonParser {
         }
     }
 
-    function highlightParser(edge: any): GenericArticle<Platform.Instagram> {
-        const node = edge.node
-        const id = /\w+[:,](?<id>\d+)/.exec(node?.id)?.groups?.id ?? ''
-        return {
-            platform: Platform.Instagram,
-            a_id: id,
-            u_id: node?.user?.username,
-            username: '',
-            /**
-             * TODO: notify when highlight updates
-             */
-            created_at: 0,
-            content: node?.title,
-            url: `https://www.instagram.com/stories/highlights/${id}/`,
-            type: ArticleTypeEnum.HIGHLIGHTS,
-            ref: null,
-            has_media: true,
-            media: null,
-            extra: null,
-            u_avatar: null,
-        }
-    }
+    // function highlightParser(edge: any): GenericArticle<Platform.Instagram> {
+    //     const node = edge.node
+    //     const id = /\w+[:,](?<id>\d+)/.exec(node?.id)?.groups?.id ?? ''
+    //     return {
+    //         platform: Platform.Instagram,
+    //         a_id: id,
+    //         u_id: node?.user?.username,
+    //         username: '',
+    //         /**
+    //          * TODO: notify when highlight updates
+    //          */
+    //         created_at: 0,
+    //         content: node?.title,
+    //         url: `https://www.instagram.com/stories/highlights/${id}/`,
+    //         type: ArticleTypeEnum.HIGHLIGHTS,
+    //         ref: null,
+    //         has_media: true,
+    //         media: null,
+    //         extra: null,
+    //         u_avatar: null,
+    //     }
+    // }
     const STORY_ACCESSIBILITY_CAPTION_REGEX = /(?<=.*?\d+\.\s).*/
     function storyParser(item: any): GenericArticle<Platform.Instagram> {
         return {
@@ -194,10 +194,10 @@ namespace InsApiJsonParser {
         }
     }
 
-    export function highlightsParser(json: any): Array<GenericArticle<Platform.Instagram>> {
-        let edges = parseEdges(json)
-        return edges.map(highlightParser)
-    }
+    // export function highlightsParser(json: any): Array<GenericArticle<Platform.Instagram>> {
+    //     let edges = parseEdges(json)
+    //     return edges.map(highlightParser)
+    // }
 
     export function postsParser(json: any): Array<GenericArticle<Platform.Instagram>> {
         let edges = parseEdges(json)
@@ -300,11 +300,11 @@ namespace InsApiJsonParser {
             throw data.error
         }
         const posts = postsParser(reasonable_jsons[PROFILE_POSTS_KEY])
-        const highlights = highlightsParser(reasonable_jsons[PROFILE_HIGHLIGHTS_KEY]).map((h) => {
-            h.username = posts[0]?.username ?? ''
-            h.u_avatar = posts[0]?.u_avatar ?? ''
-            return h
-        })
+        // const highlights = highlightsParser(reasonable_jsons[PROFILE_HIGHLIGHTS_KEY]).map((h) => {
+        //     h.username = posts[0]?.username ?? ''
+        //     h.u_avatar = posts[0]?.u_avatar ?? ''
+        //     return h
+        // })
         return posts
     }
 
