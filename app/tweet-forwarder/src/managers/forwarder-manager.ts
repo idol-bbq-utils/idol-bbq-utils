@@ -193,6 +193,16 @@ class ForwarderPools extends BaseCompatibleModel {
     > = new Map()
     private props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>
     private ArticleConverter = new ImgConverter()
+
+    /**
+     * max allowed error count for a single article in every cycle
+     */
+    private MAX_ERROR_COUNT = 3
+    /**
+     * platform:a_id -> error count
+     */
+    private errorCounter = new Map<string, number>()
+
     // private workers:
     constructor(props: Pick<AppConfig, 'forward_targets' | 'cfg_forward_target'>, emitter: EventEmitter, log?: Logger) {
         super()
@@ -492,6 +502,9 @@ class ForwarderPools extends BaseCompatibleModel {
             const fullText = articleToText(article)
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
             const text = articleToImgSuccess ? formatMetaline(article) : fullText
+
+            let error_for_all = true
+
             // 对所有订阅者进行转发
             for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
@@ -507,8 +520,36 @@ class ForwarderPools extends BaseCompatibleModel {
                         await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
                         currentArticle = currentArticle.ref as ArticleWithId | null
                     }
+                    error_for_all = false
                 } catch (e) {
                     ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
+                }
+            }
+
+            /**
+             * 如果剩下的转发平台全部都出错，并且在5个循环周期内都没有成功转发，我们认为这个文章已经无法转发了，标记为已转发
+             * 比如 413: Request Entity Too Large
+             */
+            if (error_for_all) {
+                // 记录错误次数
+                let errorCount = this.errorCounter.get(`${platform}:${article.a_id}`)
+                if (!errorCount) {
+                    errorCount = 0
+                }
+                errorCount = errorCount + 1
+                if (errorCount > this.MAX_ERROR_COUNT) {
+                    ctx.log?.error(`Error count exceeded for ${article.a_id}, skipping this and tag forwarded...`)
+                    for (const { forwarder: target } of to) {
+                        let currentArticle: ArticleWithId | null = article
+                        while (currentArticle) {
+                            await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                            currentArticle = currentArticle.ref as ArticleWithId | null
+                        }
+                    }
+                    this.errorCounter.delete(`${platform}:${article.a_id}`)
+                } else {
+                    this.errorCounter.set(`${platform}:${article.a_id}`, errorCount)
+                    ctx.log?.error(`Error count for ${article.a_id}: ${errorCount}`)
                 }
             }
             /**
