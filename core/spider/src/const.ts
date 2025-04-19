@@ -1,4 +1,4 @@
-import { Instagram, X } from './spiders'
+import { Instagram, Tiktok, X } from './spiders'
 import { Platform } from './types'
 
 /**
@@ -20,11 +20,15 @@ const platformArticleMapToActionText: Record<Platform, Record<string, string>> =
         [Instagram.ArticleTypeEnum.HIGHLIGHTS]: '发布highlights',
         [Instagram.ArticleTypeEnum.REEL]: '发布视频',
     },
+    [Platform.TikTok]: {
+        [Tiktok.ArticleTypeEnum.POST]: '发布视频',
+    },
 }
 
 const platformNameMap: Record<Platform, string> = {
     [Platform.X]: 'X',
     [Platform.Instagram]: 'Instagram',
+    [Platform.TikTok]: 'TikTok',
 }
 
 export { platformArticleMapToActionText, platformNameMap }

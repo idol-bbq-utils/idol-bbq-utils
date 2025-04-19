@@ -2,6 +2,7 @@ import { Platform } from '@/types'
 import { BaseSpider } from './base'
 import { InstagramSpider } from './instagram'
 import { XTimeLineSpider } from './x'
+import { TiktokSpider } from './tiktok'
 
 namespace Spider {
     export interface SpiderConstructor {
@@ -10,7 +11,7 @@ namespace Spider {
         new (...args: ConstructorParameters<typeof BaseSpider>): BaseSpider
     }
 
-    const spiders: Array<SpiderConstructor> = [XTimeLineSpider, InstagramSpider]
+    const spiders: Array<SpiderConstructor> = [XTimeLineSpider, InstagramSpider, TiktokSpider]
 
     export function getSpider(url: string): SpiderConstructor | null {
         for (const spider of spiders) {
@@ -36,3 +37,4 @@ export { Spider }
 export * from './base'
 export * as X from './x'
 export * as Instagram from './instagram'
+export * as Tiktok from './tiktok'
