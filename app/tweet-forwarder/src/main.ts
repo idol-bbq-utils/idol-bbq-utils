@@ -23,7 +23,7 @@ async function main() {
             handleSIGINT: false,
             handleSIGHUP: false,
             handleSIGTERM: false,
-            args: [process.env.NO_SANDBOX ? '--no-sandbox' : ''],
+            args: [process.env.NO_SANDBOX ? '--no-sandbox' : '', '--disable-gpu'],
             channel: 'chrome',
         })
         // @ts-ignore
