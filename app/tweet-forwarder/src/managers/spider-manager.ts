@@ -236,7 +236,6 @@ class SpiderPools extends BaseCompatibleModel {
         const page = await this.browser.newPage()
         const cookie_file = cfg_crawler?.cookie_file
         const user_agent = cfg_crawler?.user_agent
-        const crawl_engine = cfg_crawler?.engine
         cookie_file && (await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
         await page.setUserAgent(user_agent || UserAgent.CHROME)
 
@@ -261,7 +260,7 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (task_type === 'article') {
-                    let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, crawl_engine, translator)
+                    let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, translator)
 
                     result.push({
                         task_type: 'article',
@@ -271,14 +270,24 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (task_type === 'follows') {
-                    const follows = await pRetry(() => spider.crawl(url.href, page, 'follows', taskId, crawl_engine), {
-                        retries: RETRY_LIMIT,
-                        onFailedAttempt: (error) => {
-                            ctx.log?.error(
-                                `[${url.href}] Crawl follows failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
-                            )
+                    const crawl_engine = cfg_crawler?.engine
+                    const sub_task_type = cfg_crawler?.sub_task_type
+                    const follows = await pRetry(
+                        () =>
+                            spider.crawl(url.href, page, taskId, {
+                                task_type: 'follows',
+                                crawl_engine,
+                                sub_task_type,
+                            }),
+                        {
+                            retries: RETRY_LIMIT,
+                            onFailedAttempt: (error) => {
+                                ctx.log?.error(
+                                    `[${url.href}] Crawl follows failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                                )
+                            },
                         },
-                    })
+                    )
                     let saved_follows_id = (await DB.Follow.save(follows)).id
                     result.push({
                         task_type: 'follows',
@@ -326,17 +335,26 @@ class SpiderPools extends BaseCompatibleModel {
         spider: BaseSpider,
         url: URL,
         page: Page,
-        crawl_engine?: CrawlEngine,
         translator?: BaseTranslator,
     ): Promise<Array<number>> {
-        const articles = await pRetry(() => spider.crawl(url.href, page, 'article', ctx.taskId, crawl_engine), {
-            retries: RETRY_LIMIT,
-            onFailedAttempt: (error) => {
-                ctx.log?.error(
-                    `[${url.href}] Crawl article failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
-                )
+        const { cfg_crawler } = ctx.task.data as Crawler
+        const { engine, sub_task_type } = cfg_crawler || {}
+        const articles = await pRetry(
+            () =>
+                spider.crawl(url.href, page, ctx.taskId, {
+                    task_type: 'article',
+                    crawl_engine: engine,
+                    sub_task_type,
+                }),
+            {
+                retries: RETRY_LIMIT,
+                onFailedAttempt: (error) => {
+                    ctx.log?.error(
+                        `[${url.href}] Crawl article failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                    )
+                },
             },
-        })
+        )
         let new_articles: Array<Article> = []
         let saved_article_ids = []
         for (const article of articles) {

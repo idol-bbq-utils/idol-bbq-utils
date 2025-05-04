@@ -19,20 +19,29 @@ abstract class BaseSpider {
     public crawl<T extends TaskType>(
         url: string,
         page: Page,
-        task_type?: T,
         trace_id?: string,
-        crawl_engine?: CrawlEngine,
+        config?: {
+            task_type?: T
+            sub_task_type?: Array<string>
+            crawl_engine?: CrawlEngine
+        },
     ): Promise<TaskTypeResult<T, Platform>> {
         this.log = this.log?.child({ trace_id })
-        let _crawl_engine = crawl_engine || 'browser'
-        return this._crawl(url, page, _crawl_engine, task_type)
+        return this._crawl(url, page, {
+            task_type: 'article' as T,
+            crawl_engine: 'browser',
+            ...config,
+        })
     }
 
     protected abstract _crawl<T extends TaskType>(
         url: string,
         page: Page,
-        crawl_engine: CrawlEngine,
-        task_type?: T,
+        config: {
+            task_type: T
+            crawl_engine: CrawlEngine
+            sub_task_type?: Array<string>
+        },
     ): Promise<TaskTypeResult<T, Platform>>
 
     constructor(log?: Logger) {

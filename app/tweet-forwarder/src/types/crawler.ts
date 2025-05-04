@@ -37,6 +37,12 @@ interface CrawlerConfig extends CommonCfgConfig {
      * Default use browser, it depends on the spider behavior.
      */
     engine?: CrawlEngine
+    /**
+     * 细粒度控制子任务类型
+     *
+     * 比如X的 article，需要分开爬取tweet和replies，具体设置依赖于爬虫的实现
+     */
+    sub_task_type?: Array<string>
 }
 
 interface Crawler {

@@ -34,6 +34,11 @@ enum XApis {
 
 const apis = Object.values(XApis)
 
+enum XTweetsTaskType {
+    tweets = 'tweets',
+    replies = 'replies',
+}
+
 class XUserTimeLineSpider extends BaseSpider {
     // extends from XBaseSpider regex
     static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /(?<id>\w+)$/.source)
@@ -51,8 +56,11 @@ class XUserTimeLineSpider extends BaseSpider {
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
-        crawl_engine: CrawlEngine,
-        task_type: T = 'article' as T,
+        config: {
+            crawl_engine: CrawlEngine
+            task_type: T
+            sub_task_type?: Array<string>
+        },
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XUserTimeLineSpider)?.groups
         if (!result) {
@@ -63,6 +71,8 @@ class XUserTimeLineSpider extends BaseSpider {
             throw new Error(`Invalid URL: ${url}, id not found`)
         }
 
+        const { crawl_engine, task_type, sub_task_type } = config
+
         if (crawl_engine === 'api') {
             this.log?.warn(`[Engine Api] API engine will be banned by X if you use it too much`)
             try {
@@ -71,11 +81,17 @@ class XUserTimeLineSpider extends BaseSpider {
 
                 if (task_type === 'article') {
                     let res = []
-                    this.log?.info(`Trying to grab tweets for ${id}.`)
-                    res = await this.API_CLIENT.grabTweets(id, cookie_string)
-                    this.log?.info(`Trying to grab replies for ${id}.`)
-                    const replies = await this.API_CLIENT.grabReplies(id, cookie_string)
-                    return res.concat(replies) as TaskTypeResult<T, Platform.X>
+                    if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.tweets)) {
+                        this.log?.info(`Trying to grab tweets for ${id}.`)
+                        let tweets = await this.API_CLIENT.grabTweets(id, cookie_string)
+                        res.push(...tweets)
+                    }
+                    if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.replies)) {
+                        this.log?.info(`Trying to grab replies for ${id}.`)
+                        const replies = await this.API_CLIENT.grabReplies(id, cookie_string)
+                        res.push(...replies)
+                    }
+                    return res as TaskTypeResult<T, Platform.X>
                 }
 
                 if (task_type === 'follows') {
@@ -121,8 +137,11 @@ class XListSpider extends BaseSpider {
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
-        crawl_engine: CrawlEngine,
-        task_type: T = 'article' as T,
+        config: {
+            crawl_engine: CrawlEngine
+            task_type: T
+            sub_task_type?: Array<string>
+        },
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XListSpider)?.groups
         if (!result) {
@@ -132,6 +151,8 @@ class XListSpider extends BaseSpider {
         if (!id) {
             throw new Error(`Invalid URL: ${url}, id not found`)
         }
+
+        const { task_type } = config
 
         const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
 
