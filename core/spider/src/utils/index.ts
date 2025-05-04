@@ -46,5 +46,38 @@ function getCookieString(cookies: Array<CookieData>): string {
         .join(';')
 }
 
-export { parseNetscapeCookieToPuppeteerCookie, getCookieString }
+class SimpleExpiringCache {
+    cache: Map<string, any>
+    constructor() {
+        this.cache = new Map()
+    }
+
+    /**
+     * @param ttl seconds
+     */
+    set(key: string, value: any, ttl: number) {
+        const expiresAt = Date.now() + ttl * 1000
+        this.cache.set(key, { value, expiresAt })
+
+        setTimeout(() => {
+            if (this.cache.get(key)?.expiresAt <= Date.now()) {
+                this.cache.delete(key)
+            }
+        }, ttl)
+    }
+
+    get(key: string) {
+        const item = this.cache.get(key)
+        if (!item) return null
+
+        if (Date.now() > item.expiresAt) {
+            this.cache.delete(key)
+            return null
+        }
+
+        return item.value
+    }
+}
+
+export { parseNetscapeCookieToPuppeteerCookie, getCookieString, SimpleExpiringCache }
 export * from './http'

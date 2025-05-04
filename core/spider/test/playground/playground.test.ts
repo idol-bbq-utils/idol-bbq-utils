@@ -1,5 +1,5 @@
 import { createLogger, format, winston } from '@idol-bbq-utils/log'
-import { Spider, UserAgent } from '@/.'
+import { parseNetscapeCookieToPuppeteerCookie, Spider, UserAgent } from '@/.'
 import type { GenericFollows } from '@/types'
 import puppeteer from 'puppeteer-core'
 import { test, expect, describe } from 'bun:test'
@@ -32,13 +32,12 @@ describe('playground', () => {
             })
             const page = await browser.newPage()
             await page.setUserAgent(UserAgent.CHROME)
-            let follows = {} as GenericFollows
             try {
                 console.time('test')
-                follows = await spiderInstance.crawl(url, page, 'follows')
+                const follows = await spiderInstance.crawl(url, page, 'article')
                 console.log(follows)
                 console.timeEnd('test')
-                expect(follows.followers).toBeGreaterThan(0)
+                // expect(follows.followers).toBeGreaterThan(0)
             } catch (e) {
                 console.error(e)
             } finally {
@@ -46,5 +45,5 @@ describe('playground', () => {
                 await browser.close()
             }
         }
-    })
+    }, 300000)
 })

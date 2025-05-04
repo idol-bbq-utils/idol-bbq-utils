@@ -81,7 +81,7 @@ interface ForwardTo<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
     platform: T
     /**
      * unique id for the target
-     * default is UUID
+     * default is md5 hash of the platform and config
      */
     id?: string
     cfg_platform: ForwardToPlatformConfig<T>
