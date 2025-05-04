@@ -1,6 +1,6 @@
 {
     "name": "@idol-bbq-utils/render",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Render text to image/svg.",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
