@@ -8,7 +8,7 @@ import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import type { Crawler } from '@/types/crawler'
 import type { AppConfig } from '@/types'
-import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { CrawlEngine, TaskType } from '@idol-bbq-utils/spider/types'
 import { BaseSpider } from '@idol-bbq-utils/spider'
 import { TranslatorProvider } from '@/types/translator'
 import { getTranslator } from '@/middleware/translator'
@@ -236,6 +236,7 @@ class SpiderPools extends BaseCompatibleModel {
         const page = await this.browser.newPage()
         const cookie_file = cfg_crawler?.cookie_file
         const user_agent = cfg_crawler?.user_agent
+        const crawl_engine = cfg_crawler?.engine
         cookie_file && (await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
         await page.setUserAgent(user_agent || UserAgent.CHROME)
 
@@ -260,7 +261,7 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (task_type === 'article') {
-                    let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, translator)
+                    let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, crawl_engine, translator)
 
                     result.push({
                         task_type: 'article',
@@ -270,7 +271,7 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (task_type === 'follows') {
-                    const follows = await pRetry(() => spider.crawl(url.href, page, 'follows', taskId), {
+                    const follows = await pRetry(() => spider.crawl(url.href, page, 'follows', taskId, crawl_engine), {
                         retries: RETRY_LIMIT,
                         onFailedAttempt: (error) => {
                             ctx.log?.error(
@@ -325,9 +326,10 @@ class SpiderPools extends BaseCompatibleModel {
         spider: BaseSpider,
         url: URL,
         page: Page,
+        crawl_engine?: CrawlEngine,
         translator?: BaseTranslator,
     ): Promise<Array<number>> {
-        const articles = await pRetry(() => spider.crawl(url.href, page, 'article', ctx.taskId), {
+        const articles = await pRetry(() => spider.crawl(url.href, page, 'article', ctx.taskId, crawl_engine), {
             retries: RETRY_LIMIT,
             onFailedAttempt: (error) => {
                 ctx.log?.error(

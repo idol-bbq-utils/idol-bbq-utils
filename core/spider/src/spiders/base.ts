@@ -1,4 +1,4 @@
-import { Platform, type TaskType, type TaskTypeResult } from '@/types'
+import { Platform, type CrawlEngine, type TaskType, type TaskTypeResult } from '@/types'
 import { Logger } from '@idol-bbq-utils/log'
 import { Page, type PageEvents } from 'puppeteer-core'
 // Replace PageEvent with its literal values
@@ -21,14 +21,17 @@ abstract class BaseSpider {
         page: Page,
         task_type?: T,
         trace_id?: string,
+        crawl_engine?: CrawlEngine,
     ): Promise<TaskTypeResult<T, Platform>> {
         this.log = this.log?.child({ trace_id })
-        return this._crawl(url, page, task_type)
+        let _crawl_engine = crawl_engine || 'browser'
+        return this._crawl(url, page, _crawl_engine, task_type)
     }
 
     protected abstract _crawl<T extends TaskType>(
         url: string,
         page: Page,
+        crawl_engine: CrawlEngine,
         task_type?: T,
     ): Promise<TaskTypeResult<T, Platform>>
 

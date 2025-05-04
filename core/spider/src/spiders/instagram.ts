@@ -1,5 +1,5 @@
 import { Platform } from '@/types'
-import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
+import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult, CrawlEngine } from '@/types'
 import { BaseSpider, waitForResponse } from './base'
 import { Page } from 'puppeteer-core'
 
@@ -37,6 +37,7 @@ class InstagramSpider extends BaseSpider {
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
+        crawl_engine: CrawlEngine,
         task_type: T = 'article' as T,
     ): Promise<TaskTypeResult<T, Platform.Instagram>> {
         const result = super._match_valid_url(url, InstagramSpider)?.groups
@@ -238,7 +239,7 @@ namespace InsApiJsonParser {
             .flat()
         const og_title = await page.$('meta[property="og:title"]')
         const title = await og_title?.evaluate((el) => el.getAttribute('content'))
-        const username = title.match(USERNAME_REGEX_FROM_OG_TITLE).groups?.username
+        const username = title?.match(USERNAME_REGEX_FROM_OG_TITLE)?.groups?.username
         for (const item of res) {
             item.username = username
         }

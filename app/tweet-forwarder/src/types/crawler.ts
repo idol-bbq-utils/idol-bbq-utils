@@ -1,4 +1,4 @@
-import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { CrawlEngine, TaskType } from '@idol-bbq-utils/spider/types'
 import type { CommonCfgConfig } from './common'
 import type { Translator } from './translator'
 
@@ -24,6 +24,8 @@ interface CrawlerConfig extends CommonCfgConfig {
         min: number
     }
     /**
+     * TODO
+     *
      * Will trigger the immediate notify to subscribed forwarders after the crawling
      *
      * Only works for `task_type` = `article` for now
@@ -31,6 +33,10 @@ interface CrawlerConfig extends CommonCfgConfig {
     immediate_notify?: boolean
     user_agent?: string
     translator?: Translator
+    /**
+     * Default use browser, it depends on the spider behavior.
+     */
+    engine?: CrawlEngine
 }
 
 interface Crawler {

@@ -1,6 +1,8 @@
 import { X, Instagram, Tiktok, Youtube } from './spiders'
 import type { ExtraContentType } from './spiders/x'
 
+type CrawlEngine = 'browser' | 'api'
+
 enum Platform {
     X = 1,
     Twitter = 1,
@@ -105,4 +107,5 @@ export type {
     TaskType,
     MediaType,
     ArticleExtractType,
+    CrawlEngine,
 }

@@ -1,5 +1,5 @@
 import { Platform } from '@/types'
-import type { ArticleExtractType, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
+import type { ArticleExtractType, CrawlEngine, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
 import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 import { JSONPath } from 'jsonpath-plus'
@@ -8,6 +8,7 @@ import { defaultViewport } from './base'
 import { SimpleExpiringCache, UserAgent } from '@/utils'
 import { ClientTransaction, handleXMigration } from 'x-client-transaction-id'
 import { v4 as uuidv4 } from 'uuid'
+import { noop } from 'puppeteer-core/lib/esm/third_party/rxjs/rxjs.js'
 
 enum ArticleTypeEnum {
     /**
@@ -44,13 +45,13 @@ class XTimeLineSpider extends BaseSpider {
 
     init(): this {
         super.init()
-
         return this
     }
 
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
+        crawl_engine: CrawlEngine,
         task_type: T = 'article' as T,
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XTimeLineSpider)?.groups
@@ -61,22 +62,45 @@ class XTimeLineSpider extends BaseSpider {
         if (!id) {
             throw new Error(`Invalid URL: ${url}, id not found`)
         }
-        const _url = `${this.BASE_URL}${id}`
-        const cookie = await page.browserContext().cookies()
-        const cookie_string = cookie.map((c) => `${c.name}=${c.value}`).join('; ')
 
+        if (crawl_engine === 'api') {
+            try {
+                const cookie = await page.browserContext().cookies()
+                const cookie_string = cookie.map((c) => `${c.name}=${c.value}`).join('; ')
+
+                if (task_type === 'article') {
+                    let res = []
+                    this.log?.info(`Trying to grab tweets for ${id}.`)
+                    res = await this.API_CLIENT.grabTweets(id, cookie_string)
+                    this.log?.info(`Trying to grab replies for ${id}.`)
+                    const replies = await this.API_CLIENT.grabReplies(id, cookie_string)
+                    return res.concat(replies) as TaskTypeResult<T, Platform.X>
+                }
+
+                if (task_type === 'follows') {
+                    this.log?.info(`Trying to grab follows for ${id}.`)
+                    return (await this.API_CLIENT.grabFollowsNumber(id)) as TaskTypeResult<T, Platform.X>
+                }
+            } catch (e) {
+                this.log?.error(`[Engine Api] Failed to crawl with for ${id}: ${e}, fallback to browser`)
+            } finally {
+                noop()
+            }
+        }
+
+        const _url = `${this.BASE_URL}${id}`
         if (task_type === 'article') {
             let res = []
             this.log?.info(`Trying to grab tweets for ${id}.`)
-            res = await this.API_CLIENT.grabTweets(id, cookie_string)
+            res = await XApiJsonParser.grabTweets(page, _url)
             this.log?.info(`Trying to grab replies for ${id}.`)
-            const replies = await this.API_CLIENT.grabReplies(id, cookie_string)
+            const replies = await XApiJsonParser.grabReplies(page, _url + '/with_replies')
             return res.concat(replies) as TaskTypeResult<T, Platform.X>
         }
 
         if (task_type === 'follows') {
             this.log?.info(`Trying to grab follows for ${id}.`)
-            return (await this.API_CLIENT.grabFollowsNumber(id)) as TaskTypeResult<T, Platform.X>
+            return (await XApiJsonParser.grabFollowsNumber(page, _url)) as TaskTypeResult<T, Platform.X>
         }
 
         throw new Error('Invalid task type')
