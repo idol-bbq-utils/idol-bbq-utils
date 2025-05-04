@@ -107,6 +107,8 @@ async function loadGoogleFont(fonts: string[], text: string) {
     return await Promise.all([getFontResponseBuffer(400), getFontResponseBuffer(700)])
 }
 
+const jaSymbols = ['～', '┈', '╮', '╯', '╰', '╭', '━', '┏', '┓', '┗', '┛']
+
 // ref: https://github.com/vercel/satori/blob/78182f836b67fff48f9b6e77b7251382c2779559/playground/pages/index.tsx#L97
 const loadDynamicAsset = withCache(async (emojiType: keyof typeof apis, _code: string, text: string) => {
     if (_code === 'emoji') {
@@ -116,7 +118,7 @@ const loadDynamicAsset = withCache(async (emojiType: keyof typeof apis, _code: s
 
     const codes = _code.split('|')
     // Some magic symbol
-    if (codes.includes('symbol') && !codes.includes('ja-JP') && text.includes('┈')) {
+    if (codes.includes('symbol') && !codes.includes('ja-JP') && jaSymbols.some((s) => text.includes(s))) {
         codes.push('ja-JP')
     }
 
@@ -195,6 +197,12 @@ class ImgConverter {
                     data: fs.readFileSync(`${fontsDir}/NotoSans-Bold.ttf`),
                     style: 'normal',
                     weight: 700,
+                },
+                {
+                    name: 'Noto Sans Math',
+                    data: fs.readFileSync(`${fontsDir}/NotoSansMath-Regular.ttf`),
+                    style: 'normal',
+                    weight: 400,
                 },
             ],
             loadAdditionalAsset: (code: string, text: string) => {

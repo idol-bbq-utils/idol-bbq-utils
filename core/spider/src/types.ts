@@ -1,23 +1,28 @@
-import { X, Instagram } from './spiders'
+import { X, Instagram, Tiktok, Youtube } from './spiders'
 import type { ExtraContentType } from './spiders/x'
 
 enum Platform {
     X = 1,
     Twitter = 1,
     Instagram,
-    // TikTok,
+    TikTok,
+    YouTube,
 }
 
 type PlatformArticleMap = {
     [Platform.X]: X.ArticleTypeEnum
     [Platform.Twitter]: X.ArticleTypeEnum
     [Platform.Instagram]: Instagram.ArticleTypeEnum
+    [Platform.TikTok]: Tiktok.ArticleTypeEnum
+    [Platform.YouTube]: Youtube.ArticleTypeEnum
 }
 
 type PlatformExtractMap = {
     [Platform.X]: ExtraContentType
     [Platform.Twitter]: ExtraContentType
     [Platform.Instagram]: null
+    [Platform.TikTok]: null
+    [Platform.YouTube]: null
 }
 
 // related to platform

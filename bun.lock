@@ -11,7 +11,7 @@
     },
     "app/tweet-forwarder": {
       "name": "@idol-bbq-utils/tweet-forwarder",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@google/generative-ai": "^0.14.1",
         "@idol-bbq-utils/log": "workspace:^",
@@ -37,7 +37,7 @@
     },
     "core/log": {
       "name": "@idol-bbq-utils/log",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "dayjs": "^1.11.11",
         "winston": "^3.13.0",
@@ -46,7 +46,7 @@
     },
     "core/render": {
       "name": "@idol-bbq-utils/render",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@idol-bbq-utils/spider": "workspace:^",
         "@resvg/resvg-js": "^2.6.2",
@@ -63,16 +63,17 @@
     },
     "core/spider": {
       "name": "@idol-bbq-utils/spider",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@idol-bbq-utils/log": "workspace:^",
+        "dayjs": "^1.11.13",
         "jsonpath-plus": "^10.2.0",
         "puppeteer-core": "^24.6.0",
       },
     },
     "core/utils": {
       "name": "@idol-bbq-utils/utils",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "retry": "^0.13.1",
       },

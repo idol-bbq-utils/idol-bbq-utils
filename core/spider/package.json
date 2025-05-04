@@ -41,6 +41,7 @@
     },
     "dependencies": {
         "@idol-bbq-utils/log": "workspace:^",
+        "dayjs": "^1.11.13",
         "jsonpath-plus": "^10.2.0",
         "puppeteer-core": "^24.6.0"
     }
