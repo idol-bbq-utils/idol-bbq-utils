@@ -246,16 +246,16 @@ class SpiderPools extends BaseCompatibleModel {
             // 单次系列爬虫任务
             try {
                 const url = new URL(website)
-                let spider = this.spiders.get(url.hostname)
+                const spiderBuilder = await Spider.getSpider(url.href)
+                if (!spiderBuilder) {
+                    ctx.log?.warn(`Spider not found for ${url.href}`)
+                    continue
+                }
+                let spider = this.spiders.get(spiderBuilder._VALID_URL.source)
                 if (!spider) {
                     // 需要用详细的网页地址匹配
-                    const spiderBuilder = await Spider.getSpider(url.href)
-                    if (!spiderBuilder) {
-                        ctx.log?.warn(`Spider not found for ${url.href}`)
-                        continue
-                    }
                     spider = new spiderBuilder(this.log).init()
-                    this.spiders.set(url.hostname, spider)
+                    this.spiders.set(spiderBuilder._VALID_URL.source, spider)
                     ctx.log?.info(`Spider instance created for ${url.hostname}`)
                 }
 
