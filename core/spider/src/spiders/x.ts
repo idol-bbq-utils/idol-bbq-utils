@@ -34,9 +34,9 @@ enum XApis {
 
 const apis = Object.values(XApis)
 
-class XTimeLineSpider extends BaseSpider {
+class XUserTimeLineSpider extends BaseSpider {
     // extends from XBaseSpider regex
-    static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /(?<id>\w+)/.source)
+    static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /(?<id>\w+)$/.source)
     static _PLATFORM = Platform.X
     BASE_URL: string = 'https://x.com/'
     NAME: string = 'X TimeLine Spider'
@@ -54,7 +54,7 @@ class XTimeLineSpider extends BaseSpider {
         crawl_engine: CrawlEngine,
         task_type: T = 'article' as T,
     ): Promise<TaskTypeResult<T, Platform.X>> {
-        const result = super._match_valid_url(url, XTimeLineSpider)?.groups
+        const result = super._match_valid_url(url, XUserTimeLineSpider)?.groups
         if (!result) {
             throw new Error(`Invalid URL: ${url}`)
         }
@@ -64,6 +64,7 @@ class XTimeLineSpider extends BaseSpider {
         }
 
         if (crawl_engine === 'api') {
+            this.log?.warn(`[Engine Api] API engine will be banned by X if you use it too much`)
             try {
                 const cookie = await page.browserContext().cookies()
                 const cookie_string = cookie.map((c) => `${c.name}=${c.value}`).join('; ')
@@ -107,6 +108,101 @@ class XTimeLineSpider extends BaseSpider {
     }
 }
 
+class XListSpider extends BaseSpider {
+    static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /\i\/lists\/(?<id>\d+)/.source)
+    static _PLATFORM = Platform.X
+    BASE_URL: string = 'https://x.com/'
+    NAME: string = 'X OldApi Spider'
+    API_PREFIX = 'https://api.twitter.com'
+
+    PUBLIC_TOKEN =
+        'Bearer AAAAAAAAAAAAAAAAAAAAAFQODgEAAAAAVHTp76lzh3rFzcHbmHVvQxYYpTw%3DckAlMINMjmCwxUcaXbAN4XqJVdgMJaHqNOFgPMK0zN1qLqLQCF'
+
+    async _crawl<T extends TaskType>(
+        url: string,
+        page: Page,
+        crawl_engine: CrawlEngine,
+        task_type: T = 'article' as T,
+    ): Promise<TaskTypeResult<T, Platform.X>> {
+        const result = super._match_valid_url(url, XListSpider)?.groups
+        if (!result) {
+            throw new Error(`Invalid URL: ${url}`)
+        }
+        const { id } = result
+        if (!id) {
+            throw new Error(`Invalid URL: ${url}, id not found`)
+        }
+
+        const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
+
+        if (task_type === 'article') {
+            this.log?.warn('Replies are not supported in this mode for now.')
+            this.log?.info(`Trying to grab tweets for ${id}.`)
+            const res = await this.grabTweets(id, cookie_string)
+            return res as TaskTypeResult<T, Platform.X>
+        }
+
+        throw new Error('Invalid task type')
+    }
+
+    getCsrfToken(cookie: string) {
+        const match = cookie.match(/ct0=([^;]+)/)
+        if (match) {
+            return match[1]
+        }
+        return null
+    }
+
+    async grabTweets(id: string, cookie_string: string): Promise<Array<GenericArticle<Platform.X>>> {
+        const url = `${this.API_PREFIX}/1.1/lists/statuses.json`
+        const params = new URLSearchParams({
+            count: '40',
+            include_my_retweet: '1',
+            include_rts: '1',
+            list_id: id,
+            cards_platform: 'Web-13',
+            include_entities: '1',
+            include_user_entities: '1',
+            include_cards: '1',
+            send_error_codes: '1',
+            tweet_mode: 'extended',
+            include_ext_alt_text: 'true',
+            include_reply_count: 'true',
+            ext: 'mediaStats%2ChighlightedLabel%2CvoiceInfo%2CsuperFollowMetadata',
+            include_ext_has_nft_avatar: 'true',
+            include_ext_is_blue_verified: 'true',
+            include_ext_verified_type: 'true',
+            include_ext_sensitive_media_warning: 'true',
+            include_ext_media_color: 'true',
+        })
+        const res = await fetch(`${url}?${params.toString()}`, {
+            headers: {
+                authorization: this.PUBLIC_TOKEN,
+                'user-agent': UserAgent.CHROME,
+                cookie: cookie_string,
+                'x-csrf-token': this.getCsrfToken(cookie_string) || '',
+            },
+        })
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch tweets: ${res.statusText}`)
+        }
+
+        const json = await res.json()
+        if (json.errors) {
+            throw new Error(`Failed to fetch tweets: ${json.errors[0].message}`)
+        }
+        if (!json) {
+            throw new Error('Tweet json format may have changed')
+        }
+
+        return json.map(XApiJsonParser.oldTweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
+    }
+}
+
+/**
+ * This is dangerous, because it will be banned by X if you use it too much
+ */
 class XApiClient {
     guest_token = '1918915913551839395'
     PUBLIC_TOKEN =
@@ -511,7 +607,13 @@ namespace XApiJsonParser {
                 return null
             }
 
-            const binding_values = card.binding_values
+            let binding_values = card.binding_values
+            if (!Array.isArray(binding_values)) {
+                binding_values = Object.entries(binding_values).map(([key, value]) => ({
+                    key,
+                    value,
+                }))
+            }
 
             let media
             let content
@@ -661,10 +763,64 @@ namespace XApiJsonParser {
         return tweet as GenericArticle<Platform.X>
     }
 
+    export function oldTweetParser(json: any): GenericArticle<Platform.X> | null {
+        // we do not handle conversation here
+        if (json?.in_reply_to_status_id) {
+            return null
+        }
+        const legacy = json
+        const userLegacy = json?.user
+        let content = legacy?.full_text
+        for (const { url } of legacy?.entities?.media || []) {
+            content = content.replace(url, '')
+        }
+
+        // 主推文解析
+        const tweet = {
+            platform: Platform.X,
+            a_id: legacy?.id_str,
+            u_id: userLegacy?.screen_name,
+            username: userLegacy?.name,
+            created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
+            content: legacy?.full_text,
+            url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
+            type: legacy?.is_quote_status ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET,
+            ref: legacy?.quoted_status
+                ? oldTweetParser(legacy?.quoted_status)
+                : legacy?.retweeted_status
+                  ? oldTweetParser(legacy?.retweeted_status)
+                  : null,
+            media: mediaParser(legacy?.entities?.media || legacy?.extended_entities?.media),
+            has_media: !!legacy?.entities?.media || !!legacy?.extended_entities?.media,
+            extra: Card.cardParser(legacy.card),
+            u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
+        }
+        // 处理转发类型
+        if (legacy?.retweeted_status) {
+            tweet.type = ArticleTypeEnum.RETWEET
+            tweet.content = ''
+            tweet.ref = oldTweetParser(legacy.retweeted_status)
+            // 转发类型推文media按照ref为准
+            tweet.media = null
+            tweet.has_media = false
+            tweet.extra = null
+        }
+
+        if (tweet.media) {
+            for (const { url } of legacy.entities.media) {
+                tweet.content = tweet.content.replace(url, '')
+            }
+        }
+        return tweet as GenericArticle<Platform.X>
+    }
+
     export function tweetsArticleParser(json: any) {
         let tweets = sanitizeTweetsJson(json)
         tweets = tweets
-            .filter((t: { entryId: string }) => t.entryId.startsWith('tweet-'))
+            .filter(
+                (t: { entryId: string }) =>
+                    t.entryId.startsWith('tweet-') && !t.entryId.startsWith('profile-conversation'),
+            )
             .map((t: { content: any }) => t.content?.itemContent?.tweet_results?.result)
             .filter(Boolean)
         return tweets.map(tweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
@@ -909,6 +1065,6 @@ type Card<T extends CardTypeEnum> = {
 
 type ExtraContentType = Card<CardTypeEnum> | null
 
-export { ArticleTypeEnum, XApiJsonParser, XTimeLineSpider }
+export { ArticleTypeEnum, XApiJsonParser, XUserTimeLineSpider, XListSpider }
 
 export type { ExtraContentType }
