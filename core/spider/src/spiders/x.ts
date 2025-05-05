@@ -173,7 +173,7 @@ class XListSpider extends BaseSpider {
     }
 
     getCsrfToken(cookie: string) {
-        const match = cookie.match(/ct0=([^;]+)/)
+        const match = cookie.match(/(?:^|;\s*)ct0=([0-9a-f]+)\s*(?:;|$)/)
         if (match) {
             return match[1]
         }
@@ -368,13 +368,21 @@ class XApiClient {
         return params
     }
 
+    getCsrfToken(cookie: string) {
+        const match = cookie.match(/(?:^|;\s*)ct0=([0-9a-f]+)\s*(?:;|$)/)
+        if (match) {
+            return match[1]
+        }
+        return null
+    }
+
     async grabTweets(id: string, cookie: string) {
         const rest_id = await this.getRestId(id)
         const transaction = await this.getTransaction()
         const query_id = this.api_with_queryid[XApis.UserTweets]
         const query_path = `${this.API_PREFIX}/${query_id}/${XApis.UserTweets}`
         const transaction_id = await transaction.generateTransactionId('GET', query_path)
-        const csrf_token = cookie.match(/ct0=([^;]+)/)?.[1]
+        const csrf_token = this.getCsrfToken(cookie)?.[1]
         const uuid = uuidv4({
             rng: cookie ? () => Buffer.from(cookie.padEnd(16, '0')) : undefined,
         })
@@ -449,7 +457,7 @@ class XApiClient {
         const query_id = this.api_with_queryid[XApis.UserTweetsAndReplies]
         const query_path = `${this.API_PREFIX}/${query_id}/${XApis.UserTweetsAndReplies}`
         const transaction_id = await transaction.generateTransactionId('GET', query_path)
-        const csrf_token = cookie.match(/ct0=([^;]+)/)?.[1]
+        const csrf_token = this.getCsrfToken(cookie)?.[1]
         const uuid = uuidv4({
             rng: cookie ? () => Buffer.from(cookie.padEnd(16, '0')) : undefined,
         })
