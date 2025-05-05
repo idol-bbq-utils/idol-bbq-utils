@@ -8,7 +8,7 @@ import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import type { Crawler } from '@/types/crawler'
 import type { AppConfig } from '@/types'
-import type { CrawlEngine, TaskType } from '@idol-bbq-utils/spider/types'
+import type { Platform, TaskType, TaskTypeResult } from '@idol-bbq-utils/spider/types'
 import { BaseSpider } from '@idol-bbq-utils/spider'
 import { TranslatorProvider } from '@/types/translator'
 import { getTranslator } from '@/middleware/translator'
@@ -272,7 +272,7 @@ class SpiderPools extends BaseCompatibleModel {
                 if (task_type === 'follows') {
                     const crawl_engine = cfg_crawler?.engine
                     const sub_task_type = cfg_crawler?.sub_task_type
-                    const follows = await pRetry(
+                    const follows_res = (await pRetry(
                         () =>
                             spider.crawl(url.href, page, taskId, {
                                 task_type: 'follows',
@@ -287,13 +287,15 @@ class SpiderPools extends BaseCompatibleModel {
                                 )
                             },
                         },
-                    )
-                    let saved_follows_id = (await DB.Follow.save(follows)).id
-                    result.push({
-                        task_type: 'follows',
-                        url: url.href,
-                        data: [saved_follows_id],
-                    })
+                    )) as TaskTypeResult<'follows', Platform>
+                    for (const follows of follows_res) {
+                        let saved_follows_id = (await DB.Follow.save(follows)).id
+                        result.push({
+                            task_type: 'follows',
+                            url: url.href,
+                            data: [saved_follows_id],
+                        })
+                    }
                 }
             } catch (error) {
                 ctx.log?.error(`Error while crawling for ${website}: ${error}`)

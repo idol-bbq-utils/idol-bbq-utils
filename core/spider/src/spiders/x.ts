@@ -96,7 +96,7 @@ class XUserTimeLineSpider extends BaseSpider {
 
                 if (task_type === 'follows') {
                     this.log?.info(`Trying to grab follows for ${id}.`)
-                    return (await this.API_CLIENT.grabFollowsNumber(id)) as TaskTypeResult<T, Platform.X>
+                    return [await this.API_CLIENT.grabFollowsNumber(id)] as TaskTypeResult<T, Platform.X>
                 }
             } catch (e) {
                 this.log?.error(`[Engine Api] Failed to crawl with for ${id}: ${e}, fallback to browser`)
@@ -123,7 +123,7 @@ class XUserTimeLineSpider extends BaseSpider {
 
         if (task_type === 'follows') {
             this.log?.info(`Trying to grab follows for ${id}.`)
-            return (await XApiJsonParser.grabFollowsNumber(page, _url)) as TaskTypeResult<T, Platform.X>
+            return [await XApiJsonParser.grabFollowsNumber(page, _url)] as TaskTypeResult<T, Platform.X>
         }
 
         throw new Error('Invalid task type')
@@ -166,6 +166,12 @@ class XListSpider extends BaseSpider {
             this.log?.warn('Replies are not supported in this mode for now.')
             this.log?.info(`Trying to grab tweets for ${id}.`)
             const res = await this.grabTweets(id, cookie_string)
+            return res as TaskTypeResult<T, Platform.X>
+        }
+
+        if (task_type === 'follows') {
+            this.log?.info(`Trying to grab follows for ${id}.`)
+            const res = await this.grabFollows(id)
             return res as TaskTypeResult<T, Platform.X>
         }
 
@@ -216,14 +222,34 @@ class XListSpider extends BaseSpider {
         }
 
         const json = await res.json()
-        if (json.errors) {
-            throw new Error(`Failed to fetch tweets: ${json.errors[0].message}`)
-        }
         if (!json) {
-            throw new Error('Tweet json format may have changed')
+            throw new Error('Failed to fetch tweets with empty json')
         }
 
         return json.map(XApiJsonParser.oldTweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
+    }
+
+    async grabFollows(id: string): Promise<Array<GenericFollows>> {
+        const url = `${this.API_PREFIX}/1.1/lists/members.json`
+        const params = new URLSearchParams({
+            list_id: id,
+        })
+        const res = await fetch(`${url}?${params.toString()}`, {
+            headers: {
+                authorization: this.PUBLIC_TOKEN,
+                'user-agent': UserAgent.CHROME,
+            },
+        })
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch follows: ${res.statusText}`)
+        }
+        const json = await res.json()
+        if (!json) {
+            throw new Error('Failed to fetch follows with empty json')
+        }
+
+        return json?.users?.map(XApiJsonParser.oldFollowsParser).filter(Boolean) as Array<GenericFollows>
     }
 }
 
@@ -890,6 +916,18 @@ namespace XApiJsonParser {
                     return t
                 }, null),
             )
+    }
+
+    export function oldFollowsParser(user: any): GenericFollows {
+        if (!user) {
+            throw new Error('Follows json format may have changed')
+        }
+        return {
+            platform: Platform.X,
+            username: user?.name,
+            u_id: user?.screen_name,
+            followers: user?.followers_count,
+        }
     }
 
     export function tweetsFollowsParser(json: any): GenericFollows {

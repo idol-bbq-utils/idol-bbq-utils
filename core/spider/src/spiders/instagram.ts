@@ -60,7 +60,7 @@ class InstagramSpider extends BaseSpider {
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return (await InsApiJsonParser.grabFollowsNumber(page, _url)) as TaskTypeResult<T, Platform.Instagram>
+            return [await InsApiJsonParser.grabFollowsNumber(page, _url)] as TaskTypeResult<T, Platform.Instagram>
         }
 
         throw new Error('Invalid task type')

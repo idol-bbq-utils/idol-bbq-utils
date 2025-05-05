@@ -79,9 +79,9 @@ class TiktokSpider extends BaseSpider {
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return TiktokApiJsonParser.grabFollowsNumber(_url, random_hex7, Number(device_id)) as Promise<
-                TaskTypeResult<T, Platform.TikTok>
-            >
+            return [
+                await TiktokApiJsonParser.grabFollowsNumber(_url, random_hex7, Number(device_id)),
+            ] as TaskTypeResult<T, Platform.TikTok>
         }
 
         throw new Error('Invalid task type')

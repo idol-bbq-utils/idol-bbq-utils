@@ -44,7 +44,7 @@ type TaskType = 'article' | 'follows'
 type TaskTypeResult<T extends TaskType, P extends Platform> = T extends 'article'
     ? Array<GenericArticle<P>>
     : T extends 'follows'
-      ? GenericFollows
+      ? Array<GenericFollows>
       : never
 
 type MediaType = 'photo' | 'video' | 'video_thumbnail' | 'unknown'
