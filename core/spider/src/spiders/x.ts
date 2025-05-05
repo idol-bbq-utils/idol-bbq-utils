@@ -879,6 +879,12 @@ namespace XApiJsonParser {
             tweet.extra = null
         }
 
+        if (tweet.type === ArticleTypeEnum.QUOTED) {
+            // 删除引用推文最后的网址
+            // like https://t.co/xxxxxxxx
+            tweet.content = tweet.content.replace(/https:\/\/t.co\/\w+$/, '')
+        }
+
         if (tweet.media) {
             for (const { url } of legacy.entities.media) {
                 tweet.content = tweet.content.replace(url, '')
