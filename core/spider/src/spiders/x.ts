@@ -1,5 +1,13 @@
 import { Platform } from '@/types'
-import type { ArticleExtractType, CrawlEngine, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
+import type {
+    ArticleExtractType,
+    CrawlEngine,
+    GenericArticle,
+    GenericFollows,
+    GenericMediaInfo,
+    TaskType,
+    TaskTypeResult,
+} from '@/types'
 import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 import { JSONPath } from 'jsonpath-plus'
@@ -676,7 +684,7 @@ namespace XApiJsonParser {
                 }))
             }
 
-            let media
+            let media: GenericMediaInfo[] = []
             let content
             if ([CardTypeEnum.IMAGE, CardTypeEnum.PLAYER].includes(_card.type)) {
                 _card = {
@@ -697,7 +705,10 @@ namespace XApiJsonParser {
                     .filter(Boolean)
                     .join('\n')
             }
-            media = (_card as Card<CardTypeEnum.IMAGE | CardTypeEnum.PLAYER>).thumbnail_url
+            media.push({
+                type: 'photo',
+                url: (_card as Card<CardTypeEnum.IMAGE | CardTypeEnum.PLAYER>).thumbnail_url || '',
+            })
 
             if (_card.type === CardTypeEnum.CHOICE) {
                 const choices = binding_values.filter((v: any) => v.key.startsWith('choice'))
@@ -797,8 +808,8 @@ namespace XApiJsonParser {
                 : result.retweeted_status_result?.result
                   ? tweetParser(result.retweeted_status_result.result)
                   : null,
-            media: mediaParser(legacy?.entities?.media || legacy?.extended_entities?.media),
-            has_media: !!legacy?.entities?.media || !!legacy?.extended_entities?.media,
+            media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
+            has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(result.card?.legacy),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
@@ -851,8 +862,9 @@ namespace XApiJsonParser {
                 : legacy?.retweeted_status
                   ? oldTweetParser(legacy?.retweeted_status)
                   : null,
-            media: mediaParser(legacy?.entities?.media || legacy?.extended_entities?.media),
-            has_media: !!legacy?.entities?.media || !!legacy?.extended_entities?.media,
+            // extended_entities里是video，但entities里只是图片
+            media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
+            has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(legacy.card),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
