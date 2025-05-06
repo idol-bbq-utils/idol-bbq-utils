@@ -5,7 +5,9 @@
         "rootDirs": ["src"],
         "paths": {
             "@/*": ["./src/*"]
-        }
+        },
+        "types": ["@types/web"]
     },
     "include": ["src", "test"]
+    // "exclude": ["node_modules"]
 }

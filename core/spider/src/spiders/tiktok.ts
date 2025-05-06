@@ -1,5 +1,5 @@
 import { Platform } from '@/types'
-import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
+import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult, CrawlEngine } from '@/types'
 import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 
@@ -48,7 +48,11 @@ class TiktokSpider extends BaseSpider {
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
-        task_type: T = 'article' as T,
+        config: {
+            task_type: T
+            crawl_engine: CrawlEngine
+            sub_task_type?: Array<string>
+        },
     ): Promise<TaskTypeResult<T, Platform.TikTok>> {
         const result = super._match_valid_url(url, TiktokSpider)?.groups
         if (!result) {
@@ -66,6 +70,7 @@ class TiktokSpider extends BaseSpider {
         }
         const { id } = result
         const _url = `${this.BASE_URL}@${id}`
+        const { task_type } = config
         if (task_type === 'article') {
             this.log?.info('Trying to grab posts.')
             const res = await TiktokApiJsonParser.grabPosts(_url, random_hex7, Number(device_id))
@@ -74,9 +79,9 @@ class TiktokSpider extends BaseSpider {
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return TiktokApiJsonParser.grabFollowsNumber(_url, random_hex7, Number(device_id)) as Promise<
-                TaskTypeResult<T, Platform.TikTok>
-            >
+            return [
+                await TiktokApiJsonParser.grabFollowsNumber(_url, random_hex7, Number(device_id)),
+            ] as TaskTypeResult<T, Platform.TikTok>
         }
 
         throw new Error('Invalid task type')

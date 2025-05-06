@@ -1,5 +1,5 @@
 import { Platform } from '@/types'
-import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
+import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult, CrawlEngine } from '@/types'
 import { BaseSpider, waitForResponse } from './base'
 import { Page } from 'puppeteer-core'
 
@@ -29,7 +29,11 @@ class YoutubeSpider extends BaseSpider {
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
-        task_type: T = 'article' as T,
+        config: {
+            task_type: T
+            crawl_engine: CrawlEngine
+            sub_task_type?: Array<string>
+        },
     ): Promise<TaskTypeResult<T, Platform.YouTube>> {
         const result = super._match_valid_url(url, YoutubeSpider)?.groups
         if (!result) {
@@ -37,6 +41,7 @@ class YoutubeSpider extends BaseSpider {
         }
         const { id } = result
         const _url = `${this.BASE_URL}@${id}`
+        const { task_type } = config
         if (task_type === 'article') {
             this.log?.info('Trying to grab posts.')
             const res = await YoutubeApiJsonParser.grabPosts(page, `${_url}/community`)

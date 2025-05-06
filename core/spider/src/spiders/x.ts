@@ -1,10 +1,22 @@
 import { Platform } from '@/types'
-import type { ArticleExtractType, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
+import type {
+    ArticleExtractType,
+    CrawlEngine,
+    GenericArticle,
+    GenericFollows,
+    GenericMediaInfo,
+    TaskType,
+    TaskTypeResult,
+} from '@/types'
 import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 import { JSONPath } from 'jsonpath-plus'
 import { waitForResponse } from '@/spiders/base'
 import { defaultViewport } from './base'
+import { SimpleExpiringCache, UserAgent } from '@/utils'
+import { ClientTransaction, handleXMigration } from 'x-client-transaction-id'
+import { v4 as uuidv4 } from 'uuid'
+import { noop } from 'puppeteer-core/lib/esm/third_party/rxjs/rxjs.js'
 
 enum ArticleTypeEnum {
     /**
@@ -17,40 +29,542 @@ enum ArticleTypeEnum {
 }
 
 const X_BASE_VALID_URL = /(https:\/\/)?(www\.)?x\.com\//
-class XTimeLineSpider extends BaseSpider {
+
+const CACHE_KEYS = {
+    TransactionClient: 'transaction',
+}
+
+enum XApis {
+    UserTweets = 'UserTweets',
+    UserTweetsAndReplies = 'UserTweetsAndReplies',
+    UserByScreenName = 'UserByScreenName',
+}
+
+const apis = Object.values(XApis)
+
+enum XTweetsTaskType {
+    tweets = 'tweets',
+    replies = 'replies',
+}
+
+class XUserTimeLineSpider extends BaseSpider {
     // extends from XBaseSpider regex
-    static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /(?<id>\w+)/.source)
+    static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /(?<id>\w+)$/.source)
     static _PLATFORM = Platform.X
     BASE_URL: string = 'https://x.com/'
     NAME: string = 'X TimeLine Spider'
 
+    API_CLIENT: XApiClient = new XApiClient()
+
+    init(): this {
+        super.init()
+        return this
+    }
+
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
-        task_type: T = 'article' as T,
+        config: {
+            crawl_engine: CrawlEngine
+            task_type: T
+            sub_task_type?: Array<string>
+        },
     ): Promise<TaskTypeResult<T, Platform.X>> {
-        const result = super._match_valid_url(url, XTimeLineSpider)?.groups
+        const result = super._match_valid_url(url, XUserTimeLineSpider)?.groups
         if (!result) {
             throw new Error(`Invalid URL: ${url}`)
         }
         const { id } = result
-        const _url = `${this.BASE_URL}${id}`
+        if (!id) {
+            throw new Error(`Invalid URL: ${url}, id not found`)
+        }
 
+        const { crawl_engine, task_type, sub_task_type } = config
+
+        if (crawl_engine === 'api') {
+            this.log?.warn(`[Engine Api] API engine will be banned by X if you use it too much`)
+            try {
+                const cookie = await page.browserContext().cookies()
+                const cookie_string = cookie.map((c) => `${c.name}=${c.value}`).join('; ')
+
+                if (task_type === 'article') {
+                    let res = []
+                    if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.tweets)) {
+                        this.log?.info(`Trying to grab tweets for ${id}.`)
+                        const tweets = await this.API_CLIENT.grabTweets(id, cookie_string)
+                        res.push(...tweets)
+                    }
+                    if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.replies)) {
+                        this.log?.info(`Trying to grab replies for ${id}.`)
+                        const replies = await this.API_CLIENT.grabReplies(id, cookie_string)
+                        res.push(...replies)
+                    }
+                    return res as TaskTypeResult<T, Platform.X>
+                }
+
+                if (task_type === 'follows') {
+                    this.log?.info(`Trying to grab follows for ${id}.`)
+                    return [await this.API_CLIENT.grabFollowsNumber(id)] as TaskTypeResult<T, Platform.X>
+                }
+            } catch (e) {
+                this.log?.error(`[Engine Api] Failed to crawl with for ${id}: ${e}, fallback to browser`)
+            } finally {
+                noop()
+            }
+        }
+
+        const _url = `${this.BASE_URL}${id}`
         if (task_type === 'article') {
             let res = []
-            this.log?.info(`Trying to grab tweets for ${id}.`)
-            res = await XApiJsonParser.grabTweets(page, _url)
-            this.log?.info(`Trying to grab replies for ${id}.`)
-            const replies = await XApiJsonParser.grabReplies(page, _url + '/with_replies')
-            return res.concat(replies) as TaskTypeResult<T, Platform.X>
+            if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.tweets)) {
+                this.log?.info(`Trying to grab tweets for ${id}.`)
+                const tweets = await XApiJsonParser.grabTweets(page, _url)
+                res.push(...tweets)
+            }
+            if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.replies)) {
+                this.log?.info(`Trying to grab replies for ${id}.`)
+                const replies = await XApiJsonParser.grabReplies(page, _url + '/with_replies')
+                res.push(...replies)
+            }
+            return res as TaskTypeResult<T, Platform.X>
         }
 
         if (task_type === 'follows') {
             this.log?.info(`Trying to grab follows for ${id}.`)
-            return (await XApiJsonParser.grabFollowsNumer(page, _url)) as TaskTypeResult<T, Platform.X>
+            return [await XApiJsonParser.grabFollowsNumber(page, _url)] as TaskTypeResult<T, Platform.X>
         }
 
         throw new Error('Invalid task type')
+    }
+}
+
+class XListSpider extends BaseSpider {
+    static _VALID_URL = new RegExp(X_BASE_VALID_URL.source + /\i\/lists\/(?<id>\d+)/.source)
+    static _PLATFORM = Platform.X
+    BASE_URL: string = 'https://x.com/'
+    NAME: string = 'X OldApi Spider'
+    API_PREFIX = 'https://api.twitter.com'
+
+    PUBLIC_TOKEN =
+        'Bearer AAAAAAAAAAAAAAAAAAAAAFQODgEAAAAAVHTp76lzh3rFzcHbmHVvQxYYpTw%3DckAlMINMjmCwxUcaXbAN4XqJVdgMJaHqNOFgPMK0zN1qLqLQCF'
+
+    async _crawl<T extends TaskType>(
+        url: string,
+        page: Page,
+        config: {
+            crawl_engine: CrawlEngine
+            task_type: T
+            sub_task_type?: Array<string>
+        },
+    ): Promise<TaskTypeResult<T, Platform.X>> {
+        const result = super._match_valid_url(url, XListSpider)?.groups
+        if (!result) {
+            throw new Error(`Invalid URL: ${url}`)
+        }
+        const { id } = result
+        if (!id) {
+            throw new Error(`Invalid URL: ${url}, id not found`)
+        }
+
+        const { task_type } = config
+
+        const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
+
+        if (task_type === 'article') {
+            this.log?.warn('Replies are not supported in this mode for now.')
+            this.log?.info(`Trying to grab tweets for ${id}.`)
+            const res = await this.grabTweets(id, cookie_string)
+            return res as TaskTypeResult<T, Platform.X>
+        }
+
+        if (task_type === 'follows') {
+            this.log?.info(`Trying to grab follows for ${id}.`)
+            const res = await this.grabFollows(id)
+            return res as TaskTypeResult<T, Platform.X>
+        }
+
+        throw new Error('Invalid task type')
+    }
+
+    getCsrfToken(cookie: string) {
+        const match = cookie.match(/(?:^|;\s*)ct0=([0-9a-f]+)\s*(?:;|$)/)
+        if (match) {
+            return match[1]
+        }
+        return null
+    }
+
+    async grabTweets(id: string, cookie_string: string): Promise<Array<GenericArticle<Platform.X>>> {
+        const url = `${this.API_PREFIX}/1.1/lists/statuses.json`
+        const params = new URLSearchParams({
+            count: '40',
+            include_my_retweet: '1',
+            include_rts: '1',
+            list_id: id,
+            cards_platform: 'Web-13',
+            include_entities: '1',
+            include_user_entities: '1',
+            include_cards: '1',
+            send_error_codes: '1',
+            tweet_mode: 'extended',
+            include_ext_alt_text: 'true',
+            include_reply_count: 'true',
+            ext: 'mediaStats%2ChighlightedLabel%2CvoiceInfo%2CsuperFollowMetadata',
+            include_ext_has_nft_avatar: 'true',
+            include_ext_is_blue_verified: 'true',
+            include_ext_verified_type: 'true',
+            include_ext_sensitive_media_warning: 'true',
+            include_ext_media_color: 'true',
+        })
+        const res = await fetch(`${url}?${params.toString()}`, {
+            headers: {
+                authorization: this.PUBLIC_TOKEN,
+                'user-agent': UserAgent.CHROME,
+                cookie: cookie_string,
+                'x-csrf-token': this.getCsrfToken(cookie_string) || '',
+            },
+        })
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch tweets: ${res.statusText}`)
+        }
+
+        const json = await res.json()
+        if (!json) {
+            throw new Error('Failed to fetch tweets with empty json')
+        }
+
+        return json.map(XApiJsonParser.oldTweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
+    }
+
+    async grabFollows(id: string): Promise<Array<GenericFollows>> {
+        const url = `${this.API_PREFIX}/1.1/lists/members.json`
+        const params = new URLSearchParams({
+            list_id: id,
+        })
+        const res = await fetch(`${url}?${params.toString()}`, {
+            headers: {
+                authorization: this.PUBLIC_TOKEN,
+                'user-agent': UserAgent.CHROME,
+            },
+        })
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch follows: ${res.statusText}`)
+        }
+        const json = await res.json()
+        if (!json) {
+            throw new Error('Failed to fetch follows with empty json')
+        }
+
+        return json?.users?.map(XApiJsonParser.oldFollowsParser).filter(Boolean) as Array<GenericFollows>
+    }
+}
+
+/**
+ * This is dangerous, because it will be banned by X if you use it too much
+ */
+class XApiClient {
+    guest_token = '1918915913551839395'
+    PUBLIC_TOKEN =
+        'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA'
+    /**
+     * 'https://x.com'
+     *
+     * Notice there is no trailing slash
+     */
+    BASE_URL = 'https://x.com'
+    API_PREFIX = '/i/api/graphql'
+    BASE_HEADER = {
+        authorization: this.PUBLIC_TOKEN,
+        'user-agent': UserAgent.CHROME,
+        referer: 'https://x.com/',
+        origin: 'https://x.com',
+    }
+
+    cache: SimpleExpiringCache = new SimpleExpiringCache()
+    api_with_queryid: Record<XApis, string>
+    name_to_rest_id: Record<string, number>
+
+    constructor() {
+        this.api_with_queryid = {} as Record<XApis, string>
+        this.name_to_rest_id = {} as Record<string, number>
+    }
+
+    async getTransaction(): Promise<ClientTransaction> {
+        let transaction = this.cache.get(CACHE_KEYS.TransactionClient) as ClientTransaction | undefined
+        if (!transaction) {
+            const document = await handleXMigration()
+            const new_transaction = await ClientTransaction.create(document)
+            transaction = new_transaction
+
+            const html = document.documentElement.outerHTML
+            const js_url = html.match(/href="([^"]*\/main\.[^"]+\.js)"/)?.[1]
+            if (!js_url) {
+                throw new Error('Failed to extract api query id from document')
+            }
+            const js_code = await await await (await fetch(js_url)).text()
+
+            this.api_with_queryid = {} as Record<XApis, string>
+
+            for (const api of apis) {
+                const queryId = this.getQueryId(js_code, api)
+                if (queryId) {
+                    this.api_with_queryid[api] = queryId
+                } else {
+                    throw new Error(`Failed to extract ${api} query id from js code`)
+                }
+            }
+
+            this.cache.set(CACHE_KEYS.TransactionClient, transaction, 60 * 60 * 6) // 6h
+        }
+
+        return transaction
+    }
+
+    /**
+     * UserByScreenName
+     */
+    async getRawUserInfo(id: string) {
+        const transaction = await this.getTransaction()
+        const query_id = this.api_with_queryid[XApis.UserByScreenName]
+        const query_path = `/graphql/${query_id}/${XApis.UserByScreenName}`
+        const transaction_id = await transaction.generateTransactionId('GET', query_path)
+        const variables = {
+            screen_name: id,
+        }
+        const features = {
+            hidden_profile_subscriptions_enabled: true,
+            profile_label_improvements_pcf_label_in_post_enabled: true,
+            rweb_tipjar_consumption_enabled: true,
+            verified_phone_label_enabled: false,
+            subscriptions_verification_info_is_identity_verified_enabled: true,
+            subscriptions_verification_info_verified_since_enabled: true,
+            highlights_tweets_tab_ui_enabled: true,
+            responsive_web_twitter_article_notes_tab_enabled: true,
+            subscriptions_feature_can_gift_premium: true,
+            creator_subscriptions_tweet_preview_api_enabled: true,
+            responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+            responsive_web_graphql_timeline_navigation_enabled: true,
+        }
+        const fieldToggles = { withAuxiliaryUserLabels: true }
+
+        const query = this.generateParams(features, variables, fieldToggles)
+        const url = `https://api.x.com${query_path}?${query.toString()}`
+        const headers = {
+            ...this.BASE_HEADER,
+            'x-client-transaction-id': transaction_id,
+            'x-guest-token': this.guest_token,
+        }
+        const res = await fetch(url, {
+            headers: headers,
+        })
+        if (!res.ok) {
+            throw new Error(`Failed to fetch user info (${id}): ${res.statusText}`)
+        }
+        const json = await res.json()
+        return json
+    }
+
+    async getRestId(id: string) {
+        if (this.name_to_rest_id[id]) {
+            return this.name_to_rest_id[id]
+        }
+        const user_info = await this.getRawUserInfo(id)
+        if (!user_info) {
+            throw new Error(`Failed to fetch user info for ${id}`)
+        }
+        const rest_id = user_info?.data?.user?.result?.rest_id
+        if (!rest_id) {
+            throw new Error(`Failed to fetch rest id for ${id}`)
+        }
+        this.name_to_rest_id[id] = rest_id
+        return rest_id as number
+    }
+
+    getQueryId(js: string, targetOperationName: string) {
+        const escapedOperationName = targetOperationName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(`queryId:"([^"]+)",operationName:"${escapedOperationName}"`, 's')
+        const match = js.match(regex)
+        return match ? match[1] : null
+    }
+
+    generateParams(
+        features: Record<string, any>,
+        variables: Record<string, any>,
+        fieldToggles?: Record<string, any>,
+    ): URLSearchParams {
+        let params = new URLSearchParams()
+        params.append('variables', JSON.stringify(variables))
+        params.append('features', JSON.stringify(features))
+        if (fieldToggles) params.append('fieldToggles', JSON.stringify(fieldToggles))
+
+        return params
+    }
+
+    getCsrfToken(cookie: string) {
+        const match = cookie.match(/(?:^|;\s*)ct0=([0-9a-f]+)\s*(?:;|$)/)
+        if (match) {
+            return match[1]
+        }
+        return null
+    }
+
+    async grabTweets(id: string, cookie: string) {
+        const rest_id = await this.getRestId(id)
+        const transaction = await this.getTransaction()
+        const query_id = this.api_with_queryid[XApis.UserTweets]
+        const query_path = `${this.API_PREFIX}/${query_id}/${XApis.UserTweets}`
+        const transaction_id = await transaction.generateTransactionId('GET', query_path)
+        const csrf_token = this.getCsrfToken(cookie)?.[1]
+        const uuid = uuidv4({
+            rng: cookie ? () => Buffer.from(cookie.padEnd(16, '0')) : undefined,
+        })
+        const variables = {
+            userId: rest_id,
+            // TODO: configurable
+            count: 5,
+            includePromotedContent: true,
+            withQuickPromoteEligibilityTweetFields: true,
+            withVoice: true,
+        }
+        const features = {
+            rweb_video_screen_enabled: false,
+            profile_label_improvements_pcf_label_in_post_enabled: true,
+            rweb_tipjar_consumption_enabled: true,
+            verified_phone_label_enabled: false,
+            creator_subscriptions_tweet_preview_api_enabled: true,
+            responsive_web_graphql_timeline_navigation_enabled: true,
+            responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+            premium_content_api_read_enabled: false,
+            communities_web_enable_tweet_community_results_fetch: true,
+            c9s_tweet_anatomy_moderator_badge_enabled: true,
+            responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+            responsive_web_grok_analyze_post_followups_enabled: true,
+            responsive_web_jetfuel_frame: false,
+            responsive_web_grok_share_attachment_enabled: true,
+            articles_preview_enabled: true,
+            responsive_web_edit_tweet_api_enabled: true,
+            graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+            view_counts_everywhere_api_enabled: true,
+            longform_notetweets_consumption_enabled: true,
+            responsive_web_twitter_article_tweet_consumption_enabled: true,
+            tweet_awards_web_tipping_enabled: false,
+            responsive_web_grok_show_grok_translated_post: false,
+            responsive_web_grok_analysis_button_from_backend: false,
+            creator_subscriptions_quote_tweet_preview_enabled: false,
+            freedom_of_speech_not_reach_fetch_enabled: true,
+            standardized_nudges_misinfo: true,
+            tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+            longform_notetweets_rich_text_read_enabled: true,
+            longform_notetweets_inline_media_enabled: true,
+            responsive_web_grok_image_annotation_enabled: true,
+            responsive_web_enhance_cards_enabled: false,
+        }
+        const fieldToggles = { withArticlePlainText: false }
+        const query = this.generateParams(features, variables, fieldToggles)
+
+        const url = `${this.BASE_URL}${query_path}?${query.toString()}`
+        const res = await fetch(url, {
+            headers: {
+                ...this.BASE_HEADER,
+                cookie: cookie,
+                'x-client-transaction-id': transaction_id,
+                'x-client-uuid': uuid,
+                'x-csrf-token': csrf_token || '',
+                'x-twitter-active-user': 'yes',
+                'x-twitter-auth-type': 'OAuth2Session',
+            },
+        })
+        if (!res.ok) {
+            throw new Error(`Failed to fetch tweets: ${res.statusText}`)
+        }
+        const json = await res.json()
+        if (json.errors) {
+            throw new Error(`Failed to fetch tweets: ${json.errors[0].message}`)
+        }
+        return XApiJsonParser.tweetsArticleParser(json)
+    }
+    async grabReplies(id: string, cookie: string) {
+        const rest_id = await this.getRestId(id)
+        const transaction = await this.getTransaction()
+        const query_id = this.api_with_queryid[XApis.UserTweetsAndReplies]
+        const query_path = `${this.API_PREFIX}/${query_id}/${XApis.UserTweetsAndReplies}`
+        const transaction_id = await transaction.generateTransactionId('GET', query_path)
+        const csrf_token = this.getCsrfToken(cookie)?.[1]
+        const uuid = uuidv4({
+            rng: cookie ? () => Buffer.from(cookie.padEnd(16, '0')) : undefined,
+        })
+        const variables = {
+            userId: rest_id,
+            count: 8,
+            includePromotedContent: true,
+            withCommunity: true,
+            withVoice: true,
+        }
+        const features = {
+            rweb_video_screen_enabled: false,
+            profile_label_improvements_pcf_label_in_post_enabled: true,
+            rweb_tipjar_consumption_enabled: true,
+            verified_phone_label_enabled: false,
+            creator_subscriptions_tweet_preview_api_enabled: true,
+            responsive_web_graphql_timeline_navigation_enabled: true,
+            responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+            premium_content_api_read_enabled: false,
+            communities_web_enable_tweet_community_results_fetch: true,
+            c9s_tweet_anatomy_moderator_badge_enabled: true,
+            responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+            responsive_web_grok_analyze_post_followups_enabled: true,
+            responsive_web_jetfuel_frame: false,
+            responsive_web_grok_share_attachment_enabled: true,
+            articles_preview_enabled: true,
+            responsive_web_edit_tweet_api_enabled: true,
+            graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+            view_counts_everywhere_api_enabled: true,
+            longform_notetweets_consumption_enabled: true,
+            responsive_web_twitter_article_tweet_consumption_enabled: true,
+            tweet_awards_web_tipping_enabled: false,
+            responsive_web_grok_show_grok_translated_post: false,
+            responsive_web_grok_analysis_button_from_backend: false,
+            creator_subscriptions_quote_tweet_preview_enabled: false,
+            freedom_of_speech_not_reach_fetch_enabled: true,
+            standardized_nudges_misinfo: true,
+            tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+            longform_notetweets_rich_text_read_enabled: true,
+            longform_notetweets_inline_media_enabled: true,
+            responsive_web_grok_image_annotation_enabled: true,
+            responsive_web_enhance_cards_enabled: false,
+        }
+        const fieldToggles = { withArticlePlainText: false }
+        const query = this.generateParams(features, variables, fieldToggles)
+        const url = `${this.BASE_URL}${query_path}?${query.toString()}`
+        const res = await fetch(url, {
+            headers: {
+                ...this.BASE_HEADER,
+                cookie: cookie,
+                'x-client-transaction-id': transaction_id,
+                'x-client-uuid': uuid,
+                'x-csrf-token': csrf_token || '',
+                'x-twitter-active-user': 'yes',
+                'x-twitter-auth-type': 'OAuth2Session',
+            },
+        })
+        if (!res.ok) {
+            throw new Error(`Failed to fetch replies: ${res.statusText}`)
+        }
+        const json = await res.json()
+        if (json.errors) {
+            throw new Error(`Failed to fetch replies: ${json.errors[0].message}`)
+        }
+        return XApiJsonParser.tweetsRepliesParser(json)
+    }
+
+    async grabFollowsNumber(id: string) {
+        const user_info = await this.getRawUserInfo(id)
+        if (!user_info) {
+            throw new Error(`Failed to fetch user info for ${id}`)
+        }
+        return XApiJsonParser.tweetsFollowsParser(user_info)
     }
 }
 namespace XApiJsonParser {
@@ -162,9 +676,15 @@ namespace XApiJsonParser {
                 return null
             }
 
-            const binding_values = card.binding_values
+            let binding_values = card.binding_values
+            if (!Array.isArray(binding_values)) {
+                binding_values = Object.entries(binding_values).map(([key, value]) => ({
+                    key,
+                    value,
+                }))
+            }
 
-            let media
+            let media: GenericMediaInfo[] = []
             let content
             if ([CardTypeEnum.IMAGE, CardTypeEnum.PLAYER].includes(_card.type)) {
                 _card = {
@@ -185,7 +705,10 @@ namespace XApiJsonParser {
                     .filter(Boolean)
                     .join('\n')
             }
-            media = (_card as Card<CardTypeEnum.IMAGE | CardTypeEnum.PLAYER>).thumbnail_url
+            media.push({
+                type: 'photo',
+                url: (_card as Card<CardTypeEnum.IMAGE | CardTypeEnum.PLAYER>).thumbnail_url || '',
+            })
 
             if (_card.type === CardTypeEnum.CHOICE) {
                 const choices = binding_values.filter((v: any) => v.key.startsWith('choice'))
@@ -285,8 +808,8 @@ namespace XApiJsonParser {
                 : result.retweeted_status_result?.result
                   ? tweetParser(result.retweeted_status_result.result)
                   : null,
-            media: mediaParser(legacy?.entities?.media || legacy?.extended_entities?.media),
-            has_media: !!legacy?.entities?.media || !!legacy?.extended_entities?.media,
+            media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
+            has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(result.card?.legacy),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
@@ -312,10 +835,71 @@ namespace XApiJsonParser {
         return tweet as GenericArticle<Platform.X>
     }
 
+    export function oldTweetParser(json: any): GenericArticle<Platform.X> | null {
+        // we do not handle conversation here
+        if (json?.in_reply_to_status_id) {
+            return null
+        }
+        const legacy = json
+        const userLegacy = json?.user
+        let content = legacy?.full_text
+        for (const { url } of legacy?.entities?.media || []) {
+            content = content.replace(url, '')
+        }
+
+        // 主推文解析
+        const tweet = {
+            platform: Platform.X,
+            a_id: legacy?.id_str,
+            u_id: userLegacy?.screen_name,
+            username: userLegacy?.name,
+            created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
+            content: legacy?.full_text,
+            url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
+            type: legacy?.is_quote_status ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET,
+            ref: legacy?.quoted_status
+                ? oldTweetParser(legacy?.quoted_status)
+                : legacy?.retweeted_status
+                  ? oldTweetParser(legacy?.retweeted_status)
+                  : null,
+            // extended_entities里是video，但entities里只是图片
+            media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
+            has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
+            extra: Card.cardParser(legacy.card),
+            u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
+        }
+        // 处理转发类型
+        if (legacy?.retweeted_status) {
+            tweet.type = ArticleTypeEnum.RETWEET
+            tweet.content = ''
+            tweet.ref = oldTweetParser(legacy.retweeted_status)
+            // 转发类型推文media按照ref为准
+            tweet.media = null
+            tweet.has_media = false
+            tweet.extra = null
+        }
+
+        if (tweet.type === ArticleTypeEnum.QUOTED) {
+            // 删除引用推文最后的网址
+            // like https://t.co/xxxxxxxx
+            tweet.content = tweet.content.replace(/https:\/\/t.co\/\w+$/, '')
+        }
+
+        if (tweet.media) {
+            for (const { url } of legacy.entities.media) {
+                tweet.content = tweet.content.replace(url, '')
+            }
+        }
+        return tweet as GenericArticle<Platform.X>
+    }
+
     export function tweetsArticleParser(json: any) {
         let tweets = sanitizeTweetsJson(json)
         tweets = tweets
-            .filter((t: { entryId: string }) => t.entryId.startsWith('tweet-'))
+            .filter(
+                (t: { entryId: string }) =>
+                    t.entryId.startsWith('tweet-') && !t.entryId.startsWith('profile-conversation'),
+            )
             .map((t: { content: any }) => t.content?.itemContent?.tweet_results?.result)
             .filter(Boolean)
         return tweets.map(tweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
@@ -350,6 +934,18 @@ namespace XApiJsonParser {
                     return t
                 }, null),
             )
+    }
+
+    export function oldFollowsParser(user: any): GenericFollows {
+        if (!user) {
+            throw new Error('Follows json format may have changed')
+        }
+        return {
+            platform: Platform.X,
+            username: user?.name,
+            u_id: user?.screen_name,
+            followers: user?.followers_count,
+        }
     }
 
     export function tweetsFollowsParser(json: any): GenericFollows {
@@ -470,7 +1066,7 @@ namespace XApiJsonParser {
     /**
      * @param url https://x.com/username
      */
-    export async function grabFollowsNumer(page: Page, url: string): Promise<GenericFollows> {
+    export async function grabFollowsNumber(page: Page, url: string): Promise<GenericFollows> {
         const { promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
             if (url.includes('UserByScreenName') && response.request().method() === 'GET') {
@@ -560,6 +1156,6 @@ type Card<T extends CardTypeEnum> = {
 
 type ExtraContentType = Card<CardTypeEnum> | null
 
-export { ArticleTypeEnum, XApiJsonParser, XTimeLineSpider }
+export { ArticleTypeEnum, XApiJsonParser, XUserTimeLineSpider, XListSpider }
 
 export type { ExtraContentType }

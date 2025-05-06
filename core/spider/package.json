@@ -43,6 +43,11 @@
         "@idol-bbq-utils/log": "workspace:^",
         "dayjs": "^1.11.13",
         "jsonpath-plus": "^10.2.0",
-        "puppeteer-core": "^24.6.0"
+        "puppeteer-core": "^24.6.0",
+        "uuid": "^11.1.0",
+        "x-client-transaction-id": "^0.1.7"
+    },
+    "devDependencies": {
+        "@types/web": "^0.0.231"
     }
 }

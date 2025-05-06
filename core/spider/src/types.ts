@@ -1,6 +1,8 @@
 import { X, Instagram, Tiktok, Youtube } from './spiders'
 import type { ExtraContentType } from './spiders/x'
 
+type CrawlEngine = 'browser' | 'api'
+
 enum Platform {
     X = 1,
     Twitter = 1,
@@ -42,7 +44,7 @@ type TaskType = 'article' | 'follows'
 type TaskTypeResult<T extends TaskType, P extends Platform> = T extends 'article'
     ? Array<GenericArticle<P>>
     : T extends 'follows'
-      ? GenericFollows
+      ? Array<GenericFollows>
       : never
 
 type MediaType = 'photo' | 'video' | 'video_thumbnail' | 'unknown'
@@ -105,4 +107,5 @@ export type {
     TaskType,
     MediaType,
     ArticleExtractType,
+    CrawlEngine,
 }

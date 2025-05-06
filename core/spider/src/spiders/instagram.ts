@@ -1,5 +1,5 @@
 import { Platform } from '@/types'
-import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult } from '@/types'
+import type { GenericMediaInfo, GenericArticle, GenericFollows, TaskType, TaskTypeResult, CrawlEngine } from '@/types'
 import { BaseSpider, waitForResponse } from './base'
 import { Page } from 'puppeteer-core'
 
@@ -37,7 +37,11 @@ class InstagramSpider extends BaseSpider {
     async _crawl<T extends TaskType>(
         url: string,
         page: Page,
-        task_type: T = 'article' as T,
+        config: {
+            task_type: T
+            crawl_engine: CrawlEngine
+            sub_task_type?: Array<string>
+        },
     ): Promise<TaskTypeResult<T, Platform.Instagram>> {
         const result = super._match_valid_url(url, InstagramSpider)?.groups
         if (!result) {
@@ -45,6 +49,7 @@ class InstagramSpider extends BaseSpider {
         }
         const { id } = result
         const _url = `${this.BASE_URL}${id}`
+        const { task_type } = config
         if (task_type === 'article') {
             this.log?.info('Trying to grab posts.')
             const res = await InsApiJsonParser.grabPosts(page, _url)
@@ -55,7 +60,7 @@ class InstagramSpider extends BaseSpider {
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return (await InsApiJsonParser.grabFollowsNumber(page, _url)) as TaskTypeResult<T, Platform.Instagram>
+            return [await InsApiJsonParser.grabFollowsNumber(page, _url)] as TaskTypeResult<T, Platform.Instagram>
         }
 
         throw new Error('Invalid task type')
@@ -238,7 +243,7 @@ namespace InsApiJsonParser {
             .flat()
         const og_title = await page.$('meta[property="og:title"]')
         const title = await og_title?.evaluate((el) => el.getAttribute('content'))
-        const username = title.match(USERNAME_REGEX_FROM_OG_TITLE).groups?.username
+        const username = title?.match(USERNAME_REGEX_FROM_OG_TITLE)?.groups?.username
         for (const item of res) {
             item.username = username
         }

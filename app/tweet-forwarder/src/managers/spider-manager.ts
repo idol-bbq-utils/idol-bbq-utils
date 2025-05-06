@@ -8,7 +8,7 @@ import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
 import type { Crawler } from '@/types/crawler'
 import type { AppConfig } from '@/types'
-import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { Platform, TaskType, TaskTypeResult } from '@idol-bbq-utils/spider/types'
 import { BaseSpider } from '@idol-bbq-utils/spider'
 import { TranslatorProvider } from '@/types/translator'
 import { getTranslator } from '@/middleware/translator'
@@ -246,16 +246,16 @@ class SpiderPools extends BaseCompatibleModel {
             // 单次系列爬虫任务
             try {
                 const url = new URL(website)
-                let spider = this.spiders.get(url.hostname)
+                const spiderBuilder = await Spider.getSpider(url.href)
+                if (!spiderBuilder) {
+                    ctx.log?.warn(`Spider not found for ${url.href}`)
+                    continue
+                }
+                let spider = this.spiders.get(spiderBuilder._VALID_URL.source)
                 if (!spider) {
                     // 需要用详细的网页地址匹配
-                    const spiderBuilder = await Spider.getSpider(url.href)
-                    if (!spiderBuilder) {
-                        ctx.log?.warn(`Spider not found for ${url.href}`)
-                        continue
-                    }
                     spider = new spiderBuilder(this.log).init()
-                    this.spiders.set(url.hostname, spider)
+                    this.spiders.set(spiderBuilder._VALID_URL.source, spider)
                     ctx.log?.info(`Spider instance created for ${url.hostname}`)
                 }
 
@@ -270,20 +270,32 @@ class SpiderPools extends BaseCompatibleModel {
                 }
 
                 if (task_type === 'follows') {
-                    const follows = await pRetry(() => spider.crawl(url.href, page, 'follows', taskId), {
-                        retries: RETRY_LIMIT,
-                        onFailedAttempt: (error) => {
-                            ctx.log?.error(
-                                `[${url.href}] Crawl follows failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
-                            )
+                    const crawl_engine = cfg_crawler?.engine
+                    const sub_task_type = cfg_crawler?.sub_task_type
+                    const follows_res = (await pRetry(
+                        () =>
+                            spider.crawl(url.href, page, taskId, {
+                                task_type: 'follows',
+                                crawl_engine,
+                                sub_task_type,
+                            }),
+                        {
+                            retries: RETRY_LIMIT,
+                            onFailedAttempt: (error) => {
+                                ctx.log?.error(
+                                    `[${url.href}] Crawl follows failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                                )
+                            },
                         },
-                    })
-                    let saved_follows_id = (await DB.Follow.save(follows)).id
-                    result.push({
-                        task_type: 'follows',
-                        url: url.href,
-                        data: [saved_follows_id],
-                    })
+                    )) as TaskTypeResult<'follows', Platform>
+                    for (const follows of follows_res) {
+                        let saved_follows_id = (await DB.Follow.save(follows)).id
+                        result.push({
+                            task_type: 'follows',
+                            url: url.href,
+                            data: [saved_follows_id],
+                        })
+                    }
                 }
             } catch (error) {
                 ctx.log?.error(`Error while crawling for ${website}: ${error}`)
@@ -327,14 +339,24 @@ class SpiderPools extends BaseCompatibleModel {
         page: Page,
         translator?: BaseTranslator,
     ): Promise<Array<number>> {
-        const articles = await pRetry(() => spider.crawl(url.href, page, 'article', ctx.taskId), {
-            retries: RETRY_LIMIT,
-            onFailedAttempt: (error) => {
-                ctx.log?.error(
-                    `[${url.href}] Crawl article failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
-                )
+        const { cfg_crawler } = ctx.task.data as Crawler
+        const { engine, sub_task_type } = cfg_crawler || {}
+        const articles = await pRetry(
+            () =>
+                spider.crawl(url.href, page, ctx.taskId, {
+                    task_type: 'article',
+                    crawl_engine: engine,
+                    sub_task_type,
+                }),
+            {
+                retries: RETRY_LIMIT,
+                onFailedAttempt: (error) => {
+                    ctx.log?.error(
+                        `[${url.href}] Crawl article failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                    )
+                },
             },
-        })
+        )
         let new_articles: Array<Article> = []
         let saved_article_ids = []
         for (const article of articles) {

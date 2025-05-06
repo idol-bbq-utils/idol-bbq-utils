@@ -16,7 +16,7 @@ import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile, writeIm
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
-import { orderBy } from 'lodash'
+import { cloneDeep, orderBy } from 'lodash'
 
 type Forwarder = RealForwarder<TaskType>
 
@@ -416,7 +416,10 @@ class ForwarderPools extends BaseCompatibleModel {
             }>
             if (cfg_forwarder?.render_type === 'img') {
                 try {
-                    const imgBuffer = await this.ArticleConverter.articleToImg(article, process.env.FONTS_DIR)
+                    const imgBuffer = await this.ArticleConverter.articleToImg(
+                        cloneDeep(article),
+                        process.env.FONTS_DIR,
+                    )
                     ctx.log?.debug(`Converted article ${article.a_id} to img successfully`)
                     const path = writeImgToFile(imgBuffer, `${ctx.taskId}-${article.a_id}-rendered.png`)
 
