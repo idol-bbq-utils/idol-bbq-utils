@@ -512,17 +512,17 @@ class ForwarderPools extends BaseCompatibleModel {
             for (const { forwarder: target, runtime_config } of to) {
                 ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
                 try {
-                    await target.send(text, {
-                        media: maybe_media_files,
-                        timestamp: article.created_at,
-                        runtime_config,
-                        original_text: articleToImgSuccess ? fullText : undefined,
-                    })
-                    let currentArticle: ArticleWithId | null = article
-                    // 运行前再检查下，因为cron的设定，可能同时会有两个同样的任务在执行
                     const exist = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
+                    // 运行前再检查下，因为cron的设定，可能同时会有两个同样的任务在执行
                     // 如果不存在则尝试发送
                     if (!exist) {
+                        await target.send(text, {
+                            media: maybe_media_files,
+                            timestamp: article.created_at,
+                            runtime_config,
+                            original_text: articleToImgSuccess ? fullText : undefined,
+                        })
+                        let currentArticle: ArticleWithId | null = article
                         while (currentArticle) {
                             await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
                             currentArticle = currentArticle.ref as ArticleWithId | null
