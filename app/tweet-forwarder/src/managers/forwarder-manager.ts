@@ -519,11 +519,16 @@ class ForwarderPools extends BaseCompatibleModel {
                         original_text: articleToImgSuccess ? fullText : undefined,
                     })
                     let currentArticle: ArticleWithId | null = article
-                    while (currentArticle) {
-                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
-                        currentArticle = currentArticle.ref as ArticleWithId | null
+                    // 运行前再检查下，因为cron的设定，可能同时会有两个同样的任务在执行
+                    const exist = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
+                    // 如果不存在则尝试发送
+                    if (!exist) {
+                        while (currentArticle) {
+                            await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                            currentArticle = currentArticle.ref as ArticleWithId | null
+                        }
+                        error_for_all = false
                     }
-                    error_for_all = false
                 } catch (e) {
                     ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                 }

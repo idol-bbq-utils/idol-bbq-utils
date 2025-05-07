@@ -161,7 +161,7 @@ class SpiderPools extends BaseCompatibleModel {
     private translators: Map<TranslatorProvider, BaseTranslator> = new Map()
     private browser: Browser
     /**
-     * batch id =  md5hash( `websites` or `origin + paths`)
+     * BaseSpider._VALID_URL.source
      */
     private spiders: Map<string, BaseSpider> = new Map()
     // private workers:
