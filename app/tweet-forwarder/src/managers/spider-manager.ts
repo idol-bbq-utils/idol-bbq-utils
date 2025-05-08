@@ -18,6 +18,7 @@ import type { Article } from '@/db'
 import { RETRY_LIMIT } from '@/config'
 import { delay } from '@/utils/time'
 import { shuffle } from 'lodash'
+import crypto from 'crypto'
 
 interface TaskResult {
     taskId: string
@@ -158,7 +159,7 @@ class SpiderPools extends BaseCompatibleModel {
     NAME = 'SpiderPools'
     log?: Logger
     private emitter: EventEmitter
-    private translators: Map<TranslatorProvider, BaseTranslator> = new Map()
+    private translators: Map<string, BaseTranslator> = new Map()
     private browser: Browser
     /**
      * BaseSpider._VALID_URL.source
@@ -197,13 +198,19 @@ class SpiderPools extends BaseCompatibleModel {
             })
             return
         }
-        websites = shuffle(
-            sanitizeWebsites({
-                websites,
-                origin,
-                paths,
-            }),
-        )
+        websites = sanitizeWebsites({
+            websites,
+            origin,
+            paths,
+        })
+        // TODO: configurable id
+        const crawler_batch_id = crypto
+            .createHash('md5')
+            .update(`${websites.join(',')}`)
+            .digest('hex')
+
+        // shuffle it for avoiding bot detection
+        websites = shuffle(websites)
         if (websites.length === 0) {
             ctx.log?.error(`No websites found after sanitizing`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
@@ -218,13 +225,13 @@ class SpiderPools extends BaseCompatibleModel {
         let translator = undefined
         if (_translator) {
             const translator_cfg = _translator
-            translator = this.translators.get(translator_cfg.provider)
+            translator = this.translators.get(crawler_batch_id)
             if (!translator) {
                 const translatorBuilder = getTranslator(translator_cfg.provider)
                 if (translatorBuilder) {
                     translator = new translatorBuilder(translator_cfg.api_key, this.log, translator_cfg.cfg_translator)
                     await translator.init()
-                    this.translators.set(translator_cfg.provider, translator)
+                    this.translators.set(crawler_batch_id, translator)
                     ctx.log?.info(`Translator instance created for ${translator_cfg.provider}`)
                 } else {
                     ctx.log?.warn(`Translator not found for ${translator_cfg.provider}`)
