@@ -1,10 +1,10 @@
-import fs, { writeFile, writeFileSync } from 'fs'
+import fs, { writeFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { CACHE_DIR_ROOT, log } from '@/config'
-import https from 'https'
 import path from 'path'
 import type { MediaToolConfigMap } from '@/types/media'
 import type { MediaType } from '@idol-bbq-utils/spider/types'
+import { UserAgent } from '@idol-bbq-utils/spider'
 
 const MATCH_FILE_NAME = /(?<filename>[^/]+)\.(?<ext>[^.]+)$/
 
@@ -14,39 +14,41 @@ function writeImgToFile(buffer: Buffer<ArrayBufferLike>, filename: string): stri
     return dest
 }
 
-function download(url: string, dest: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const dir = path.dirname(dest)
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true })
-        }
-        let ext: string | undefined = undefined
-        https
-            .get(url, (response) => {
-                const contentType = response.headers['content-type']
-                ext = contentType ? mimeToExt[contentType as keyof typeof mimeToExt] : undefined
-                if (ext) {
-                    dest += `.${ext}`
-                }
-                const file = fs.createWriteStream(dest)
-                response.pipe(file)
-                file.on('finish', () => {
-                    file.close(() => resolve(dest))
-                })
-            })
-            .on('error', (error) => {
-                if (ext) {
-                    dest += `.${ext}`
-                }
-                if (fs.existsSync(dest)) {
-                    fs.unlinkSync(dest)
-                }
-                reject(error.message)
-            })
+async function downloadFile(
+    url: string,
+    cookie?: string,
+): Promise<{
+    contentType: string
+    file: Buffer
+}> {
+    const res = await fetch(url, {
+        credentials: 'include',
+        headers: {
+            'user-agent': UserAgent.CHROME,
+            cookie: cookie || '',
+        },
+        redirect: 'manual',
     })
+    if ([301, 302, 307, 308].includes(res.status)) {
+        const location = res.headers.get('location')
+        if (location) {
+            return downloadFile(location, cookie)
+        } else {
+            throw new Error(`Failed to download file: ${res.status} ${res.statusText} ${url}`)
+        }
+    }
+
+    if (res.status >= 400) {
+        throw new Error(`Failed to download file: ${res.status} ${res.statusText} ${url}`)
+    }
+    const file = await res.arrayBuffer()
+    return {
+        contentType: res.headers.get('content-type') || 'application/octet-stream',
+        file: Buffer.from(file),
+    }
 }
 
-async function plainDownloadMediaFile(url: string, prefix?: string): Promise<string> {
+async function plainDownloadMediaFile(url: string, prefix?: string, cookie?: string): Promise<string> {
     const _url = new URL(url)
     let filename = MATCH_FILE_NAME.exec(_url.pathname)?.groups?.filename
     if (!filename) {
@@ -55,8 +57,43 @@ async function plainDownloadMediaFile(url: string, prefix?: string): Promise<str
     if (prefix) {
         filename = `${prefix}-${filename}`
     }
-    const dest = `${CACHE_DIR_ROOT}/media/plain/${filename}`
-    return download(url, dest)
+    let dest = `${CACHE_DIR_ROOT}/media/plain/${filename}`
+    const dir = path.dirname(dest)
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+    }
+    let ext: string | undefined = undefined
+    const { file, contentType } = await downloadFile(url, cookie)
+    ext = contentType ? mimeToExt[contentType as keyof typeof mimeToExt] : undefined
+    if (ext) {
+        dest += `.${ext}`
+    }
+    fs.writeFileSync(dest, file)
+    return dest
+}
+
+async function tryGetCookie(url: string) {
+    const res = await fetch(url)
+    const cookieString = res.headers.get('set-cookie')
+    if (!cookieString) {
+        return
+    }
+    // Split the cookie string into individual cookies
+    const cookies = cookieString.split(/,\s*(?=[a-zA-Z0-9_-]+=)/)
+
+    // Process each cookie to extract the key-value pairs
+    const cookieArr = [] as Array<string>
+
+    cookies.forEach((cookie) => {
+        const parts = cookie.split(';').map((part) => part.trim())
+
+        const [keyValue, ...attributes] = parts
+        if (keyValue) {
+            cookieArr.push(keyValue)
+        }
+    })
+
+    return cookieArr.join('; ')
 }
 
 function galleryDownloadMediaFile(
@@ -111,7 +148,17 @@ function getMediaType(path: string): MediaType {
     return 'unknown'
 }
 
-const mimeToExt = {
+type ImageContentType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+type VideoContentType = 'video/mp4' | 'video/webm' | 'video/x-matroska' | 'video/quicktime' | 'video/x-flv'
+
+type ImageExtType = 'jpg' | 'png' | 'gif' | 'webp'
+type VideoExtType = 'mp4' | 'webm' | 'mkv' | 'mov' | 'flv'
+
+const mimeToExt: {
+    [K in ImageContentType]: ImageExtType
+} & {
+    [V in VideoContentType]: VideoExtType
+} = {
     'image/jpeg': 'jpg',
     'image/png': 'png',
     'image/gif': 'gif',
@@ -121,6 +168,23 @@ const mimeToExt = {
     'video/x-matroska': 'mkv',
     'video/quicktime': 'mov',
     'video/x-flv': 'flv',
+} as const
+
+const extToMime = Object.fromEntries(Object.entries(mimeToExt).map(([mime, ext]) => [ext, mime])) as {
+    [K in ImageExtType]: ImageContentType
+} & {
+    [V in VideoExtType]: VideoContentType
 }
 
-export { getMediaType, plainDownloadMediaFile, galleryDownloadMediaFile, writeImgToFile }
+type FileContentType = ImageContentType | VideoContentType
+
+export {
+    getMediaType,
+    plainDownloadMediaFile,
+    galleryDownloadMediaFile,
+    writeImgToFile,
+    extToMime,
+    mimeToExt,
+    tryGetCookie,
+}
+export type { FileContentType }

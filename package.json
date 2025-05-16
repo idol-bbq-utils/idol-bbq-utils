@@ -18,7 +18,7 @@
         "node": ">=20.0.0"
     },
     "devDependencies": {
-        "@types/bun": "^1.2.8",
+        "@types/bun": "^1.2.13",
         "prettier": "^3.3.2",
         "typescript": "^5.5.3"
     },

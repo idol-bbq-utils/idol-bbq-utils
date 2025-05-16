@@ -12,7 +12,13 @@ import { type MediaTool, MediaToolEnum } from '@/types/media'
 import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
-import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile, writeImgToFile } from '@/middleware/media'
+import {
+    galleryDownloadMediaFile,
+    getMediaType,
+    plainDownloadMediaFile,
+    tryGetCookie,
+    writeImgToFile,
+} from '@/middleware/media'
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
@@ -446,12 +452,28 @@ class ForwarderPools extends BaseCompatibleModel {
                     }>
                     if (currentArticle.has_media) {
                         ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
+                        let cookie: string | undefined = undefined
+                        // TODO: better way to get cookie
+                        if ([Platform.TikTok].includes(currentArticle.platform)) {
+                            cookie = await tryGetCookie(currentArticle.url)
+                        }
+                        async function handleExtraMedia(media: Array<{ url: string; type: MediaType }>) {
+                            return Promise.all(
+                                media.map(async ({ url }) => {
+                                    const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
+                                    return {
+                                        path,
+                                        media_type: getMediaType(path),
+                                    }
+                                }),
+                            )
+                        }
                         // handle media
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
                             ctx.log?.debug(`Downloading media with http downloader`)
                             new_files = await Promise.all(
                                 currentArticle.media?.map(async ({ url, type }) => {
-                                    const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                    const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
                                     return {
                                         path,
                                         media_type: type,
@@ -460,15 +482,7 @@ class ForwarderPools extends BaseCompatibleModel {
                             )
 
                             if (currentArticle.extra?.media) {
-                                const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(async ({ url, type }) => {
-                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
-                                        return {
-                                            path,
-                                            media_type: type,
-                                        }
-                                    }),
-                                )
+                                const extra_files = await handleExtraMedia(currentArticle.extra.media)
                                 new_files = new_files.concat(extra_files)
                             }
                         }
@@ -482,15 +496,7 @@ class ForwarderPools extends BaseCompatibleModel {
                                 media_type: getMediaType(path),
                             }))
                             if (currentArticle.extra?.media) {
-                                const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(async ({ url }) => {
-                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
-                                        return {
-                                            path,
-                                            media_type: getMediaType(path),
-                                        }
-                                    }),
-                                )
+                                const extra_files = await handleExtraMedia(currentArticle.extra.media)
                                 new_files = new_files.concat(extra_files)
                             }
                         }
