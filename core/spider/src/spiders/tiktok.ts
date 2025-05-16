@@ -39,12 +39,12 @@ class TiktokSpider extends BaseSpider {
         let random_hex7 = this.cache.get('random_hex7')
         if (!random_hex7) {
             random_hex7 = TiktokApiJsonParser.randomHexString(7)
-            this.cache.set('random_hex7', random_hex7, Date.now() + this.expire)
+            this.cache.set('random_hex7', random_hex7, this.expire)
         }
         let device_id = this.cache.get('device_id')
         if (!device_id) {
             device_id = TiktokApiJsonParser.randomDeviceId().toString()
-            this.cache.set('device_id', device_id, Date.now() + this.expire)
+            this.cache.set('device_id', device_id, this.expire)
         }
         const { id } = result
         const _url = `${this.BASE_URL}@${id}`
