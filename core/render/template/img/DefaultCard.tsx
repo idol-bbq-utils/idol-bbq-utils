@@ -302,7 +302,8 @@ function BaseCard({ article }: { article: Article }) {
                     transform: 'rotate(6deg)',
                 }}
                 width={32}
-                src={SVG[article.platform]}
+                height={32 * SVG[article.platform].ratio}
+                src={SVG[article.platform].icon}
             />
             {flattedArticle.map((item, index) => (
                 <ArticleContent key={index} article={item} level={0} />
