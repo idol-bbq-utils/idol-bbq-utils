@@ -71,18 +71,6 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
             // 定时dispatch任务
             const job = new CronJob(cron as string, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
-
-                interval_time = {
-                    ...{
-                        max: 0,
-                        min: 0,
-                    },
-                    ...interval_time,
-                }
-                const time = Math.floor(Math.random() * (interval_time.max - interval_time.min) + interval_time.min)
-                this.log?.info(`[${taskId}] Cron triggered but wait for ${time}ms`)
-                await delay(time)
-
                 this.log?.info(`[${taskId}] Starting to dispatch task: ${crawler.name}`)
                 const task: TaskScheduler.Task = {
                     id: taskId,
@@ -220,7 +208,7 @@ class SpiderPools extends BaseCompatibleModel {
             return
         }
 
-        const { translator: _translator } = cfg_crawler || {}
+        let { translator: _translator, interval_time } = cfg_crawler || {}
         // try to get translation
         let translator = undefined
         if (_translator) {
@@ -246,10 +234,21 @@ class SpiderPools extends BaseCompatibleModel {
         cookie_file && (await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
         await page.setUserAgent(user_agent || UserAgent.CHROME)
 
+        interval_time = {
+            ...{
+                max: 0,
+                min: 0,
+            },
+            ...interval_time,
+        }
+        const time = Math.floor(Math.random() * (interval_time.max - interval_time.min) + interval_time.min)
+
         let result: Array<CrawlerTaskResult> = []
         let errors: Array<any> = []
         // 开始任务
         for (const website of websites) {
+            this.log?.info(`[${taskId}] crawler wait for ${time}ms`)
+            await delay(time)
             // 单次系列爬虫任务
             try {
                 const url = new URL(website)
