@@ -787,7 +787,8 @@ namespace XApiJsonParser {
     function tweetParser(result: any): GenericArticle<Platform.X> | null {
         // TweetWithVisibilityResults --> result.tweet
         const legacy = result.legacy || result.tweet?.legacy
-        const userLegacy = (result.core || result.tweet?.core)?.user_results?.result?.legacy
+        const userResult = (result.core || result.tweet?.core)?.user_results?.result
+        const userLegacy = userResult?.legacy
         let content = legacy?.full_text
         for (const { url } of legacy?.entities?.media || []) {
             content = content.replace(url, '')
@@ -811,7 +812,9 @@ namespace XApiJsonParser {
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(result.card?.legacy),
-            u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
+            u_avatar:
+                userResult?.avatar?.image_url?.replace('_normal', '') ||
+                userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
         // 处理转发类型
         if (legacy?.retweeted_status_result) {
