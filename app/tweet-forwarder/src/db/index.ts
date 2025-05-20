@@ -199,6 +199,22 @@ namespace DB {
                 },
             })
         }
+
+        export async function deleteRecord(ref_id: number, bot_id: string, task_type: string) {
+            let exist_one = await checkExist(ref_id, bot_id, task_type)
+            if (!exist_one) {
+                return
+            }
+            return await prisma.forward_by.delete({
+                where: {
+                    ref_id_bot_id_task_type: {
+                        ref_id,
+                        bot_id,
+                        task_type,
+                    },
+                },
+            })
+        }
     }
 }
 

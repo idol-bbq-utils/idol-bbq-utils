@@ -515,30 +515,43 @@ class ForwarderPools extends BaseCompatibleModel {
             let error_for_all = true
 
             // 对所有订阅者进行转发
-            for (const { forwarder: target, runtime_config } of to) {
-                ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
-                try {
-                    const exist = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
-                    // 运行前再检查下，因为cron的设定，可能同时会有两个同样的任务在执行
-                    // 如果不存在则尝试发送
-                    if (!exist) {
-                        await target.send(text, {
-                            media: maybe_media_files,
-                            timestamp: article.created_at,
-                            runtime_config,
-                            original_text: articleToImgSuccess ? fullText : undefined,
-                        })
-                        let currentArticle: ArticleWithId | null = article
-                        while (currentArticle) {
-                            await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
-                            currentArticle = currentArticle.ref as ArticleWithId | null
+            await Promise.all(
+                to.map(async ({ forwarder: target, runtime_config }) => {
+                    ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
+                    try {
+                        const exist = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
+                        // 运行前再检查下，因为cron的设定，可能同时会有两个同样的任务在执行
+                        // 如果不存在则尝试发送
+                        if (!exist) {
+                            // 先占用发送
+                            let currentArticle: ArticleWithId | null = article
+                            while (currentArticle) {
+                                await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                                currentArticle = currentArticle.ref as ArticleWithId | null
+                            }
+                            try {
+                                await target.send(text, {
+                                    media: maybe_media_files,
+                                    timestamp: article.created_at,
+                                    runtime_config,
+                                    original_text: articleToImgSuccess ? fullText : undefined,
+                                })
+                            } catch (e) {
+                                ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
+                                let currentArticle: ArticleWithId | null = article
+                                while (currentArticle) {
+                                    await DB.ForwardBy.deleteRecord(currentArticle.id, target.id, 'article')
+                                    currentArticle = currentArticle.ref as ArticleWithId | null
+                                }
+                            }
+
+                            error_for_all = false
                         }
-                        error_for_all = false
+                    } catch (e) {
+                        ctx.log?.error(`DB Error ${target.id}: ${e}`)
                     }
-                } catch (e) {
-                    ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
-                }
-            }
+                }),
+            )
 
             /**
              * 如果剩下的转发平台全部都出错，并且在5个循环周期内都没有成功转发，我们认为这个文章已经无法转发了，标记为已转发
