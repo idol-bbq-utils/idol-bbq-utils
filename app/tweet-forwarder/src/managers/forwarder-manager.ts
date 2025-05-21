@@ -536,6 +536,7 @@ class ForwarderPools extends BaseCompatibleModel {
                                     runtime_config,
                                     original_text: articleToImgSuccess ? fullText : undefined,
                                 })
+                                error_for_all = false
                             } catch (e) {
                                 ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                                 let currentArticle: ArticleWithId | null = article
@@ -544,8 +545,6 @@ class ForwarderPools extends BaseCompatibleModel {
                                     currentArticle = currentArticle.ref as ArticleWithId | null
                                 }
                             }
-
-                            error_for_all = false
                         }
                     } catch (e) {
                         ctx.log?.error(`DB Error ${target.id}: ${e}`)
