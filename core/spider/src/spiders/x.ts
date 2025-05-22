@@ -219,7 +219,6 @@ class XListSpider extends BaseSpider {
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
-                'user-agent': UserAgent.CHROME,
                 cookie: cookie_string,
                 'x-csrf-token': this.getCsrfToken(cookie_string) || '',
             },
