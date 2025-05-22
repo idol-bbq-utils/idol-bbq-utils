@@ -197,7 +197,7 @@ class XListSpider extends BaseSpider {
     async grabTweets(id: string, cookie_string: string): Promise<Array<GenericArticle<Platform.X>>> {
         const url = `${this.API_PREFIX}/1.1/lists/statuses.json`
         const params = new URLSearchParams({
-            count: '40',
+            count: '20',
             include_my_retweet: '1',
             include_rts: '1',
             list_id: id,
