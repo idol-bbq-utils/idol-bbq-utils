@@ -216,6 +216,7 @@ class XListSpider extends BaseSpider {
             include_ext_sensitive_media_warning: 'true',
             include_ext_media_color: 'true',
         })
+        // TODO: keep http header case sensitive
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
@@ -244,7 +245,6 @@ class XListSpider extends BaseSpider {
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
-                'user-agent': UserAgent.CHROME,
             },
         })
 
