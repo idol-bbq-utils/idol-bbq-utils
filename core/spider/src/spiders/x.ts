@@ -787,7 +787,7 @@ namespace XApiJsonParser {
         // TweetWithVisibilityResults --> result.tweet
         const legacy = result.legacy || result.tweet?.legacy
         const userResult = (result.core || result.tweet?.core)?.user_results?.result
-        const userLegacy = userResult?.legacy
+        const userLegacy = userResult?.core
         let content = legacy?.full_text
         for (const { url } of legacy?.entities?.media || []) {
             content = content.replace(url, '')
