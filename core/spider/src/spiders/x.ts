@@ -197,7 +197,7 @@ class XListSpider extends BaseSpider {
     async grabTweets(id: string, cookie_string: string): Promise<Array<GenericArticle<Platform.X>>> {
         const url = `${this.API_PREFIX}/1.1/lists/statuses.json`
         const params = new URLSearchParams({
-            count: '40',
+            count: '20',
             include_my_retweet: '1',
             include_rts: '1',
             list_id: id,
@@ -216,10 +216,10 @@ class XListSpider extends BaseSpider {
             include_ext_sensitive_media_warning: 'true',
             include_ext_media_color: 'true',
         })
+        // TODO: keep http header case sensitive
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
-                'user-agent': UserAgent.CHROME,
                 cookie: cookie_string,
                 'x-csrf-token': this.getCsrfToken(cookie_string) || '',
             },
@@ -245,7 +245,6 @@ class XListSpider extends BaseSpider {
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
-                'user-agent': UserAgent.CHROME,
             },
         })
 
@@ -787,7 +786,8 @@ namespace XApiJsonParser {
     function tweetParser(result: any): GenericArticle<Platform.X> | null {
         // TweetWithVisibilityResults --> result.tweet
         const legacy = result.legacy || result.tweet?.legacy
-        const userLegacy = (result.core || result.tweet?.core)?.user_results?.result?.legacy
+        const userResult = (result.core || result.tweet?.core)?.user_results?.result
+        const userLegacy = userResult?.core
         let content = legacy?.full_text
         for (const { url } of legacy?.entities?.media || []) {
             content = content.replace(url, '')
@@ -811,7 +811,9 @@ namespace XApiJsonParser {
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(result.card?.legacy),
-            u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
+            u_avatar:
+                userResult?.avatar?.image_url?.replace('_normal', '') ||
+                userLegacy?.profile_image_url_https?.replace('_normal', ''),
         }
         // 处理转发类型
         if (legacy?.retweeted_status_result) {

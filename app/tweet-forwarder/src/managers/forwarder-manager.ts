@@ -12,7 +12,13 @@ import { type MediaTool, MediaToolEnum } from '@/types/media'
 import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
-import { galleryDownloadMediaFile, getMediaType, plainDownloadMediaFile, writeImgToFile } from '@/middleware/media'
+import {
+    galleryDownloadMediaFile,
+    getMediaType,
+    plainDownloadMediaFile,
+    tryGetCookie,
+    writeImgToFile,
+} from '@/middleware/media'
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
@@ -446,12 +452,28 @@ class ForwarderPools extends BaseCompatibleModel {
                     }>
                     if (currentArticle.has_media) {
                         ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
+                        let cookie: string | undefined = undefined
+                        // TODO: better way to get cookie
+                        if ([Platform.TikTok].includes(currentArticle.platform)) {
+                            cookie = await tryGetCookie(currentArticle.url)
+                        }
+                        async function handleExtraMedia(media: Array<{ url: string; type: MediaType }>) {
+                            return Promise.all(
+                                media.map(async ({ url }) => {
+                                    const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
+                                    return {
+                                        path,
+                                        media_type: getMediaType(path),
+                                    }
+                                }),
+                            )
+                        }
                         // handle media
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
                             ctx.log?.debug(`Downloading media with http downloader`)
                             new_files = await Promise.all(
                                 currentArticle.media?.map(async ({ url, type }) => {
-                                    const path = await plainDownloadMediaFile(url, ctx.taskId)
+                                    const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
                                     return {
                                         path,
                                         media_type: type,
@@ -460,15 +482,7 @@ class ForwarderPools extends BaseCompatibleModel {
                             )
 
                             if (currentArticle.extra?.media) {
-                                const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(async ({ url, type }) => {
-                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
-                                        return {
-                                            path,
-                                            media_type: type,
-                                        }
-                                    }),
-                                )
+                                const extra_files = await handleExtraMedia(currentArticle.extra.media)
                                 new_files = new_files.concat(extra_files)
                             }
                         }
@@ -482,15 +496,7 @@ class ForwarderPools extends BaseCompatibleModel {
                                 media_type: getMediaType(path),
                             }))
                             if (currentArticle.extra?.media) {
-                                const extra_files = await Promise.all(
-                                    currentArticle.extra.media.map(async ({ url }) => {
-                                        const path = await plainDownloadMediaFile(url, ctx.taskId)
-                                        return {
-                                            path,
-                                            media_type: getMediaType(path),
-                                        }
-                                    }),
-                                )
+                                const extra_files = await handleExtraMedia(currentArticle.extra.media)
                                 new_files = new_files.concat(extra_files)
                             }
                         }
@@ -509,25 +515,42 @@ class ForwarderPools extends BaseCompatibleModel {
             let error_for_all = true
 
             // 对所有订阅者进行转发
-            for (const { forwarder: target, runtime_config } of to) {
-                ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
-                try {
-                    await target.send(text, {
-                        media: maybe_media_files,
-                        timestamp: article.created_at,
-                        runtime_config,
-                        original_text: articleToImgSuccess ? fullText : undefined,
-                    })
-                    let currentArticle: ArticleWithId | null = article
-                    while (currentArticle) {
-                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
-                        currentArticle = currentArticle.ref as ArticleWithId | null
+            await Promise.all(
+                to.map(async ({ forwarder: target, runtime_config }) => {
+                    ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
+                    try {
+                        const exist = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
+                        // 运行前再检查下，因为cron的设定，可能同时会有两个同样的任务在执行
+                        // 如果不存在则尝试发送
+                        if (!exist) {
+                            // 先占用发送
+                            let currentArticle: ArticleWithId | null = article
+                            while (currentArticle) {
+                                await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                                currentArticle = currentArticle.ref as ArticleWithId | null
+                            }
+                            try {
+                                await target.send(text, {
+                                    media: maybe_media_files,
+                                    timestamp: article.created_at,
+                                    runtime_config,
+                                    original_text: articleToImgSuccess ? fullText : undefined,
+                                })
+                                error_for_all = false
+                            } catch (e) {
+                                ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
+                                let currentArticle: ArticleWithId | null = article
+                                while (currentArticle) {
+                                    await DB.ForwardBy.deleteRecord(currentArticle.id, target.id, 'article')
+                                    currentArticle = currentArticle.ref as ArticleWithId | null
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        ctx.log?.error(`DB Error ${target.id}: ${e}`)
                     }
-                    error_for_all = false
-                } catch (e) {
-                    ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
-                }
-            }
+                }),
+            )
 
             /**
              * 如果剩下的转发平台全部都出错，并且在5个循环周期内都没有成功转发，我们认为这个文章已经无法转发了，标记为已转发

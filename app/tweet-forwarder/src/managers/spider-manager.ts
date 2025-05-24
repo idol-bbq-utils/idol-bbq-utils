@@ -18,6 +18,7 @@ import type { Article } from '@/db'
 import { RETRY_LIMIT } from '@/config'
 import { delay } from '@/utils/time'
 import { shuffle } from 'lodash'
+import crypto from 'crypto'
 
 interface TaskResult {
     taskId: string
@@ -70,18 +71,6 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
             // 定时dispatch任务
             const job = new CronJob(cron as string, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
-
-                interval_time = {
-                    ...{
-                        max: 0,
-                        min: 0,
-                    },
-                    ...interval_time,
-                }
-                const time = Math.floor(Math.random() * (interval_time.max - interval_time.min) + interval_time.min)
-                this.log?.info(`[${taskId}] Cron triggered but wait for ${time}ms`)
-                await delay(time)
-
                 this.log?.info(`[${taskId}] Starting to dispatch task: ${crawler.name}`)
                 const task: TaskScheduler.Task = {
                     id: taskId,
@@ -158,10 +147,10 @@ class SpiderPools extends BaseCompatibleModel {
     NAME = 'SpiderPools'
     log?: Logger
     private emitter: EventEmitter
-    private translators: Map<TranslatorProvider, BaseTranslator> = new Map()
+    private translators: Map<string, BaseTranslator> = new Map()
     private browser: Browser
     /**
-     * batch id =  md5hash( `websites` or `origin + paths`)
+     * BaseSpider._VALID_URL.source
      */
     private spiders: Map<string, BaseSpider> = new Map()
     // private workers:
@@ -197,13 +186,19 @@ class SpiderPools extends BaseCompatibleModel {
             })
             return
         }
-        websites = shuffle(
-            sanitizeWebsites({
-                websites,
-                origin,
-                paths,
-            }),
-        )
+        websites = sanitizeWebsites({
+            websites,
+            origin,
+            paths,
+        })
+        // TODO: configurable id
+        const crawler_batch_id = crypto
+            .createHash('md5')
+            .update(`${websites.join(',')}`)
+            .digest('hex')
+
+        // shuffle it for avoiding bot detection
+        websites = shuffle(websites)
         if (websites.length === 0) {
             ctx.log?.error(`No websites found after sanitizing`)
             this.emitter.emit(`spider:${TaskScheduler.TaskEvent.UPDATE_STATUS}`, {
@@ -213,18 +208,18 @@ class SpiderPools extends BaseCompatibleModel {
             return
         }
 
-        const { translator: _translator } = cfg_crawler || {}
+        let { translator: _translator, interval_time } = cfg_crawler || {}
         // try to get translation
         let translator = undefined
         if (_translator) {
             const translator_cfg = _translator
-            translator = this.translators.get(translator_cfg.provider)
+            translator = this.translators.get(crawler_batch_id)
             if (!translator) {
                 const translatorBuilder = getTranslator(translator_cfg.provider)
                 if (translatorBuilder) {
                     translator = new translatorBuilder(translator_cfg.api_key, this.log, translator_cfg.cfg_translator)
                     await translator.init()
-                    this.translators.set(translator_cfg.provider, translator)
+                    this.translators.set(crawler_batch_id, translator)
                     ctx.log?.info(`Translator instance created for ${translator_cfg.provider}`)
                 } else {
                     ctx.log?.warn(`Translator not found for ${translator_cfg.provider}`)
@@ -239,10 +234,21 @@ class SpiderPools extends BaseCompatibleModel {
         cookie_file && (await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
         await page.setUserAgent(user_agent || UserAgent.CHROME)
 
+        interval_time = {
+            ...{
+                max: 0,
+                min: 0,
+            },
+            ...interval_time,
+        }
+        const time = Math.floor(Math.random() * (interval_time.max - interval_time.min) + interval_time.min)
+
         let result: Array<CrawlerTaskResult> = []
         let errors: Array<any> = []
         // 开始任务
         for (const website of websites) {
+            this.log?.info(`[${taskId}] crawler wait for ${time}ms`)
+            await delay(time)
             // 单次系列爬虫任务
             try {
                 const url = new URL(website)

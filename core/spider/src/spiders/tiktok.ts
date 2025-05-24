@@ -4,35 +4,13 @@ import { BaseSpider } from './base'
 import { Page } from 'puppeteer-core'
 
 import { JSONPath } from 'jsonpath-plus'
-import { HTTPClient } from '@/utils'
+import { HTTPClient, SimpleExpiringCache } from '@/utils'
 
 enum ArticleTypeEnum {
     /**
      * basic page: https://www.tiktok.com/api/post/item_list/
      */
     POST = 'post',
-}
-
-class KV_CACHE {
-    private cache: Map<string, { value: string; expire: number }> = new Map()
-
-    set(key: string, value: string, expire: number) {
-        this.cache.set(key, { value, expire })
-    }
-
-    get(key: string): string | null {
-        const item = this.cache.get(key)
-        if (item && item.expire > Date.now()) {
-            return item.value
-        }
-        return null
-    }
-    delete(key: string) {
-        this.cache.delete(key)
-    }
-    clear() {
-        this.cache.clear()
-    }
 }
 
 class TiktokSpider extends BaseSpider {
@@ -42,7 +20,7 @@ class TiktokSpider extends BaseSpider {
     BASE_URL: string = 'https://www.tiktok.com/'
     NAME: string = 'Tiktok Generic Spider'
 
-    private cache: KV_CACHE = new KV_CACHE()
+    private cache: SimpleExpiringCache = new SimpleExpiringCache()
     private expire: number = 60 * 3 * 1000 // 3 minutes
 
     async _crawl<T extends TaskType>(
@@ -61,12 +39,12 @@ class TiktokSpider extends BaseSpider {
         let random_hex7 = this.cache.get('random_hex7')
         if (!random_hex7) {
             random_hex7 = TiktokApiJsonParser.randomHexString(7)
-            this.cache.set('random_hex7', random_hex7, Date.now() + this.expire)
+            this.cache.set('random_hex7', random_hex7, this.expire)
         }
         let device_id = this.cache.get('device_id')
         if (!device_id) {
             device_id = TiktokApiJsonParser.randomDeviceId().toString()
-            this.cache.set('device_id', device_id, Date.now() + this.expire)
+            this.cache.set('device_id', device_id, this.expire)
         }
         const { id } = result
         const _url = `${this.BASE_URL}@${id}`
@@ -174,7 +152,7 @@ namespace TiktokApiJsonParser {
     export function postsParser(json: any): Array<GenericArticle<Platform.TikTok>> {
         let items = json?.itemList
         if (!items) {
-            throw new Error('Post format may have changed')
+            return []
         }
         return items.map(postParser)
     }
