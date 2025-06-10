@@ -838,10 +838,6 @@ namespace XApiJsonParser {
     }
 
     export function oldTweetParser(json: any): GenericArticle<Platform.X> | null {
-        // we do not handle conversation here
-        if (json?.in_reply_to_status_id) {
-            return null
-        }
         const legacy = json
         const userLegacy = json?.user
         let content = legacy?.full_text
