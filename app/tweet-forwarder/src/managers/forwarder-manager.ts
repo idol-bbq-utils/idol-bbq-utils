@@ -423,8 +423,7 @@ class ForwarderPools extends BaseCompatibleModel {
             if (cfg_forwarder?.render_type?.startsWith('img')) {
                 try {
                     const imgBuffer = await this.ArticleConverter.articleToImg(
-                        cloneDeep(article),
-                        process.env.FONTS_DIR,
+                        cloneDeep(article)
                     )
                     ctx.log?.debug(`Converted article ${article.a_id} to img successfully`)
                     const path = writeImgToFile(imgBuffer, `${ctx.taskId}-${article.a_id}-rendered.png`)

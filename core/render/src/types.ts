@@ -14,4 +14,11 @@ type Article = Omit<GenericArticle<Platform>, 'media' | 'ref' | 'extra'> & {
         | null
 }
 
-export type { Article, MediaInfo }
+type FontConfig = {
+    name: string,
+    font_file_name: string,
+    style: 'normal' | 'italic',
+    weight: number
+}
+
+export type { Article, MediaInfo, FontConfig }
