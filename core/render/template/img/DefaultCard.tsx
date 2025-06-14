@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import _, { reduce } from 'lodash'
 import type { JSX } from 'react/jsx-runtime'
 import SVG from '@/img/assets/svg'
+import { KOZUE } from '@/img/assets/img'
 
 const CARD_WIDTH = 600
 const CONTENT_WIDTH = CARD_WIDTH - 16 * 2 - 64 - 12
@@ -292,7 +293,7 @@ function flatArticle(article: Article): Array<Article> {
     return articles
 }
 
-function BaseCard({ article }: { article: Article }) {
+function BaseCard({ article, paddingHeight }: { article: Article, paddingHeight: number }) {
     const flattedArticle = flatArticle(article)
     return (
         <div
@@ -313,6 +314,11 @@ function BaseCard({ article }: { article: Article }) {
             {flattedArticle.map((item, index) => (
                 <ArticleContent key={index} article={item} level={0} />
             ))}
+            {/* {paddingHeight > 0 && (
+                <div tw="flex justify-center items-center opacity-20">
+                    <img src={KOZUE} width={paddingHeight}/>
+                </div>
+            )} */}
         </div>
     )
 }
@@ -344,7 +350,7 @@ function articleParser(article: Article): {
     height: number
 } {
     let flattedArticleHeightArray = flatArticle(article).map((item) => estimatedArticleHeight(item, 0))
-    const estimatedHeight = [
+    let estimatedHeight = [
         16, // padding top
         _(flattedArticleHeightArray)
             .filter((item) => item > 0)
@@ -355,9 +361,14 @@ function articleParser(article: Article): {
     ]
         .flat()
         .reduce((a, b) => a + b, 0)
+
+    let paddingHeight = 0
+    if (estimatedHeight / CARD_WIDTH < 1 / 3) {
+        paddingHeight = (CARD_WIDTH * 1) / 3 - estimatedHeight
+    }
     return {
-        component: <BaseCard article={article} />,
-        height: estimatedHeight,
+        component: <BaseCard article={article} paddingHeight={paddingHeight} />,
+        height: estimatedHeight + paddingHeight,
     }
 }
 
