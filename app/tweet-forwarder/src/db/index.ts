@@ -37,7 +37,13 @@ namespace DB {
             let ref: number | undefined = undefined
             // 递归注意
             if (article.ref) {
-                ref = (await save(article.ref)).id
+                if (typeof article.ref === 'object') {
+                    ref = (await save(article.ref)).id
+                }
+                if (typeof article.ref === 'string') {
+                    ref = (await getByArticleCode(article.ref, article.platform))?.id
+                }
+               
             }
             const res = await prisma.crawler_article.create({
                 data: {

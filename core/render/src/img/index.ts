@@ -1,8 +1,8 @@
-import type { Article } from '@/types'
+import type { Article, FontConfig } from '@/types'
 import { getIconCode, loadEmoji, type apis } from './utils/twemoji'
 import { FontDetector, languageFontMap } from './utils/font'
 import { articleParser, CARD_WIDTH } from '@/template/img/DefaultCard'
-import satori from 'satori'
+import satori, { type Font } from 'satori'
 import tailwindConfig from '@/template/img/DefaultTailwindConfig'
 import { Resvg } from '@resvg/resvg-js'
 import fs from 'fs'
@@ -179,32 +179,33 @@ const loadDynamicAsset = withCache(async (emojiType: keyof typeof apis, _code: s
 })
 
 class ImgConverter {
-    constructor() {}
-    public async articleToImg(article: Article, fontsDir: string = './assets/fonts') {
+    private fonts: Array<FontConfig>
+    constructor() {
+        const fontsDir = process.env.FONTS_DIR || './assets/fonts'
+        const fonts: FontConfig[] = JSON.parse(
+            fs.readFileSync(`${fontsDir}/fonts.json`, 'utf-8'),
+        )
+        this.fonts = fonts
+    }
+    public async articleToImg(article: Article) {
         const { height, component: Card } = articleParser(article)
+        const fontsOptions: Font[] = this.fonts.map((font)=>{
+            try {
+                const data = fs.readFileSync(`${process.env.FONTS_DIR || './assets/fonts'}/${font.font_file_name}`)
+                return {
+                    name: font.name,
+                    data: data,
+                    weight: font.weight,
+                    style: font.style,
+                }
+            } catch (e){
+                return undefined
+            }
+        }).filter(Boolean) as Font[]
         const svg = await satori(Card, {
             width: CARD_WIDTH,
             height: height,
-            fonts: [
-                {
-                    name: 'Noto Sans',
-                    data: fs.readFileSync(`${fontsDir}/NotoSans-Regular.ttf`),
-                    style: 'normal',
-                    weight: 400,
-                },
-                {
-                    name: 'Noto Sans',
-                    data: fs.readFileSync(`${fontsDir}/NotoSans-Bold.ttf`),
-                    style: 'normal',
-                    weight: 700,
-                },
-                {
-                    name: 'Noto Sans Math',
-                    data: fs.readFileSync(`${fontsDir}/NotoSansMath-Regular.ttf`),
-                    style: 'normal',
-                    weight: 400,
-                },
-            ],
+            fonts: fontsOptions,
             loadAdditionalAsset: (code: string, text: string) => {
                 return loadDynamicAsset('twemoji', code, text)
             },

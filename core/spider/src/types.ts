@@ -27,6 +27,14 @@ type PlatformExtractMap = {
     [Platform.YouTube]: null
 }
 
+type PlatformRefMap = {
+    [Platform.X]: string,
+    [Platform.Twitter]: string,
+    [Platform.Instagram]: null,
+    [Platform.TikTok]: null,
+    [Platform.YouTube]: null,
+}
+
 // related to platform
 type ArticleType<T extends Platform> = PlatformArticleMap[T]
 type ArticleExtractType<T extends Platform> = {
@@ -81,7 +89,7 @@ interface GenericArticle<T extends Platform> {
     /**
      * reference to the original article: `a_id`
      */
-    ref: GenericArticle<T> | null
+    ref: GenericArticleRef<T> | null
     has_media: boolean
     /**
      * media for not using gallery-dl
@@ -98,6 +106,8 @@ interface GenericArticle<T extends Platform> {
     u_avatar: string | null
 }
 
+type GenericArticleRef<T extends Platform> = GenericArticle<T> | string
+
 export { Platform }
 export type {
     GenericArticle,
@@ -108,4 +118,5 @@ export type {
     MediaType,
     ArticleExtractType,
     CrawlEngine,
+    GenericArticleRef,
 }

@@ -420,11 +420,10 @@ class ForwarderPools extends BaseCompatibleModel {
                 path: string
                 media_type: MediaType
             }>
-            if (cfg_forwarder?.render_type === 'img') {
+            if (cfg_forwarder?.render_type?.startsWith('img')) {
                 try {
                     const imgBuffer = await this.ArticleConverter.articleToImg(
-                        cloneDeep(article),
-                        process.env.FONTS_DIR,
+                        cloneDeep(article)
                     )
                     ctx.log?.debug(`Converted article ${article.a_id} to img successfully`)
                     const path = writeImgToFile(imgBuffer, `${ctx.taskId}-${article.a_id}-rendered.png`)
@@ -505,12 +504,18 @@ class ForwarderPools extends BaseCompatibleModel {
                             maybe_media_files = maybe_media_files.concat(new_files)
                         }
                     }
-                    currentArticle = currentArticle.ref
+                    if (currentArticle.ref && typeof currentArticle.ref === 'object') {
+                       currentArticle = currentArticle.ref as Article
+                    } else {
+                       currentArticle = null
+                    }
                 }
             }
             const fullText = articleToText(article)
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
-            const text = articleToImgSuccess ? formatMetaline(article) : fullText
+            let text = articleToImgSuccess ? formatMetaline(article) : fullText
+            // 如果render_type是img，则不需要文本
+            text = cfg_forwarder?.render_type === 'img' ? '' : text
 
             let error_for_all = true
 

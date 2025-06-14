@@ -408,9 +408,15 @@ class SpiderPools extends BaseCompatibleModel {
          * 再根据是否需要更新翻译进行更新
          */
         let articleNeedTobeTranslated: Array<Article> = []
-        while (currentArticle) {
+        // 获取引用文章
+        while (currentArticle && typeof currentArticle === 'object') {
             articleNeedTobeTranslated.push(currentArticle)
-            currentArticle = currentArticle.ref
+            if (typeof currentArticle.ref !== 'string') {
+                currentArticle = currentArticle.ref as Article
+            } else {
+                currentArticle = null
+            }
+            
         }
         /**
          * 并行翻译
