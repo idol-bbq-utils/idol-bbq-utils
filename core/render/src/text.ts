@@ -86,7 +86,12 @@ function articleToText(article: Article) {
             format_article += `\n\n${'-'.repeat(12)}\n\n`
         }
         // get ready for next run
-        currentArticle = currentArticle.ref
+        if (currentArticle.ref && typeof currentArticle.ref === 'object') {
+            currentArticle = currentArticle.ref
+        } else {
+            currentArticle = null
+        }
+        
     }
     return format_article
 }

@@ -505,7 +505,11 @@ class ForwarderPools extends BaseCompatibleModel {
                             maybe_media_files = maybe_media_files.concat(new_files)
                         }
                     }
-                    currentArticle = currentArticle.ref
+                    if (currentArticle.ref && typeof currentArticle.ref === 'object') {
+                       currentArticle = currentArticle.ref as Article
+                    } else {
+                       currentArticle = null
+                    }
                 }
             }
             const fullText = articleToText(article)

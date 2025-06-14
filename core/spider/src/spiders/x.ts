@@ -3,6 +3,7 @@ import type {
     ArticleExtractType,
     CrawlEngine,
     GenericArticle,
+    GenericArticleRef,
     GenericFollows,
     GenericMediaInfo,
     TaskType,
@@ -845,6 +846,16 @@ namespace XApiJsonParser {
             content = content.replace(url, '')
         }
 
+        let type: ArticleTypeEnum =  (legacy?.is_quote_status || legacy?.conversation_id_str) ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET
+        let ref = (legacy?.quoted_status
+                ? oldTweetParser(legacy?.quoted_status)
+                : legacy?.retweeted_status
+                  ? oldTweetParser(legacy?.retweeted_status)
+                  : null) as GenericArticleRef<Platform.X>
+        if (type === ArticleTypeEnum.QUOTED && !ref) {
+            ref = legacy?.conversation_id_str
+        }
+
         // 主推文解析
         const tweet = {
             platform: Platform.X,
@@ -854,18 +865,14 @@ namespace XApiJsonParser {
             created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
             content: legacy?.full_text,
             url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
-            type: legacy?.is_quote_status ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET,
-            ref: legacy?.quoted_status
-                ? oldTweetParser(legacy?.quoted_status)
-                : legacy?.retweeted_status
-                  ? oldTweetParser(legacy?.retweeted_status)
-                  : null,
+            type: type,
+            ref: ref,
             // extended_entities里是video，但entities里只是图片
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(legacy.card),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
-        }
+        } as GenericArticle<Platform.X>
         // 处理转发类型
         if (legacy?.retweeted_status) {
             tweet.type = ArticleTypeEnum.RETWEET
@@ -880,12 +887,12 @@ namespace XApiJsonParser {
         if (tweet.type === ArticleTypeEnum.QUOTED) {
             // 删除引用推文最后的网址
             // like https://t.co/xxxxxxxx
-            tweet.content = tweet.content.replace(/https:\/\/t.co\/\w+$/, '')
+            tweet.content = tweet.content?.replace(/https:\/\/t.co\/\w+$/, '') ?? null
         }
 
         if (tweet.media) {
             for (const { url } of legacy.entities.media) {
-                tweet.content = tweet.content.replace(url, '')
+                tweet.content = tweet.content?.replace(url, '') ?? null
             }
         }
         return tweet as GenericArticle<Platform.X>
