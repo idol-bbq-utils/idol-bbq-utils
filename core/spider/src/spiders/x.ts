@@ -846,7 +846,7 @@ namespace XApiJsonParser {
             content = content.replace(url, '')
         }
 
-        let type: ArticleTypeEnum =  (legacy?.is_quote_status || legacy?.conversation_id_str) ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET
+        let type: ArticleTypeEnum =  (legacy?.is_quote_status || (legacy?.conversation_id_str && legacy?.conversation_id_str !== legacy?.id_str)) ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET
         let ref = (legacy?.quoted_status
                 ? oldTweetParser(legacy?.quoted_status)
                 : legacy?.retweeted_status
