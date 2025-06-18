@@ -807,8 +807,8 @@ namespace XApiJsonParser {
             ref: result.quoted_status_result?.result
                 ? tweetParser(result.quoted_status_result.result)
                 : result.retweeted_status_result?.result
-                  ? tweetParser(result.retweeted_status_result.result)
-                  : null,
+                    ? tweetParser(result.retweeted_status_result.result)
+                    : null,
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(result.card?.legacy),
@@ -846,16 +846,18 @@ namespace XApiJsonParser {
             content = content.replace(url, '')
         }
 
-        let type: ArticleTypeEnum =  (legacy?.is_quote_status || (legacy?.conversation_id_str && legacy?.conversation_id_str !== legacy?.id_str)) ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET
-        let ref = (legacy?.quoted_status
-                ? oldTweetParser(legacy?.quoted_status)
-                : legacy?.retweeted_status
-                  ? oldTweetParser(legacy?.retweeted_status)
-                  : null) as GenericArticleRef<Platform.X>
-        if (type === ArticleTypeEnum.QUOTED && !ref) {
-            ref = legacy?.conversation_id_str
+        let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
+        let ref: GenericArticleRef<Platform.X> | null = null
+        if (legacy?.retweeted_status) { // high priority
+            type = ArticleTypeEnum.RETWEET
+            ref = oldTweetParser(legacy?.retweeted_status) as GenericArticleRef<Platform.X>
+        } else if (legacy?.is_quote_status) {
+            type = ArticleTypeEnum.QUOTED
+            ref = oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X>
+        } else if (legacy?.in_reply_to_status_id_str) {
+            type = ArticleTypeEnum.CONVERSATION
+            ref = legacy?.in_reply_to_status_id_str
         }
-
         // 主推文解析
         const tweet = {
             platform: Platform.X,
@@ -874,26 +876,25 @@ namespace XApiJsonParser {
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         } as GenericArticle<Platform.X>
         // 处理转发类型
-        if (legacy?.retweeted_status) {
-            tweet.type = ArticleTypeEnum.RETWEET
+        if (tweet.type === ArticleTypeEnum.RETWEET) {
             tweet.content = ''
-            tweet.ref = oldTweetParser(legacy.retweeted_status)
             // 转发类型推文media按照ref为准
             tweet.media = null
             tweet.has_media = false
             tweet.extra = null
         }
 
-        if (tweet.type === ArticleTypeEnum.QUOTED) {
-            // 删除引用推文最后的网址
-            // like https://t.co/xxxxxxxx
-            tweet.content = tweet.content?.replace(/https:\/\/t.co\/\w+$/, '') ?? null
-        }
-
-        if (tweet.media) {
-            for (const { url } of legacy.entities.media) {
-                tweet.content = tweet.content?.replace(url, '') ?? null
+        let urls = legacy.entities.urls || []
+        let media_urls = legacy.entities.media?.map((m: { url: string }) => m.url) || []
+        for (const u of urls) {
+            if (u.expanded_url && !u.expanded_url.startsWith('https://x.com/')) {
+                tweet.content = tweet.content?.replace(u.url, u.expanded_url) ?? null
+            } else {
+                tweet.content = tweet.content?.replace(u.url, '') ?? null
             }
+        }
+        for (const url of media_urls) {
+            tweet.content = tweet.content?.replace(url, '') ?? null
         }
         return tweet as GenericArticle<Platform.X>
     }
@@ -979,8 +980,8 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: defaultViewport,
-        },
+                viewport: defaultViewport,
+            },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
@@ -1030,8 +1031,8 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: defaultViewport,
-        },
+                viewport: defaultViewport,
+            },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
