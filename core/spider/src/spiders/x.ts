@@ -841,11 +841,6 @@ namespace XApiJsonParser {
     export function oldTweetParser(json: any): GenericArticle<Platform.X> | null {
         const legacy = json
         const userLegacy = json?.user
-        let content = legacy?.full_text
-        for (const { url } of legacy?.entities?.media || []) {
-            content = content.replace(url, '')
-        }
-
         let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
         let ref: GenericArticleRef<Platform.X> | null = null
         if (legacy?.retweeted_status) { // high priority
@@ -853,7 +848,7 @@ namespace XApiJsonParser {
             ref = oldTweetParser(legacy?.retweeted_status) as GenericArticleRef<Platform.X>
         } else if (legacy?.is_quote_status) {
             type = ArticleTypeEnum.QUOTED
-            ref = oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X>
+            ref = legacy?.quoted_status ? oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X> : legacy?.quoted_status_id_str || null
         } else if (legacy?.in_reply_to_status_id_str) {
             type = ArticleTypeEnum.CONVERSATION
             ref = legacy?.in_reply_to_status_id_str
