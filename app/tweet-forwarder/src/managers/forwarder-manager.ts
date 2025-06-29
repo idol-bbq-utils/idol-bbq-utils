@@ -448,7 +448,7 @@ class ForwarderPools extends BaseCompatibleModel {
                     let new_files = [] as Array<{
                         path: string
                         media_type: MediaType
-                    }>
+                    } | undefined>
                     if (currentArticle.has_media) {
                         ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
                         let cookie: string | undefined = undefined
@@ -456,32 +456,29 @@ class ForwarderPools extends BaseCompatibleModel {
                         if ([Platform.TikTok].includes(currentArticle.platform)) {
                             cookie = await tryGetCookie(currentArticle.url)
                         }
-                        async function handleExtraMedia(media: Array<{ url: string; type: MediaType }>) {
+                        async function handleMedia(media: Array<{ url: string; type: MediaType }>, overrideType?: boolean) {
                             return Promise.all(
-                                media.map(async ({ url }) => {
-                                    const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
-                                    return {
-                                        path,
-                                        media_type: getMediaType(path),
+                                media.map(async ({ url, type }) => {
+                                    try {
+                                        const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
+                                        return {
+                                            path,
+                                            media_type: overrideType ? getMediaType(path) : type,
+                                        }
+                                    } catch (e) {
+                                        ctx.log?.error(`Error while downloading media file: ${e}, skipping ${url}`)
                                     }
+                                    return undefined
                                 }),
                             )
                         }
                         // handle media
                         if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
                             ctx.log?.debug(`Downloading media with http downloader`)
-                            new_files = await Promise.all(
-                                currentArticle.media?.map(async ({ url, type }) => {
-                                    const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
-                                    return {
-                                        path,
-                                        media_type: type,
-                                    }
-                                }),
-                            )
+                            new_files = await handleMedia(currentArticle.media)
 
                             if (currentArticle.extra?.media) {
-                                const extra_files = await handleExtraMedia(currentArticle.extra.media)
+                                const extra_files = await handleMedia(currentArticle.extra.media, true)
                                 new_files = new_files.concat(extra_files)
                             }
                         }
@@ -495,13 +492,13 @@ class ForwarderPools extends BaseCompatibleModel {
                                 media_type: getMediaType(path),
                             }))
                             if (currentArticle.extra?.media) {
-                                const extra_files = await handleExtraMedia(currentArticle.extra.media)
+                                const extra_files = await handleMedia(currentArticle.extra.media, true)
                                 new_files = new_files.concat(extra_files)
                             }
                         }
                         if (new_files.length > 0) {
                             ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
-                            maybe_media_files = maybe_media_files.concat(new_files)
+                            maybe_media_files = maybe_media_files.concat(new_files.filter(i => i !== undefined))
                         }
                     }
                     if (currentArticle.ref && typeof currentArticle.ref === 'object') {
@@ -530,7 +527,7 @@ class ForwarderPools extends BaseCompatibleModel {
                         if (!exist) {
                             // 先占用发送
                             let currentArticle: ArticleWithId | null = article
-                            while (currentArticle) {
+                            while (currentArticle && typeof currentArticle === 'object') {
                                 await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
                                 currentArticle = currentArticle.ref as ArticleWithId | null
                             }
@@ -545,7 +542,7 @@ class ForwarderPools extends BaseCompatibleModel {
                             } catch (e) {
                                 ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                                 let currentArticle: ArticleWithId | null = article
-                                while (currentArticle) {
+                                while (currentArticle && typeof currentArticle === 'object') {
                                     await DB.ForwardBy.deleteRecord(currentArticle.id, target.id, 'article')
                                     currentArticle = currentArticle.ref as ArticleWithId | null
                                 }
@@ -572,7 +569,7 @@ class ForwarderPools extends BaseCompatibleModel {
                     ctx.log?.error(`Error count exceeded for ${article.a_id}, skipping this and tag forwarded...`)
                     for (const { forwarder: target } of to) {
                         let currentArticle: ArticleWithId | null = article
-                        while (currentArticle) {
+                        while (currentArticle && typeof currentArticle === 'object') {
                             await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
                             currentArticle = currentArticle.ref as ArticleWithId | null
                         }
