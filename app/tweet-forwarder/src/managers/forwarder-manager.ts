@@ -9,7 +9,7 @@ import DB from '@/db'
 import type { Article, ArticleWithId, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
 import { type MediaTool, MediaToolEnum } from '@/types/media'
-import type { ForwardToPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
+import type { ForwardTargetPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
 import {
@@ -155,10 +155,10 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
     }
 }
 
-type ForwardToIdWithRuntimeConfig = Record<string, ForwardToPlatformCommonConfig | undefined>
-type ForwardToInstanceWithRuntimeConfig = {
+type ForwardTargetIdWithRuntimeConfig = Record<string, ForwardTargetPlatformCommonConfig | undefined>
+type ForwardTargetInstanceWithRuntimeConfig = {
     forwarder: BaseForwarder
-    runtime_config?: ForwardToPlatformCommonConfig
+    runtime_config?: ForwardTargetPlatformCommonConfig
 }
 class ForwarderPools extends BaseCompatibleModel {
     NAME = 'ForwarderPools'
@@ -193,7 +193,7 @@ class ForwarderPools extends BaseCompatibleModel {
             /**
              * id for forward_to
              */
-            to: ForwardToIdWithRuntimeConfig
+            to: ForwardTargetIdWithRuntimeConfig
             cfg_forwarder: Forwarder['cfg_forwarder']
         }
     > = new Map()
@@ -366,7 +366,7 @@ class ForwarderPools extends BaseCompatibleModel {
     async processSingleArticleTask(
         ctx: TaskScheduler.TaskCtx,
         url: string,
-        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
+        forwarders: Array<ForwardTargetInstanceWithRuntimeConfig>,
         cfg_forwarder: Forwarder['cfg_forwarder'],
     ) {
         const { u_id, platform } = Spider.extractBasicInfo(url) ?? {}
@@ -384,10 +384,10 @@ class ForwarderPools extends BaseCompatibleModel {
          */
         const articles_forwarders = [] as Array<{
             article: ArticleWithId
-            to: Array<ForwardToInstanceWithRuntimeConfig>
+            to: Array<ForwardTargetInstanceWithRuntimeConfig>
         }>
         for (const article of articles) {
-            const to = [] as Array<ForwardToInstanceWithRuntimeConfig>
+            const to = [] as Array<ForwardTargetInstanceWithRuntimeConfig>
             for (const forwarder of forwarders) {
                 const { forwarder: f } = forwarder
                 const id = f.id
@@ -515,7 +515,7 @@ class ForwarderPools extends BaseCompatibleModel {
             text = cfg_forwarder?.render_type === 'img' ? '' : text
 
             let error_for_all = true
-
+            let cloned_article = cloneDeep(article)
             // 对所有订阅者进行转发
             await Promise.all(
                 to.map(async ({ forwarder: target, runtime_config }) => {
@@ -536,7 +536,7 @@ class ForwarderPools extends BaseCompatibleModel {
                                     media: maybe_media_files,
                                     timestamp: article.created_at,
                                     runtime_config,
-                                    original_text: articleToImgSuccess ? fullText : undefined,
+                                    article: cloned_article,
                                 })
                                 error_for_all = false
                             } catch (e) {
@@ -560,24 +560,24 @@ class ForwarderPools extends BaseCompatibleModel {
              */
             if (error_for_all) {
                 // 记录错误次数
-                let errorCount = this.errorCounter.get(`${platform}:${article.a_id}`)
+                let errorCount = this.errorCounter.get(`${platform}:${cloned_article.a_id}`)
                 if (!errorCount) {
                     errorCount = 0
                 }
                 errorCount = errorCount + 1
                 if (errorCount > this.MAX_ERROR_COUNT) {
-                    ctx.log?.error(`Error count exceeded for ${article.a_id}, skipping this and tag forwarded...`)
+                    ctx.log?.error(`Error count exceeded for ${cloned_article.a_id}, skipping this and tag forwarded...`)
                     for (const { forwarder: target } of to) {
-                        let currentArticle: ArticleWithId | null = article
+                        let currentArticle: ArticleWithId | null = cloned_article
                         while (currentArticle && typeof currentArticle === 'object') {
                             await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
                             currentArticle = currentArticle.ref as ArticleWithId | null
                         }
                     }
-                    this.errorCounter.delete(`${platform}:${article.a_id}`)
+                    this.errorCounter.delete(`${platform}:${cloned_article.a_id}`)
                 } else {
-                    this.errorCounter.set(`${platform}:${article.a_id}`, errorCount)
-                    ctx.log?.error(`Error count for ${article.a_id}: ${errorCount}`)
+                    this.errorCounter.set(`${platform}:${cloned_article.a_id}`, errorCount)
+                    ctx.log?.error(`Error count for ${cloned_article.a_id}: ${errorCount}`)
                 }
             }
             /**
@@ -603,7 +603,7 @@ class ForwarderPools extends BaseCompatibleModel {
     async processFollowsTask(
         ctx: TaskScheduler.TaskCtx,
         websites: Array<string>,
-        forwarders: Array<ForwardToInstanceWithRuntimeConfig>,
+        forwarders: Array<ForwardTargetInstanceWithRuntimeConfig>,
     ) {
         if (websites.length === 0) {
             ctx.log?.error(`No websites found`)
@@ -673,7 +673,7 @@ class ForwarderPools extends BaseCompatibleModel {
         subscribers: Forwarder['subscribers'],
         cfg: Forwarder['cfg_forwarder'],
         cfg_forward_target?: Forwarder['cfg_forward_target'],
-    ): Array<ForwardToInstanceWithRuntimeConfig> {
+    ): Array<ForwardTargetInstanceWithRuntimeConfig> {
         const common_cfg = cfg_forward_target
         let wrap = this.subscribers.get(id)
         if (!wrap) {
@@ -690,11 +690,11 @@ class ForwarderPools extends BaseCompatibleModel {
                               }
                           }
                           return acc
-                      }, {} as ForwardToIdWithRuntimeConfig)
+                      }, {} as ForwardTargetIdWithRuntimeConfig)
                     : this.forward_to.keys().reduce((acc, id) => {
                           acc[id] = undefined
                           return acc
-                      }, {} as ForwardToIdWithRuntimeConfig),
+                      }, {} as ForwardTargetIdWithRuntimeConfig),
                 cfg_forwarder: cfg,
             }
             this.subscribers.set(id, newWrap)

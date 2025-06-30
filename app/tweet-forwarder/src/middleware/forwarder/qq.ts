@@ -1,9 +1,9 @@
 import axios from 'axios'
 import { Forwarder } from './base'
-import { type ForwardToPlatformConfig, ForwardToPlatformEnum } from '@/types/forwarder'
+import { type ForwardTargetPlatformConfig, ForwardTargetPlatformEnum } from '@/types/forwarder'
 
 class QQForwarder extends Forwarder {
-    static _PLATFORM = ForwardToPlatformEnum.QQ
+    static _PLATFORM = ForwardTargetPlatformEnum.QQ
     private group_id: string
     private url: string
     private token: string
@@ -11,7 +11,7 @@ class QQForwarder extends Forwarder {
     BASIC_TEXT_LIMIT = 4000
     constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
         super(config, ...rest)
-        const { group_id, url, token } = config as ForwardToPlatformConfig<ForwardToPlatformEnum.QQ>
+        const { group_id, url, token } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.QQ>
         if (!group_id || !url) {
             throw new Error(`forwarder ${this.NAME} group_id and url is required`)
         }
