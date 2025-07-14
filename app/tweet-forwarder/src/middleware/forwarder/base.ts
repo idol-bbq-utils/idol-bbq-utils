@@ -1,6 +1,7 @@
 import { RETRY_LIMIT } from '@/config'
 import type { Article } from '@/db'
 import {
+    type ForwardTarget,
     type ForwardTargetPlatformCommonConfig,
     type ForwardTargetPlatformConfig,
     ForwardTargetPlatformEnum,
@@ -24,8 +25,8 @@ abstract class BaseForwarder extends BaseCompatibleModel {
     static _PLATFORM = ForwardTargetPlatformEnum.None
     log?: Logger
     id: string
-    protected config: ForwardTargetPlatformConfig<ForwardTargetPlatformEnum>
-    constructor(config: ForwardTargetPlatformConfig<ForwardTargetPlatformEnum>, id: string, log?: Logger) {
+    protected config: ForwardTarget['cfg_platform']
+    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
         super()
         this.log = log
         this.config = config
@@ -60,7 +61,7 @@ abstract class Forwarder extends BaseForwarder {
     protected BASIC_TEXT_LIMIT = 1000
     TEXT_LIMIT: number
     private cache: SimpleExpiringCache = new SimpleExpiringCache()
-    constructor(config: ForwardTargetPlatformConfig<ForwardTargetPlatformEnum>, id: string, log?: Logger) {
+    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
         super(config, id, log)
         if (this.config?.replace_regex) {
             try {
@@ -141,8 +142,31 @@ abstract class Forwarder extends BaseForwarder {
                 return false
             }
             // apply block rule
+            // always and once
             if (sub_type.includes(article?.type)) {
-                const cache_key = `${article}`
+                const cache_key = `${article.platform}::${article.a_id}::block`
+                let cached = this.cache.get(cache_key)
+                if (!cached && block_type.startsWith('once')) {
+                    let has_media = false
+                    if (block_type === 'once.media') {
+                        let currentArticle: Article | null = article
+                        while (currentArticle) { 
+                            if (currentArticle.has_media) {
+                                has_media = true
+                                break
+                            }
+                            if (currentArticle.ref && typeof currentArticle.ref === 'object') {
+                                currentArticle = currentArticle.ref
+                            } else {
+                                currentArticle = null
+                            }
+                        }
+                    }
+                    (block_until === 'once' || has_media) && this.cache.set(cache_key, block_type, getSubtractTime(dayjs().unix(), block_until))
+                    return false
+                    
+                }
+                return true
             }
 
             return false
@@ -174,7 +198,7 @@ abstract class Forwarder extends BaseForwarder {
         return
     }
 
-    textFilter(text: string, regexps: ForwardTargetPlatformConfig['replace_regex']): string {
+    textFilter(text: string, regexps: ForwardTarget['cfg_platform']['replace_regex']): string {
         if (!regexps) {
             return text
         }

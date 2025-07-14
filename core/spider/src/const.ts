@@ -24,7 +24,7 @@ const platformArticleMapToActionText: Record<Platform, Record<string, string>> =
         [Tiktok.ArticleTypeEnum.POST]: '发布视频',
     },
     [Platform.YouTube]: {
-        [Youtube.ArticleTypeEnum.POST]: '发布视频',
+        [Youtube.ArticleTypeEnum.POST]: '发布帖子',
         // [Youtube.ArticleTypeEnum.SHORTS]: '发布短视频',
     },
 }

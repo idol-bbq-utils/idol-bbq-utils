@@ -94,8 +94,11 @@ interface ForwardTargetPlatformCommonConfig {
         sub_type?: Array<string>
         /**
          * Default is `none`
+         * if always set, block_until will be ignored
          */
-        block_type?: 'all' | 'once' | 'none'
+        block_type?: 'always' | 'none' |
+                    'once' | 'once.media'
+                      
         /**
          * default is `6h`
          */
@@ -103,8 +106,7 @@ interface ForwardTargetPlatformCommonConfig {
     }>
 }
 
-type ForwardTargetPlatformConfig<T extends ForwardTargetPlatformEnum = ForwardTargetPlatformEnum> = PlatformConfigMap[T] &
-    ForwardTargetPlatformCommonConfig
+type ForwardTargetPlatformConfig<T extends ForwardTargetPlatformEnum = ForwardTargetPlatformEnum> = PlatformConfigMap[T]
 
 interface ForwarderConfig extends CommonCfgConfig {
     cron?: string
@@ -119,7 +121,7 @@ interface ForwardTarget<T extends ForwardTargetPlatformEnum = ForwardTargetPlatf
      * default is md5 hash of the platform and config
      */
     id?: string
-    cfg_platform: ForwardTargetPlatformConfig<T>
+    cfg_platform: ForwardTargetPlatformConfig<T> & ForwardTargetPlatformCommonConfig
 }
 
 interface Forwarder<T extends TaskType> {
