@@ -36,4 +36,13 @@ const platformNameMap: Record<Platform, string> = {
     [Platform.YouTube]: 'YouTube',
 }
 
-export { platformArticleMapToActionText, platformNameMap }
+const platformPresetHeadersMap: Record<Platform, Record<string, string>> = {
+    [Platform.X]: {},
+    [Platform.Instagram]: {},
+    [Platform.TikTok]: {
+        'referer': 'https://www.tiktok.com/',
+    },
+    [Platform.YouTube]: {},
+}
+
+export { platformArticleMapToActionText, platformNameMap, platformPresetHeadersMap }
