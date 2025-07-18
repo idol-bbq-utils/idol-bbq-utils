@@ -16,7 +16,7 @@ function writeImgToFile(buffer: Buffer<ArrayBufferLike>, filename: string): stri
 
 async function downloadFile(
     url: string,
-    cookie?: string,
+    headers?: Record<string, string>,
 ): Promise<{
     contentType: string
     file: Buffer
@@ -25,14 +25,14 @@ async function downloadFile(
         credentials: 'include',
         headers: {
             'user-agent': UserAgent.CHROME,
-            cookie: cookie || '',
+            ...headers,
         },
         redirect: 'manual',
     })
     if ([301, 302, 307, 308].includes(res.status)) {
         const location = res.headers.get('location')
         if (location) {
-            return downloadFile(location, cookie)
+            return downloadFile(location, headers)
         } else {
             throw new Error(`Failed to download file: ${res.status} ${res.statusText} ${url}`)
         }
@@ -48,7 +48,7 @@ async function downloadFile(
     }
 }
 
-async function plainDownloadMediaFile(url: string, prefix?: string, cookie?: string): Promise<string> {
+async function plainDownloadMediaFile(url: string, prefix?: string, headers?: Record<string, string>): Promise<string> {
     const _url = new URL(url)
     let filename = MATCH_FILE_NAME.exec(_url.pathname)?.groups?.filename
     if (!filename) {
@@ -63,7 +63,7 @@ async function plainDownloadMediaFile(url: string, prefix?: string, cookie?: str
         fs.mkdirSync(dir, { recursive: true })
     }
     let ext: string | undefined = undefined
-    const { file, contentType } = await downloadFile(url, cookie)
+    const { file, contentType } = await downloadFile(url, headers)
     ext = contentType ? mimeToExt[contentType as keyof typeof mimeToExt] : undefined
     if (ext) {
         dest += `.${ext}`
@@ -73,8 +73,12 @@ async function plainDownloadMediaFile(url: string, prefix?: string, cookie?: str
 }
 
 async function tryGetCookie(url: string) {
-    const res = await fetch(url)
-    const cookieString = res.headers.get('set-cookie')
+    let cookieString: string | null = null
+    try {
+        const res = await fetch(url)
+        cookieString = res.headers.get('set-cookie')
+    } catch (e) {
+    }
     if (!cookieString) {
         return
     }

@@ -8,7 +8,7 @@ import { Platform, type MediaType, type TaskType } from '@idol-bbq-utils/spider/
 import DB from '@/db'
 import type { Article, ArticleWithId, DBFollows } from '@/db'
 import { BaseForwarder } from '@/middleware/forwarder/base'
-import { type MediaTool, MediaToolEnum } from '@/types/media'
+import { type Media, type MediaTool, MediaToolEnum } from '@/types/media'
 import type { ForwardTargetPlatformCommonConfig, Forwarder as RealForwarder } from '@/types/forwarder'
 import { getForwarder } from '@/middleware/forwarder'
 import crypto from 'crypto'
@@ -23,6 +23,7 @@ import { articleToText, followsToText, formatMetaline, ImgConverter } from '@ido
 import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
 import { cloneDeep, orderBy } from 'lodash'
+import { platformPresetHeadersMap } from '@idol-bbq-utils/spider/const'
 
 type Forwarder = RealForwarder<TaskType>
 
@@ -420,6 +421,11 @@ class ForwarderPools extends BaseCompatibleModel {
                 path: string
                 media_type: MediaType
             }>
+
+            // 下载媒体文件
+            if (cfg_forwarder?.media) {
+                maybe_media_files = await this.handleMedia(ctx, article, cfg_forwarder.media)
+            }
             if (cfg_forwarder?.render_type?.startsWith('img')) {
                 try {
                     const imgBuffer = await this.ArticleConverter.articleToImg(
@@ -428,7 +434,7 @@ class ForwarderPools extends BaseCompatibleModel {
                     ctx.log?.debug(`Converted article ${article.a_id} to img successfully`)
                     const path = writeImgToFile(imgBuffer, `${ctx.taskId}-${article.a_id}-rendered.png`)
 
-                    maybe_media_files.push({
+                    maybe_media_files.unshift({
                         path,
                         media_type: 'photo',
                     })
@@ -439,75 +445,6 @@ class ForwarderPools extends BaseCompatibleModel {
             }
             // article to photo
 
-            // 下载媒体文件
-            if (cfg_forwarder?.media) {
-                const media = cfg_forwarder.media
-
-                let currentArticle: Article | null = article
-                while (currentArticle) {
-                    let new_files = [] as Array<{
-                        path: string
-                        media_type: MediaType
-                    } | undefined>
-                    if (currentArticle.has_media) {
-                        ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
-                        let cookie: string | undefined = undefined
-                        // TODO: better way to get cookie
-                        if ([Platform.TikTok].includes(currentArticle.platform)) {
-                            cookie = await tryGetCookie(currentArticle.url)
-                        }
-                        async function handleMedia(media: Array<{ url: string; type: MediaType }>, overrideType?: boolean) {
-                            return Promise.all(
-                                media.map(async ({ url, type }) => {
-                                    try {
-                                        const path = await plainDownloadMediaFile(url, ctx.taskId, cookie)
-                                        return {
-                                            path,
-                                            media_type: overrideType ? getMediaType(path) : type,
-                                        }
-                                    } catch (e) {
-                                        ctx.log?.error(`Error while downloading media file: ${e}, skipping ${url}`)
-                                    }
-                                    return undefined
-                                }),
-                            )
-                        }
-                        // handle media
-                        if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
-                            ctx.log?.debug(`Downloading media with http downloader`)
-                            new_files = await handleMedia(currentArticle.media)
-
-                            if (currentArticle.extra?.media) {
-                                const extra_files = await handleMedia(currentArticle.extra.media, true)
-                                new_files = new_files.concat(extra_files)
-                            }
-                        }
-                        if (media.use.tool === MediaToolEnum.GALLERY_DL) {
-                            ctx.log?.debug(`Downloading media with gallery-dl`)
-                            new_files = await galleryDownloadMediaFile(
-                                currentArticle.url,
-                                media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
-                            ).map((path) => ({
-                                path,
-                                media_type: getMediaType(path),
-                            }))
-                            if (currentArticle.extra?.media) {
-                                const extra_files = await handleMedia(currentArticle.extra.media, true)
-                                new_files = new_files.concat(extra_files)
-                            }
-                        }
-                        if (new_files.length > 0) {
-                            ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
-                            maybe_media_files = maybe_media_files.concat(new_files.filter(i => i !== undefined))
-                        }
-                    }
-                    if (currentArticle.ref && typeof currentArticle.ref === 'object') {
-                       currentArticle = currentArticle.ref as Article
-                    } else {
-                       currentArticle = null
-                    }
-                }
-            }
             const fullText = articleToText(article)
             // 获取需要转发的文本，但如果已经执行了文本转图片，则只需要metaline
             let text = articleToImgSuccess ? formatMetaline(article) : fullText
@@ -680,21 +617,21 @@ class ForwarderPools extends BaseCompatibleModel {
             const newWrap = {
                 to: subscribers
                     ? subscribers.reduce((acc, s) => {
-                          if (typeof s === 'string') {
-                              acc[s] = common_cfg
-                          }
-                          if (typeof s === 'object') {
-                              acc[s.id] = {
-                                  ...common_cfg,
-                                  ...s.cfg_forward_target,
-                              }
-                          }
-                          return acc
-                      }, {} as ForwardTargetIdWithRuntimeConfig)
+                        if (typeof s === 'string') {
+                            acc[s] = common_cfg
+                        }
+                        if (typeof s === 'object') {
+                            acc[s.id] = {
+                                ...common_cfg,
+                                ...s.cfg_forward_target,
+                            }
+                        }
+                        return acc
+                    }, {} as ForwardTargetIdWithRuntimeConfig)
                     : this.forward_to.keys().reduce((acc, id) => {
-                          acc[id] = undefined
-                          return acc
-                      }, {} as ForwardTargetIdWithRuntimeConfig),
+                        acc[id] = undefined
+                        return acc
+                    }, {} as ForwardTargetIdWithRuntimeConfig),
                 cfg_forwarder: cfg,
             }
             this.subscribers.set(id, newWrap)
@@ -711,9 +648,9 @@ class ForwarderPools extends BaseCompatibleModel {
                     typeof s === 'string'
                         ? common_cfg
                         : {
-                              ...common_cfg,
-                              ...s.cfg_forward_target,
-                          }
+                            ...common_cfg,
+                            ...s.cfg_forward_target,
+                        }
             }
         })
         return Object.entries(to)
@@ -728,6 +665,85 @@ class ForwarderPools extends BaseCompatibleModel {
                 }
             })
             .filter((i) => i !== undefined)
+    }
+
+    async handleMedia(ctx: TaskScheduler.TaskCtx, article: Article, media: Media): Promise<Array<{
+        path: string
+        media_type: MediaType
+    }>> {
+        let maybe_media_files = [] as Array<{
+            path: string
+            media_type: MediaType
+        }>
+        let currentArticle: Article | null = article
+        while (currentArticle) {
+            let new_files = [] as Array<{
+                path: string
+                media_type: MediaType
+            } | undefined>
+            if (currentArticle.has_media) {
+                ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
+                let cookie: string | undefined = undefined
+                // TODO: better way to get cookie
+                if ([Platform.TikTok].includes(currentArticle.platform)) {
+                    cookie = await tryGetCookie(currentArticle.url)
+                }
+                async function _handleMedia(media: Array<{ url: string; type: MediaType }>, overrideType?: boolean) {
+                    return Promise.all(
+                        media.map(async ({ url, type }) => {
+                            try {
+                                // TODO: better way to set referer
+                                const path = await plainDownloadMediaFile(url, ctx.taskId, {
+                                    cookie: cookie || '',
+                                    ...(currentArticle?.platform ? platformPresetHeadersMap[currentArticle.platform] : {})
+                                })
+                                return {
+                                    path,
+                                    media_type: overrideType ? getMediaType(path) : type,
+                                }
+                            } catch (e) {
+                                ctx.log?.error(`Error while downloading media file: ${e}, skipping ${url}`)
+                            }
+                            return undefined
+                        }),
+                    )
+                }
+                // handle media
+                if (media.use.tool === MediaToolEnum.DEFAULT && currentArticle.media) {
+                    ctx.log?.debug(`Downloading media with http downloader`)
+                    new_files = await _handleMedia(currentArticle.media)
+
+                    if (currentArticle.extra?.media) {
+                        const extra_files = await _handleMedia(currentArticle.extra.media, true)
+                        new_files = new_files.concat(extra_files)
+                    }
+                }
+                if (media.use.tool === MediaToolEnum.GALLERY_DL) {
+                    ctx.log?.debug(`Downloading media with gallery-dl`)
+                    new_files = await galleryDownloadMediaFile(
+                        currentArticle.url,
+                        media.use as MediaTool<MediaToolEnum.GALLERY_DL>,
+                    ).map((path) => ({
+                        path,
+                        media_type: getMediaType(path),
+                    }))
+                    if (currentArticle.extra?.media) {
+                        const extra_files = await _handleMedia(currentArticle.extra.media, true)
+                        new_files = new_files.concat(extra_files)
+                    }
+                }
+                if (new_files.length > 0) {
+                    ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
+                    maybe_media_files = maybe_media_files.concat(new_files.filter(i => i !== undefined))
+                }
+            }
+            if (currentArticle.ref && typeof currentArticle.ref === 'object') {
+                currentArticle = currentArticle.ref as Article
+            } else {
+                currentArticle = null
+            }
+        }
+        return maybe_media_files
     }
 }
 
