@@ -241,7 +241,7 @@ class XListSpider extends BaseSpider {
         return json.map(XApiJsonParser.oldTweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
     }
 
-    async grabTweetsPoor(id: string): Promise<Array<GenericFollows>> {
+    async grabTweetsPoor(id: string): Promise<Array<GenericArticle<Platform.X>>> {
         const url = `${this.API_PREFIX}/1.1/lists/members.json`
         const params = new URLSearchParams({
             list_id: id,
@@ -260,7 +260,7 @@ class XListSpider extends BaseSpider {
             throw new Error('Failed to fetch follows with empty json')
         }
 
-        return json?.users?.map((u: any) =>[u.status]).map(XApiJsonParser.oldFollowsParser).filter(Boolean) as Array<GenericFollows>
+        return json?.users?.map(XApiJsonParser.oldTweetMemeberParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
     }
 
     async grabFollows(id: string): Promise<Array<GenericFollows>> {
@@ -271,6 +271,7 @@ class XListSpider extends BaseSpider {
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
+                'user-agent': UserAgent.CHROME,
             },
         })
 
@@ -866,6 +867,62 @@ namespace XApiJsonParser {
     export function oldTweetParser(json: any): GenericArticle<Platform.X> | null {
         const legacy = json
         const userLegacy = json?.user
+        let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
+        let ref: GenericArticleRef<Platform.X> | null = null
+        if (legacy?.retweeted_status) { // high priority
+            type = ArticleTypeEnum.RETWEET
+            ref = oldTweetParser(legacy?.retweeted_status) as GenericArticleRef<Platform.X>
+        } else if (legacy?.is_quote_status) {
+            type = ArticleTypeEnum.QUOTED
+            ref = legacy?.quoted_status ? oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X> : legacy?.quoted_status_id_str || null
+        } else if (legacy?.in_reply_to_status_id_str) {
+            type = ArticleTypeEnum.CONVERSATION
+            ref = legacy?.in_reply_to_status_id_str
+        }
+        // 主推文解析
+        const tweet = {
+            platform: Platform.X,
+            a_id: legacy?.id_str,
+            u_id: userLegacy?.screen_name,
+            username: userLegacy?.name,
+            created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
+            content: legacy?.full_text,
+            url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
+            type: type,
+            ref: ref,
+            // extended_entities里是video，但entities里只是图片
+            media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
+            has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
+            extra: Card.cardParser(legacy.card),
+            u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
+        } as GenericArticle<Platform.X>
+        // 处理转发类型
+        if (tweet.type === ArticleTypeEnum.RETWEET) {
+            tweet.content = ''
+            // 转发类型推文media按照ref为准
+            tweet.media = null
+            tweet.has_media = false
+            tweet.extra = null
+        }
+
+        let urls = legacy.entities.urls || []
+        let media_urls = legacy.entities.media?.map((m: { url: string }) => m.url) || []
+        for (const u of urls) {
+            if (u.expanded_url && !u.expanded_url.startsWith('https://x.com/')) {
+                tweet.content = tweet.content?.replace(u.url, u.expanded_url) ?? null
+            } else {
+                tweet.content = tweet.content?.replace(u.url, '') ?? null
+            }
+        }
+        for (const url of media_urls) {
+            tweet.content = tweet.content?.replace(url, '') ?? null
+        }
+        return tweet as GenericArticle<Platform.X>
+    }
+
+        export function oldTweetMemeberParser(json: any): GenericArticle<Platform.X> | null {
+        const legacy = json?.status
+        const userLegacy = json
         let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
         let ref: GenericArticleRef<Platform.X> | null = null
         if (legacy?.retweeted_status) { // high priority
