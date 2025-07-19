@@ -169,12 +169,12 @@ class XListSpider extends BaseSpider {
 
         const { task_type } = config
 
-        const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
-
         if (task_type === 'article') {
             this.log?.warn('Replies are not supported in this mode for now.')
             this.log?.info(`Trying to grab tweets for ${id}.`)
-            const res = await this.grabTweets(id, cookie_string)
+            // const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
+            // const res = await this.grabTweets(id, cookie_string)
+            const res = await this.grabTweetsPoor(id)
             return res as TaskTypeResult<T, Platform.X>
         }
 
@@ -195,6 +195,9 @@ class XListSpider extends BaseSpider {
         return null
     }
 
+    /**
+     * @deprecated This api endpoint was 404 not found at 2025-07-19 00:00 UTC.
+     */
     async grabTweets(id: string, cookie_string: string): Promise<Array<GenericArticle<Platform.X>>> {
         const url = `${this.API_PREFIX}/1.1/lists/statuses.json`
         const params = new URLSearchParams({
@@ -236,6 +239,28 @@ class XListSpider extends BaseSpider {
         }
 
         return json.map(XApiJsonParser.oldTweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
+    }
+
+    async grabTweetsPoor(id: string): Promise<Array<GenericFollows>> {
+        const url = `${this.API_PREFIX}/1.1/lists/members.json`
+        const params = new URLSearchParams({
+            list_id: id,
+        })
+        const res = await fetch(`${url}?${params.toString()}`, {
+            headers: {
+                authorization: this.PUBLIC_TOKEN,
+            },
+        })
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch follows: ${res.statusText}`)
+        }
+        const json = await res.json()
+        if (!json) {
+            throw new Error('Failed to fetch follows with empty json')
+        }
+
+        return json?.users?.map((u: any) =>[u.status]).map(XApiJsonParser.oldFollowsParser).filter(Boolean) as Array<GenericFollows>
     }
 
     async grabFollows(id: string): Promise<Array<GenericFollows>> {
