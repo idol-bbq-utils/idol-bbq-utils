@@ -924,16 +924,15 @@ namespace XApiJsonParser {
         const legacy = json?.status
         const userLegacy = json
         let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
-        let ref: GenericArticleRef<Platform.X> | null = null
         if (legacy?.retweeted_status) { // high priority
             type = ArticleTypeEnum.RETWEET
-            ref = oldTweetParser(legacy?.retweeted_status) as GenericArticleRef<Platform.X>
         } else if (legacy?.is_quote_status) {
             type = ArticleTypeEnum.QUOTED
-            ref = legacy?.quoted_status ? oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X> : legacy?.quoted_status_id_str || null
         } else if (legacy?.in_reply_to_status_id_str) {
             type = ArticleTypeEnum.CONVERSATION
-            ref = legacy?.in_reply_to_status_id_str
+        }
+        if (type !== ArticleTypeEnum.TWEET) {
+            return null
         }
         // 主推文解析
         const tweet = {
@@ -942,24 +941,16 @@ namespace XApiJsonParser {
             u_id: userLegacy?.screen_name,
             username: userLegacy?.name,
             created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
-            content: legacy?.full_text,
+            content: legacy?.text,
             url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
             type: type,
-            ref: ref,
+            ref: null,
             // extended_entities里是video，但entities里只是图片
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(legacy.card),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
         } as GenericArticle<Platform.X>
-        // 处理转发类型
-        if (tweet.type === ArticleTypeEnum.RETWEET) {
-            tweet.content = ''
-            // 转发类型推文media按照ref为准
-            tweet.media = null
-            tweet.has_media = false
-            tweet.extra = null
-        }
 
         let urls = legacy.entities.urls || []
         let media_urls = legacy.entities.media?.map((m: { url: string }) => m.url) || []
