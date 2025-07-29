@@ -1,13 +1,17 @@
 import { RETRY_LIMIT } from '@/config'
+import type { Article } from '@/db'
 import {
-    type ForwardToPlatformCommonConfig,
-    type ForwardToPlatformConfig,
-    ForwardToPlatformEnum,
+    type ForwardTarget,
+    type ForwardTargetPlatformCommonConfig,
+    type ForwardTargetPlatformConfig,
+    ForwardTargetPlatformEnum,
 } from '@/types/forwarder'
 import { BaseCompatibleModel } from '@/utils/base'
 import { formatTime, getSubtractTime } from '@/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
 import { Logger } from '@idol-bbq-utils/log'
+import { articleToText } from '@idol-bbq-utils/render'
+import { SimpleExpiringCache } from '@idol-bbq-utils/spider'
 import type { MediaType } from '@idol-bbq-utils/spider/types'
 import { pRetry } from '@idol-bbq-utils/utils'
 import dayjs from 'dayjs'
@@ -18,11 +22,11 @@ const CHUNK_SEPARATOR_PREV = '----⬆️----\n\n'
 const PADDING_LENGTH = 24
 
 abstract class BaseForwarder extends BaseCompatibleModel {
-    static _PLATFORM = ForwardToPlatformEnum.None
+    static _PLATFORM = ForwardTargetPlatformEnum.None
     log?: Logger
     id: string
-    protected config: ForwardToPlatformConfig<ForwardToPlatformEnum>
-    constructor(config: ForwardToPlatformConfig<ForwardToPlatformEnum>, id: string, log?: Logger) {
+    protected config: ForwardTarget['cfg_platform']
+    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
         super()
         this.log = log
         this.config = config
@@ -47,8 +51,8 @@ abstract class BaseForwarder extends BaseCompatibleModel {
                 path: string
             }>
             timestamp?: number
-            runtime_config?: ForwardToPlatformCommonConfig
-            original_text?: string
+            runtime_config?: ForwardTargetPlatformCommonConfig
+            article?: Article
         },
     ): Promise<any>
 }
@@ -56,7 +60,8 @@ abstract class BaseForwarder extends BaseCompatibleModel {
 abstract class Forwarder extends BaseForwarder {
     protected BASIC_TEXT_LIMIT = 1000
     TEXT_LIMIT: number
-    constructor(config: ForwardToPlatformConfig<ForwardToPlatformEnum>, id: string, log?: Logger) {
+    private cache: SimpleExpiringCache = new SimpleExpiringCache()
+    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
         super(config, id, log)
         if (this.config?.replace_regex) {
             try {
@@ -72,17 +77,18 @@ abstract class Forwarder extends BaseForwarder {
     }
 
     async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
-        const { timestamp, runtime_config: _runtime_config, original_text } = props || {}
+        const { timestamp, runtime_config: _runtime_config, article } = props || {}
         const runtime_config = {
             ...this.config,
             ..._runtime_config,
         }
-        const { replace_regex, block_until, filter_keywords, accept_keywords } = runtime_config
+        const { replace_regex, block_until, filter_keywords, accept_keywords, block_rules } = runtime_config
         const block_until_date = getSubtractTime(dayjs().unix(), block_until || '30m')
         if (timestamp && timestamp < block_until_date) {
             this.log?.warn(`blocked: can not send before ${formatTime(block_until_date)}`)
             return Promise.resolve()
         }
+        const original_text = accept_keywords || filter_keywords ? articleToText(article) : undefined
         // 白名单
         if (accept_keywords) {
             const regex = new RegExp(accept_keywords.join('|'), 'i')
@@ -113,9 +119,63 @@ abstract class Forwarder extends BaseForwarder {
                 return Promise.resolve()
             }
         }
+        // 替换关键词
         if (replace_regex) {
             text = this.textFilter(text, replace_regex)
         }
+        // block rule
+        const blocked_by_rules = block_rules?.some(({
+            platform,
+            task_type = 'article',
+            sub_type = [],
+            block_type = 'none',
+            block_until = '6h',
+        }) => {
+            if (platform !== article?.platform) {
+                return false
+            }
+            // Maybe this is not important
+            if (task_type !== 'article') {
+                return false
+            }
+            if (block_type === 'none') {
+                return false
+            }
+            // apply block rule
+            // always and once
+            if (sub_type.includes(article?.type)) {
+                const cache_key = `${article.platform}::${article.a_id}::block`
+                let cached = this.cache.get(cache_key)
+                if (!cached && block_type.startsWith('once')) {
+                    let has_media = false
+                    if (block_type === 'once.media') {
+                        let currentArticle: Article | null = article
+                        while (currentArticle) { 
+                            if (currentArticle.has_media) {
+                                has_media = true
+                                break
+                            }
+                            if (currentArticle.ref && typeof currentArticle.ref === 'object') {
+                                currentArticle = currentArticle.ref
+                            } else {
+                                currentArticle = null
+                            }
+                        }
+                    }
+                    (block_until === 'once' || has_media) && this.cache.set(cache_key, block_type, getSubtractTime(dayjs().unix(), block_until))
+                    return false
+                    
+                }
+                return true
+            }
+
+            return false
+        })
+        if (blocked_by_rules) {
+            this.log?.warn(`blocked: block rules matched`)
+            return Promise.resolve()
+        }
+
         const _log = this.log
         _log?.debug(`trying to send text with length ${text.length}`)
 
@@ -138,7 +198,7 @@ abstract class Forwarder extends BaseForwarder {
         return
     }
 
-    textFilter(text: string, regexps: ForwardToPlatformConfig['replace_regex']): string {
+    textFilter(text: string, regexps: ForwardTarget['cfg_platform']['replace_regex']): string {
         if (!regexps) {
             return text
         }

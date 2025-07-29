@@ -24,7 +24,7 @@ const platformArticleMapToActionText: Record<Platform, Record<string, string>> =
         [Tiktok.ArticleTypeEnum.POST]: '发布视频',
     },
     [Platform.YouTube]: {
-        [Youtube.ArticleTypeEnum.POST]: '发布视频',
+        [Youtube.ArticleTypeEnum.POST]: '发布帖子',
         // [Youtube.ArticleTypeEnum.SHORTS]: '发布短视频',
     },
 }
@@ -36,4 +36,13 @@ const platformNameMap: Record<Platform, string> = {
     [Platform.YouTube]: 'YouTube',
 }
 
-export { platformArticleMapToActionText, platformNameMap }
+const platformPresetHeadersMap: Record<Platform, Record<string, string>> = {
+    [Platform.X]: {},
+    [Platform.Instagram]: {},
+    [Platform.TikTok]: {
+        'referer': 'https://www.tiktok.com/',
+    },
+    [Platform.YouTube]: {},
+}
+
+export { platformArticleMapToActionText, platformNameMap, platformPresetHeadersMap }

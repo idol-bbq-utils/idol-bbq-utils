@@ -3,6 +3,7 @@ import type {
     ArticleExtractType,
     CrawlEngine,
     GenericArticle,
+    GenericArticleRef,
     GenericFollows,
     GenericMediaInfo,
     TaskType,
@@ -168,12 +169,12 @@ class XListSpider extends BaseSpider {
 
         const { task_type } = config
 
-        const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
-
         if (task_type === 'article') {
             this.log?.warn('Replies are not supported in this mode for now.')
             this.log?.info(`Trying to grab tweets for ${id}.`)
-            const res = await this.grabTweets(id, cookie_string)
+            // const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
+            // const res = await this.grabTweets(id, cookie_string)
+            const res = await this.grabTweetsPoor(id)
             return res as TaskTypeResult<T, Platform.X>
         }
 
@@ -194,6 +195,9 @@ class XListSpider extends BaseSpider {
         return null
     }
 
+    /**
+     * @deprecated This api endpoint was 404 not found at 2025-07-19 00:00 UTC.
+     */
     async grabTweets(id: string, cookie_string: string): Promise<Array<GenericArticle<Platform.X>>> {
         const url = `${this.API_PREFIX}/1.1/lists/statuses.json`
         const params = new URLSearchParams({
@@ -237,6 +241,28 @@ class XListSpider extends BaseSpider {
         return json.map(XApiJsonParser.oldTweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
     }
 
+    async grabTweetsPoor(id: string): Promise<Array<GenericArticle<Platform.X>>> {
+        const url = `${this.API_PREFIX}/1.1/lists/members.json`
+        const params = new URLSearchParams({
+            list_id: id,
+        })
+        const res = await fetch(`${url}?${params.toString()}`, {
+            headers: {
+                authorization: this.PUBLIC_TOKEN,
+            },
+        })
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch follows: ${res.statusText}`)
+        }
+        const json = await res.json()
+        if (!json) {
+            throw new Error('Failed to fetch follows with empty json')
+        }
+
+        return json?.users?.map(XApiJsonParser.oldTweetMemeberParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
+    }
+
     async grabFollows(id: string): Promise<Array<GenericFollows>> {
         const url = `${this.API_PREFIX}/1.1/lists/members.json`
         const params = new URLSearchParams({
@@ -245,6 +271,7 @@ class XListSpider extends BaseSpider {
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
+                'user-agent': UserAgent.CHROME,
             },
         })
 
@@ -806,8 +833,8 @@ namespace XApiJsonParser {
             ref: result.quoted_status_result?.result
                 ? tweetParser(result.quoted_status_result.result)
                 : result.retweeted_status_result?.result
-                  ? tweetParser(result.retweeted_status_result.result)
-                  : null,
+                    ? tweetParser(result.retweeted_status_result.result)
+                    : null,
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(result.card?.legacy),
@@ -838,17 +865,20 @@ namespace XApiJsonParser {
     }
 
     export function oldTweetParser(json: any): GenericArticle<Platform.X> | null {
-        // we do not handle conversation here
-        if (json?.in_reply_to_status_id) {
-            return null
-        }
         const legacy = json
         const userLegacy = json?.user
-        let content = legacy?.full_text
-        for (const { url } of legacy?.entities?.media || []) {
-            content = content.replace(url, '')
+        let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
+        let ref: GenericArticleRef<Platform.X> | null = null
+        if (legacy?.retweeted_status) { // high priority
+            type = ArticleTypeEnum.RETWEET
+            ref = oldTweetParser(legacy?.retweeted_status) as GenericArticleRef<Platform.X>
+        } else if (legacy?.is_quote_status) {
+            type = ArticleTypeEnum.QUOTED
+            ref = legacy?.quoted_status ? oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X> : legacy?.quoted_status_id_str || null
+        } else if (legacy?.in_reply_to_status_id_str) {
+            type = ArticleTypeEnum.CONVERSATION
+            ref = legacy?.in_reply_to_status_id_str
         }
-
         // 主推文解析
         const tweet = {
             platform: Platform.X,
@@ -858,39 +888,81 @@ namespace XApiJsonParser {
             created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
             content: legacy?.full_text,
             url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
-            type: legacy?.is_quote_status ? ArticleTypeEnum.QUOTED : ArticleTypeEnum.TWEET,
-            ref: legacy?.quoted_status
-                ? oldTweetParser(legacy?.quoted_status)
-                : legacy?.retweeted_status
-                  ? oldTweetParser(legacy?.retweeted_status)
-                  : null,
+            type: type,
+            ref: ref,
             // extended_entities里是video，但entities里只是图片
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(legacy.card),
             u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
-        }
+        } as GenericArticle<Platform.X>
         // 处理转发类型
-        if (legacy?.retweeted_status) {
-            tweet.type = ArticleTypeEnum.RETWEET
+        if (tweet.type === ArticleTypeEnum.RETWEET) {
             tweet.content = ''
-            tweet.ref = oldTweetParser(legacy.retweeted_status)
             // 转发类型推文media按照ref为准
             tweet.media = null
             tweet.has_media = false
             tweet.extra = null
         }
 
-        if (tweet.type === ArticleTypeEnum.QUOTED) {
-            // 删除引用推文最后的网址
-            // like https://t.co/xxxxxxxx
-            tweet.content = tweet.content.replace(/https:\/\/t.co\/\w+$/, '')
-        }
-
-        if (tweet.media) {
-            for (const { url } of legacy.entities.media) {
-                tweet.content = tweet.content.replace(url, '')
+        let urls = legacy.entities.urls || []
+        let media_urls = legacy.entities.media?.map((m: { url: string }) => m.url) || []
+        for (const u of urls) {
+            if (u.expanded_url && !u.expanded_url.startsWith('https://x.com/')) {
+                tweet.content = tweet.content?.replace(u.url, u.expanded_url) ?? null
+            } else {
+                tweet.content = tweet.content?.replace(u.url, '') ?? null
             }
+        }
+        for (const url of media_urls) {
+            tweet.content = tweet.content?.replace(url, '') ?? null
+        }
+        return tweet as GenericArticle<Platform.X>
+    }
+
+        export function oldTweetMemeberParser(json: any): GenericArticle<Platform.X> | null {
+        const legacy = json?.status
+        const userLegacy = json
+        let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
+        if (legacy?.retweeted_status) { // high priority
+            type = ArticleTypeEnum.RETWEET
+        } else if (legacy?.is_quote_status) {
+            type = ArticleTypeEnum.QUOTED
+        } else if (legacy?.in_reply_to_status_id_str) {
+            type = ArticleTypeEnum.CONVERSATION
+        }
+        if (type !== ArticleTypeEnum.TWEET) {
+            return null
+        }
+        // 主推文解析
+        const tweet = {
+            platform: Platform.X,
+            a_id: legacy?.id_str,
+            u_id: userLegacy?.screen_name,
+            username: userLegacy?.name,
+            created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
+            content: legacy?.text,
+            url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
+            type: type,
+            ref: null,
+            // extended_entities里是video，但entities里只是图片
+            media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
+            has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
+            extra: Card.cardParser(legacy.card),
+            u_avatar: userLegacy?.profile_image_url_https?.replace('_normal', ''),
+        } as GenericArticle<Platform.X>
+
+        let urls = legacy.entities.urls || []
+        let media_urls = legacy.entities.media?.map((m: { url: string }) => m.url) || []
+        for (const u of urls) {
+            if (u.expanded_url && !u.expanded_url.startsWith('https://x.com/')) {
+                tweet.content = tweet.content?.replace(u.url, u.expanded_url) ?? null
+            } else {
+                tweet.content = tweet.content?.replace(u.url, '') ?? null
+            }
+        }
+        for (const url of media_urls) {
+            tweet.content = tweet.content?.replace(url, '') ?? null
         }
         return tweet as GenericArticle<Platform.X>
     }
@@ -976,8 +1048,8 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: defaultViewport,
-        },
+                viewport: defaultViewport,
+            },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
@@ -1027,8 +1099,8 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-            viewport: defaultViewport,
-        },
+                viewport: defaultViewport,
+            },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()

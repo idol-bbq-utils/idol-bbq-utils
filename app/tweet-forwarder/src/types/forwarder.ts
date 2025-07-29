@@ -1,8 +1,8 @@
-import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { Platform, TaskType } from '@idol-bbq-utils/spider/types'
 import type { CommonCfgConfig } from './common'
 import type { Media } from './media'
 
-enum ForwardToPlatformEnum {
+enum ForwardTargetPlatformEnum {
     None = 'none',
     Telegram = 'telegram',
     Bilibili = 'bilibili',
@@ -10,19 +10,19 @@ enum ForwardToPlatformEnum {
 }
 
 type PlatformConfigMap = {
-    [ForwardToPlatformEnum.None]: {}
-    [ForwardToPlatformEnum.Telegram]: {
+    [ForwardTargetPlatformEnum.None]: {}
+    [ForwardTargetPlatformEnum.Telegram]: {
         token: string
         chat_id: string
     }
-    [ForwardToPlatformEnum.Bilibili]: {
+    [ForwardTargetPlatformEnum.Bilibili]: {
         bili_jct: string
         sessdata: string
     }
     /**
      * one11 bot protocol
      */
-    [ForwardToPlatformEnum.QQ]: {
+    [ForwardTargetPlatformEnum.QQ]: {
         url: string
         group_id: string
         token: string
@@ -49,7 +49,7 @@ type TaskConfigMap = {
 
 type TaskConfig<T extends TaskType> = TaskConfigMap[T]
 
-interface ForwardToPlatformCommonConfig {
+interface ForwardTargetPlatformCommonConfig {
     replace_regex?: string | [string, string] | Array<[string, string]>
     /**
      *
@@ -66,25 +66,62 @@ interface ForwardToPlatformCommonConfig {
     block_until?: string
     accept_keywords?: Array<string>
     filter_keywords?: Array<string>
+    /**
+     * Block rule for the forwarder
+     *
+     * For example:
+     * 
+     * ```
+     * platform: Platform.X
+     * task_type: 'article'
+     * sub_type: ['retweet']
+     * block_type: 'once'
+     * block_until: '6h'
+     * ```
+     * 
+     * This will only send once which article type is retweet from X.
+     * And other retweets will be blocked until 6 hours later.
+     */
+    block_rules?: Array<{
+        platform: Platform,
+        /**
+         * Default is `article`
+         */
+        task_type?: TaskType
+        /**
+         * The rule will apply to the specified sub-task types included, otherwise it will block nothing
+         */
+        sub_type?: Array<string>
+        /**
+         * Default is `none`
+         * if always set, block_until will be ignored
+         */
+        block_type?: 'always' | 'none' |
+                    'once' | 'once.media'
+                      
+        /**
+         * default is `6h`
+         */
+        block_until?: string
+    }>
 }
 
-type ForwardToPlatformConfig<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> = PlatformConfigMap[T] &
-    ForwardToPlatformCommonConfig
+type ForwardTargetPlatformConfig<T extends ForwardTargetPlatformEnum = ForwardTargetPlatformEnum> = PlatformConfigMap[T]
 
 interface ForwarderConfig extends CommonCfgConfig {
     cron?: string
     media?: Media
-    render_type?: 'text' | 'img'
+    render_type?: 'text' | 'img' | 'img-with-meta'
 }
 
-interface ForwardTo<T extends ForwardToPlatformEnum = ForwardToPlatformEnum> {
+interface ForwardTarget<T extends ForwardTargetPlatformEnum = ForwardTargetPlatformEnum> {
     platform: T
     /**
      * unique id for the target
      * default is md5 hash of the platform and config
      */
     id?: string
-    cfg_platform: ForwardToPlatformConfig<T>
+    cfg_platform: ForwardTargetPlatformConfig<T> & ForwardTargetPlatformCommonConfig
 }
 
 interface Forwarder<T extends TaskType> {
@@ -123,15 +160,15 @@ interface Forwarder<T extends TaskType> {
         | string
         | {
               id: string
-              cfg_forward_target?: ForwardToPlatformCommonConfig
+              cfg_forward_target?: ForwardTargetPlatformCommonConfig
           }
     >
 
     cfg_forwarder?: ForwarderConfig
 
-    cfg_forward_target?: ForwardToPlatformCommonConfig
+    cfg_forward_target?: ForwardTargetPlatformCommonConfig
 }
 
-export { ForwardToPlatformEnum }
+export { ForwardTargetPlatformEnum }
 
-export type { ForwardTo, Forwarder, ForwarderConfig, ForwardToPlatformConfig, ForwardToPlatformCommonConfig }
+export type { ForwardTarget, Forwarder, ForwarderConfig, ForwardTargetPlatformConfig, ForwardTargetPlatformCommonConfig }

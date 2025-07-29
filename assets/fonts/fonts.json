@@ -1,0 +1,20 @@
+[
+    {
+        "name": "Noto Sans",
+        "font_file_name": "NotoSans-Regular.ttf",
+        "style": "normal",
+        "weight": 400
+    },
+    {
+        "name": "Noto Sans",
+        "font_file_name": "NotoSans-Bold.ttf",
+        "style": "normal",
+        "weight": 700
+    },
+    {
+        "name": "Noto Sans Math",
+        "font_file_name": "NotoSansMath-Regular.ttf",
+        "style": "normal",
+        "weight": 400
+    }
+]
