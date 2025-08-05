@@ -948,7 +948,7 @@ namespace XApiJsonParser {
             u_id: userLegacy?.screen_name,
             username: userLegacy?.name,
             created_at: Math.floor(parseTwitterDate(legacy?.created_at) / 1000),
-            content: legacy?.text,
+            content: legacy?.text || legacy?.full_text,
             url: userLegacy?.screen_name ? `https://x.com/${userLegacy.screen_name}/status/${legacy?.id_str}` : '',
             type: type,
             ref: null,
