@@ -245,6 +245,13 @@ class XListSpider extends BaseSpider {
         const url = `${this.API_PREFIX}/1.1/lists/members.json`
         const params = new URLSearchParams({
             list_id: id,
+            cards_platform: 'Web-13',
+            include_entities: '1',
+            include_user_entities: '1',
+            include_cards: '1',
+            tweet_mode: 'extended',
+            include_ext_alt_text: 'true',
+            include_ext_media_color: 'true',
         })
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
@@ -920,7 +927,7 @@ namespace XApiJsonParser {
         return tweet as GenericArticle<Platform.X>
     }
 
-        export function oldTweetMemeberParser(json: any): GenericArticle<Platform.X> | null {
+    export function oldTweetMemeberParser(json: any): GenericArticle<Platform.X> | null {
         const legacy = json?.status
         const userLegacy = json
         let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
