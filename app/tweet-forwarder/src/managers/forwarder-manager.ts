@@ -415,6 +415,17 @@ class ForwarderPools extends BaseCompatibleModel {
         ctx.log?.info(`Ready to send articles for ${url}`)
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
+            // check article 
+            const article_is_blocked = to.every(({ forwarder: target, runtime_config })=> target.check_blocked("", {
+                timestamp: article.created_at,
+                runtime_config,
+                article: cloneDeep(article)
+            }))
+            if (article_is_blocked) {
+                ctx.log?.warn(`Article ${article.a_id} is blocked by all forwarders, skipping...`)
+                continue;
+            }
+
             let articleToImgSuccess = false
             ctx.log?.debug(`Processing article ${article.a_id} for ${to.map((i) => i.forwarder.id).join(', ')}`)
             let maybe_media_files = [] as Array<{

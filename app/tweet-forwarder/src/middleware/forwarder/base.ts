@@ -55,6 +55,11 @@ abstract class BaseForwarder extends BaseCompatibleModel {
             article?: Article
         },
     ): Promise<any>
+
+    public abstract check_blocked(
+        text: string,
+        props: Parameters<BaseForwarder['send']>[1]
+    ): boolean
 }
 
 abstract class Forwarder extends BaseForwarder {
@@ -76,17 +81,17 @@ abstract class Forwarder extends BaseForwarder {
             this.BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SEPARATOR_PREV.length - PADDING_LENGTH
     }
 
-    async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
+    public check_blocked(text: string, props: Parameters<BaseForwarder['send']>[1]) {
         const { timestamp, runtime_config: _runtime_config, article } = props || {}
         const runtime_config = {
             ...this.config,
             ..._runtime_config,
         }
-        const { replace_regex, block_until, filter_keywords, accept_keywords, block_rules } = runtime_config
+        const { block_until, filter_keywords, accept_keywords, block_rules } = runtime_config
         const block_until_date = getSubtractTime(dayjs().unix(), block_until || '30m')
         if (timestamp && timestamp < block_until_date) {
             this.log?.warn(`blocked: can not send before ${formatTime(block_until_date)}`)
-            return Promise.resolve()
+            return true
         }
         const original_text = accept_keywords || filter_keywords ? articleToText(article) : undefined
         // 白名单
@@ -102,7 +107,7 @@ abstract class Forwarder extends BaseForwarder {
             blocked = original_text ? !regex.test(original_text) : blocked
             if (blocked) {
                 this.log?.warn(`blocked: accept keywords matched`)
-                return Promise.resolve()
+                return true
             }
         }
         // 黑名单
@@ -116,12 +121,8 @@ abstract class Forwarder extends BaseForwarder {
             blocked = original_text ? regex.test(original_text) : blocked
             if (blocked) {
                 this.log?.warn(`blocked: filter keywords matched`)
-                return Promise.resolve()
+                return true
             }
-        }
-        // 替换关键词
-        if (replace_regex) {
-            text = this.textFilter(text, replace_regex)
         }
         // block rule
         const blocked_by_rules = block_rules?.some(({
@@ -173,7 +174,24 @@ abstract class Forwarder extends BaseForwarder {
         })
         if (blocked_by_rules) {
             this.log?.warn(`blocked: block rules matched`)
+            return true
+        }
+        return false
+    }
+
+    async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
+        const { runtime_config: _runtime_config } = props || {}
+        const runtime_config = {
+            ...this.config,
+            ..._runtime_config,
+        }
+        const { replace_regex } = runtime_config
+        if (this.check_blocked(text, props)) {
             return Promise.resolve()
+        }
+        // 替换关键词
+        if (replace_regex) {
+            text = this.textFilter(text, replace_regex)
         }
 
         const _log = this.log
