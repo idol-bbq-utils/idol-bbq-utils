@@ -19,6 +19,8 @@ import { ClientTransaction, handleXMigration } from 'x-client-transaction-id'
 import { v4 as uuidv4 } from 'uuid'
 import { noop } from 'puppeteer-core/lib/esm/third_party/rxjs/rxjs.js'
 
+type XListApiEngine = 'api-statuses' | 'api-member'
+
 enum ArticleTypeEnum {
     /**
      *
@@ -172,9 +174,13 @@ class XListSpider extends BaseSpider {
         if (task_type === 'article') {
             this.log?.warn('Replies are not supported in this mode for now.')
             this.log?.info(`Trying to grab tweets for ${id}.`)
-            // const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
-            // const res = await this.grabTweets(id, cookie_string)
-            const res = await this.grabTweetsPoor(id)
+            let res = [] as Array<GenericArticle<Platform.X>>
+            if (config.crawl_engine === 'api-statuses') {
+                const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
+                res = await this.grabTweets(id, cookie_string)
+            } else {
+                res = await this.grabTweetsPoor(id)
+            }
             return res as TaskTypeResult<T, Platform.X>
         }
 
@@ -1239,4 +1245,4 @@ type ExtraContentType = Card<CardTypeEnum> | null
 
 export { ArticleTypeEnum, XApiJsonParser, XUserTimeLineSpider, XListSpider }
 
-export type { ExtraContentType }
+export type { ExtraContentType, XListApiEngine }

@@ -1,7 +1,7 @@
 import { X, Instagram, Tiktok, Youtube } from './spiders'
 import type { ExtraContentType } from './spiders/x'
 
-type CrawlEngine = 'browser' | 'api'
+type CrawlEngine = 'browser' | 'api' | X.XListApiEngine
 
 enum Platform {
     X = 1,
