@@ -423,6 +423,14 @@ class ForwarderPools extends BaseCompatibleModel {
             }))
             if (article_is_blocked) {
                 ctx.log?.warn(`Article ${article.a_id} is blocked by all forwarders, skipping...`)
+                // save forwardby
+                for (const { forwarder: target } of to) {
+                    let currentArticle: ArticleWithId | null = article
+                    while (currentArticle && typeof currentArticle === 'object') {
+                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                        currentArticle = currentArticle.ref as ArticleWithId | null
+                    }
+                }
                 continue;
             }
 
