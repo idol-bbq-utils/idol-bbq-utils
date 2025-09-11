@@ -92,12 +92,12 @@ class XUserTimeLineSpider extends BaseSpider {
 
                 if (task_type === 'article') {
                     let res = []
-                    if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.tweets)) {
+                    if (!sub_task_type || sub_task_type.length === 0 || sub_task_type.includes(XTweetsTaskType.tweets)) {
                         this.log?.info(`Trying to grab tweets for ${id}.`)
                         const tweets = await this.API_CLIENT.grabTweets(id, cookie_string)
                         res.push(...tweets)
                     }
-                    if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.replies)) {
+                    if (!sub_task_type || sub_task_type.length === 0 || sub_task_type.includes(XTweetsTaskType.replies)) {
                         this.log?.info(`Trying to grab replies for ${id}.`)
                         const replies = await this.API_CLIENT.grabReplies(id, cookie_string)
                         res.push(...replies)
@@ -119,12 +119,12 @@ class XUserTimeLineSpider extends BaseSpider {
         const _url = `${this.BASE_URL}${id}`
         if (task_type === 'article') {
             let res = []
-            if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.tweets)) {
+            if (!sub_task_type || sub_task_type.length === 0 || sub_task_type.includes(XTweetsTaskType.tweets)) {
                 this.log?.info(`Trying to grab tweets for ${id}.`)
                 const tweets = await XApiJsonParser.grabTweets(page, _url)
                 res.push(...tweets)
             }
-            if (!sub_task_type || sub_task_type.includes(XTweetsTaskType.replies)) {
+            if (!sub_task_type || sub_task_type.length === 0 || sub_task_type.includes(XTweetsTaskType.replies)) {
                 this.log?.info(`Trying to grab replies for ${id}.`)
                 const replies = await XApiJsonParser.grabReplies(page, _url + '/with_replies')
                 res.push(...replies)
