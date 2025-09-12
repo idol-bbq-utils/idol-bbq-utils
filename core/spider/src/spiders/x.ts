@@ -173,12 +173,11 @@ class XListSpider extends BaseSpider {
         }
 
         const { task_type } = config
-
+        const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
         if (task_type === 'article') {
             this.log?.warn('Replies are not supported in this mode for now.')
             this.log?.info(`Trying to grab tweets for ${id}.`)
             let res = [] as Array<GenericArticle<Platform.X>>
-            const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
             if (config.crawl_engine === 'api-statuses') {
                 this.log?.debug('Using api-statuses engine')
                 res = await this.grabTweets(id, cookie_string)
@@ -187,14 +186,14 @@ class XListSpider extends BaseSpider {
                 res = await this.GRAPHQL_API_CLIENT.grabTweetsFromList(id, cookie_string)
             } else {
                 this.log?.debug('Using api-member engine')
-                res = await this.grabTweetsPoor(id)
+                res = await this.grabTweetsPoor(id, cookie_string)
             }
             return res as TaskTypeResult<T, Platform.X>
         }
 
         if (task_type === 'follows') {
             this.log?.info(`Trying to grab follows for ${id}.`)
-            const res = await this.grabFollows(id)
+            const res = await this.grabFollows(id, cookie_string)
             return res as TaskTypeResult<T, Platform.X>
         }
 
@@ -255,7 +254,7 @@ class XListSpider extends BaseSpider {
         return json.map(XApiJsonParser.oldTweetParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
     }
 
-    async grabTweetsPoor(id: string): Promise<Array<GenericArticle<Platform.X>>> {
+    async grabTweetsPoor(id: string, cookie_string: string): Promise<Array<GenericArticle<Platform.X>>> {
         const url = `${this.API_PREFIX}/1.1/lists/members.json`
         const params = new URLSearchParams({
             list_id: id,
@@ -270,6 +269,8 @@ class XListSpider extends BaseSpider {
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
+                "user-agent": UserAgent.CHROME,
+                cookie: cookie_string,
             },
         })
 
@@ -284,15 +285,17 @@ class XListSpider extends BaseSpider {
         return json?.users?.map(XApiJsonParser.oldTweetMemeberParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
     }
 
-    async grabFollows(id: string): Promise<Array<GenericFollows>> {
+    async grabFollows(id: string, cookie: string): Promise<Array<GenericFollows>> {
         const url = `${this.API_PREFIX}/1.1/lists/members.json`
         const params = new URLSearchParams({
             list_id: id,
+            count: '99'
         })
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
                 'user-agent': UserAgent.CHROME,
+                cookie: cookie,
             },
         })
 
