@@ -180,10 +180,13 @@ class XListSpider extends BaseSpider {
             let res = [] as Array<GenericArticle<Platform.X>>
             const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
             if (config.crawl_engine === 'api-statuses') {
+                this.log?.debug('Using api-statuses engine')
                 res = await this.grabTweets(id, cookie_string)
             } else if (config.crawl_engine === 'api-graphql') {
+                this.log?.debug('Using api-graphql engine')
                 res = await this.GRAPHQL_API_CLIENT.grabTweetsFromList(id, cookie_string)
             } else {
+                this.log?.debug('Using api-member engine')
                 res = await this.grabTweetsPoor(id)
             }
             return res as TaskTypeResult<T, Platform.X>
