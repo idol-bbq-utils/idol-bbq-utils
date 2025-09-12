@@ -296,6 +296,7 @@ class XListSpider extends BaseSpider {
                 authorization: this.PUBLIC_TOKEN,
                 'user-agent': UserAgent.CHROME,
                 cookie: cookie,
+                'x-csrf-token': this.getCsrfToken(cookie) || '',
             },
         })
 
