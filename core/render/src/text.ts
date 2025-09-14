@@ -80,7 +80,7 @@ function articleToText(article: Article) {
         }
 
         /* 原文 */
-        let raw_article = parseRawContent(article)
+        let raw_article = parseRawContent(currentArticle)
         format_article += `${raw_article}`
         if (currentArticle.ref) {
             format_article += `\n\n${'-'.repeat(12)}\n\n`
