@@ -5,7 +5,7 @@ import { Logger } from '@idol-bbq-utils/log'
 
 abstract class BaseQwen extends BaseTranslator {
     public name = 'base qwen translator'
-    protected BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+    protected BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
 }
 
 class QwenMTTranslator extends BaseQwen {
