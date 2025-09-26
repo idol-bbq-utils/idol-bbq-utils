@@ -5,6 +5,7 @@ import { ByteDanceLLMTranslator } from './bytedance'
 import { BigModelLLMTranslator } from './bigmodel'
 import { DeepSeekLLMTranslator } from './deepseek'
 import { OpenaiLikeLLMTranslator } from './openai'
+import { QwenMTTranslator } from './qwen'
 
 interface TranslatorConstructor {
     _PROVIDER: TranslatorProvider
@@ -17,6 +18,7 @@ const translators: Array<TranslatorConstructor> = [
     BigModelLLMTranslator,
     DeepSeekLLMTranslator,
     OpenaiLikeLLMTranslator,
+    QwenMTTranslator
 ]
 
 function getTranslator(provider: TranslatorProvider): TranslatorConstructor | null {

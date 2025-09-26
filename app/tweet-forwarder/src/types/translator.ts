@@ -5,7 +5,7 @@ type BigModel_LLM = 'glm-4-flash'
 type Google_LLM = 'gemini'
 type Deepseek_LLM = 'deepseek-v3'
 
-type OpenA_Like_LLM = 'openai'
+type OpenA_Like_LLM = 'Openai'
 
 enum TranslatorProvider {
     /**
@@ -31,7 +31,11 @@ enum TranslatorProvider {
     /**
      * default model id openai
      */
-    OpenAI = 'openai',
+    OpenAI = 'Openai',
+    /**
+     * Qwen MT model
+     */
+    QwenMT = 'QwenMT',
 }
 
 interface TranslatorConfig extends CommonCfgConfig {
