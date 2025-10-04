@@ -43,7 +43,6 @@ class BiliForwarder extends Forwarder {
                                     _log?.error('Upload photo failed, retrying...')
                                 },
                             })
-                            _log?.debug(obj)
                             return obj
                         } catch (e) {
                             _log?.error(`Upload photo ${item.path} failed, skip this photo`)
@@ -61,6 +60,10 @@ class BiliForwarder extends Forwarder {
                 img_height: i.image_height,
                 img_size: i.image_size,
             }))
+        if (media.length !== 0 && pics.length === 0) {
+            _log?.error(`No photos uploaded, throw error.`)
+            throw new Error(`No photos uploaded, please check your bili_jct and sessdata.`)
+        }
         // TODO: more pics support
         pics = pics.slice(0, 9)
         if (pics.length > 0) {
@@ -92,6 +95,7 @@ class BiliForwarder extends Forwarder {
                 Cookie: `SESSDATA=${this.sessdata}`,
             }
         })
+        this.log?.debug(`Upload photo response: ${JSON.stringify(res.data)}`)
         return res.data.data
     }
 
