@@ -85,14 +85,12 @@ class BiliForwarder extends Forwarder {
         const form = new FormData()
         form.append('file_up', fs.createReadStream(path))
         form.append('category', 'daily')
+        form.append('csrf', this.bili_jct)
         const res = await axios.post('https://api.bilibili.com/x/dynamic/feed/draw/upload_bfs', form, {
             headers: {
                 ...form.getHeaders(),
                 Cookie: `SESSDATA=${this.sessdata}`,
-            },
-            params: {
-                csrf: this.bili_jct,
-            },
+            }
         })
         return res.data.data
     }
