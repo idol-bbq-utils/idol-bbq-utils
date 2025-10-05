@@ -16,16 +16,18 @@ class BiliForwarder extends Forwarder {
     NAME = 'bilibili'
     private bili_jct: string
     private sessdata: string
+    private media_check_level: ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>['media_check_level']
     BASIC_TEXT_LIMIT = 1000
 
     constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
         super(config, ...rest)
-        const { bili_jct, sessdata } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>
+        const { bili_jct, sessdata, media_check_level = 'none' } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>
         if (!bili_jct || !sessdata) {
             throw new Error(`forwarder ${this.NAME} bili_jct and sessdata are required`)
         }
         this.bili_jct = bili_jct
         this.sessdata = sessdata
+        this.media_check_level = media_check_level
     }
     public async realSend(...[texts, props]: [...Parameters<Forwarder['realSend']>]) {
         let { media } = props || {}
@@ -60,9 +62,13 @@ class BiliForwarder extends Forwarder {
                 img_height: i.image_height,
                 img_size: i.image_size,
             }))
-        if (media.length !== 0 && pics.length === 0) {
+        if (this.media_check_level === 'loose' && media.length !== 0 && pics.length === 0) {
             _log?.error(`No photos uploaded, throw error.`)
             throw new Error(`No photos uploaded, please check your bili_jct and sessdata.`)
+        }
+        if (this.media_check_level === 'strict' && media.length !== pics.length) {
+            _log?.error(`Some photos upload failed.`)
+            throw new Error(`Some photos upload failed, please check your bili_jct and sessdata.`)
         }
         // TODO: more pics support
         pics = pics.slice(0, 9)

@@ -18,6 +18,7 @@ type PlatformConfigMap = {
     [ForwardTargetPlatformEnum.Bilibili]: {
         bili_jct: string
         sessdata: string
+        media_check_level?: 'strict' | 'loose' | 'none'
     }
     /**
      * one11 bot protocol
