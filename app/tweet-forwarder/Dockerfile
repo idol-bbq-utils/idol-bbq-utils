@@ -1,4 +1,4 @@
-ARG CHROME_VERSION=130.0.6723.58
+ARG CHROME_VERSION=142.0.7444.175-1
 ARG GALLERY_DL_VERSION=v1.28.5
 
 FROM oven/bun:1.2.8-slim AS base
@@ -33,7 +33,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Chrome
-RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}-1_amd64.deb \
+RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}_amd64.deb \
     && apt install -y /tmp/chrome.deb \
     && rm /tmp/chrome.deb
 

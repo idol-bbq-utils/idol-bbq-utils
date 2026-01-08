@@ -41,7 +41,7 @@ enum XApis {
     UserTweets = 'UserTweets',
     UserTweetsAndReplies = 'UserTweetsAndReplies',
     UserByScreenName = 'UserByScreenName',
-    // ListLatestTweetsTimeline = 'ListLatestTweetsTimeline',
+    ListLatestTweetsTimeline = 'ListLatestTweetsTimeline',
 }
 
 const apis = Object.values(XApis)
@@ -330,6 +330,7 @@ class XApiClient {
      * Notice there is no trailing slash
      */
     BASE_URL = 'https://x.com'
+    ASSETS_BASE_URL = 'https://abs.twimg.com/responsive-web/client-web'
     API_PREFIX = '/i/api/graphql'
     BASE_HEADER = {
         authorization: this.PUBLIC_TOKEN,
@@ -371,11 +372,39 @@ class XApiClient {
                     throw new Error(`Failed to extract ${api} query id from js code`)
                 }
             }
+            // await this.getGraphqlQueryId();
 
             this.cache.set(CACHE_KEYS.TransactionClient, transaction, 60 * 60 * 24) // 24h
         }
 
         return transaction
+    }
+
+    // 获取graphql query id, 备份用
+    async getGraphqlQueryId() { //
+        let webpage = await fetch(this.BASE_URL, {
+            headers: {
+                'user-agent': UserAgent.CHROME,
+                referer: 'https://x.com/',
+                origin: 'https://x.com',
+            }
+        })
+        const html = await webpage.text()
+        // extract "": "md5/hash"
+        {// List
+            const lists_graphql_js_pattern = /"([^"]*AudioSpacebarScr)"\s*:\s*"(\w+)"/
+            const match = html.match(lists_graphql_js_pattern)
+            if (match) {
+                const js_url =  `${this.ASSETS_BASE_URL}/${match[1]}.${match[2]}a.js` // a is magic maybe changed in the future
+                console.log(js_url)
+                const js_code = await (await fetch(js_url)).text()
+                const queryId = this.getQueryId(js_code, XApis.ListLatestTweetsTimeline)
+                if (queryId) {
+                    this.api_with_queryid[XApis.ListLatestTweetsTimeline] = queryId
+                }
+            }
+        }
+
     }
 
     /**
@@ -624,13 +653,14 @@ class XApiClient {
     }
 
     async grabTweetsFromList(list_id: string, cookie: string) {
-        // const transaction = await this.getTransaction()
-        const query_id = "AbHmcvLWYVxADvWF6zvFWQ" // abs.twimg.com\responsive-web\client-web\sharedloader.Dockbundle.Articlesbundle.AudioSpaceDetailbundle.AudioSpaceDiscoverybundle.AudioSpacebarScr.e8195e0a.js
+        const _ = await this.getTransaction()
+        const query_id = this.api_with_queryid[XApis.ListLatestTweetsTimeline] ?? "NRigOCel0QKiWs_GuBgOzw" // abs.twimg.com\responsive-web\client-web\sharedloader.Dockbundle.Articlesbundle.AudioSpaceDetailbundle.AudioSpaceDiscoverybundle.AudioSpacebarScr.e8195e0a.js
+        // https://abs.twimg.com/responsive-web/client-web/shared~loader.Dock~bundle.Articles~bundle.AudioSpaceDetail~bundle.AudioSpaceDiscovery~bundle.AudioSpacebarScr.523665ea.js
         const query_path = `${this.API_PREFIX}/${query_id}/ListLatestTweetsTimeline`
         // const transaction_id = await transaction.generateTransactionId('GET', query_path)
         const csrf_token = this.getCsrfToken(cookie)
-        const variables = { listId: list_id, count: 20 }
-        const features = {"rweb_video_screen_enabled":false,"payments_enabled":false,"profile_label_improvements_pcf_label_in_post_enabled":true,"rweb_tipjar_consumption_enabled":true,"verified_phone_label_enabled":false,"creator_subscriptions_tweet_preview_api_enabled":true,"responsive_web_graphql_timeline_navigation_enabled":true,"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,"premium_content_api_read_enabled":false,"communities_web_enable_tweet_community_results_fetch":true,"c9s_tweet_anatomy_moderator_badge_enabled":true,"responsive_web_grok_analyze_button_fetch_trends_enabled":false,"responsive_web_grok_analyze_post_followups_enabled":true,"responsive_web_jetfuel_frame":true,"responsive_web_grok_share_attachment_enabled":true,"articles_preview_enabled":true,"responsive_web_edit_tweet_api_enabled":true,"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,"view_counts_everywhere_api_enabled":true,"longform_notetweets_consumption_enabled":true,"responsive_web_twitter_article_tweet_consumption_enabled":true,"tweet_awards_web_tipping_enabled":false,"responsive_web_grok_show_grok_translated_post":false,"responsive_web_grok_analysis_button_from_backend":false,"creator_subscriptions_quote_tweet_preview_enabled":false,"freedom_of_speech_not_reach_fetch_enabled":true,"standardized_nudges_misinfo":true,"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,"longform_notetweets_rich_text_read_enabled":true,"longform_notetweets_inline_media_enabled":true,"responsive_web_grok_image_annotation_enabled":true,"responsive_web_grok_imagine_annotation_enabled":true,"responsive_web_grok_community_note_auto_translation_is_enabled":false,"responsive_web_enhance_cards_enabled":false}
+        const variables = { listId: list_id, count: 1 }
+        const features = {"rweb_video_screen_enabled":false,"profile_label_improvements_pcf_label_in_post_enabled":true,"responsive_web_profile_redirect_enabled":false,"rweb_tipjar_consumption_enabled":true,"verified_phone_label_enabled":false,"creator_subscriptions_tweet_preview_api_enabled":true,"responsive_web_graphql_timeline_navigation_enabled":true,"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,"premium_content_api_read_enabled":false,"communities_web_enable_tweet_community_results_fetch":true,"c9s_tweet_anatomy_moderator_badge_enabled":true,"responsive_web_grok_analyze_button_fetch_trends_enabled":false,"responsive_web_grok_analyze_post_followups_enabled":true,"responsive_web_jetfuel_frame":true,"responsive_web_grok_share_attachment_enabled":true,"responsive_web_grok_annotations_enabled":false,"articles_preview_enabled":true,"responsive_web_edit_tweet_api_enabled":true,"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,"view_counts_everywhere_api_enabled":true,"longform_notetweets_consumption_enabled":true,"responsive_web_twitter_article_tweet_consumption_enabled":true,"tweet_awards_web_tipping_enabled":false,"responsive_web_grok_show_grok_translated_post":false,"responsive_web_grok_analysis_button_from_backend":true,"post_ctas_fetch_enabled":false,"creator_subscriptions_quote_tweet_preview_enabled":false,"freedom_of_speech_not_reach_fetch_enabled":true,"standardized_nudges_misinfo":true,"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,"longform_notetweets_rich_text_read_enabled":true,"longform_notetweets_inline_media_enabled":true,"responsive_web_grok_image_annotation_enabled":true,"responsive_web_grok_imagine_annotation_enabled":true,"responsive_web_grok_community_note_auto_translation_is_enabled":false,"responsive_web_enhance_cards_enabled":false}
         const query = this.generateParams(features, variables)
 
         const url = `${this.BASE_URL}${query_path}?${query.toString()}`
@@ -949,7 +979,14 @@ namespace XApiJsonParser {
             tweet.has_media = false
             tweet.extra = null
         }
-
+        let urls = legacy.entities.urls || []
+        for (const u of urls) {
+            if (u.expanded_url && !u.expanded_url.startsWith('https://x.com/')) {
+                tweet.content = tweet.content?.replace(u.url, u.expanded_url) ?? null
+            } else {
+                tweet.content = tweet.content?.replace(u.url, '') ?? null
+            }
+        }
         if (tweet.media) {
             for (const { url } of legacy.entities.media) {
                 tweet.content = tweet.content.replace(url, '')
@@ -1000,7 +1037,6 @@ namespace XApiJsonParser {
         }
 
         let urls = legacy.entities.urls || []
-        let media_urls = legacy.entities.media?.map((m: { url: string }) => m.url) || []
         for (const u of urls) {
             if (u.expanded_url && !u.expanded_url.startsWith('https://x.com/')) {
                 tweet.content = tweet.content?.replace(u.url, u.expanded_url) ?? null
@@ -1008,6 +1044,7 @@ namespace XApiJsonParser {
                 tweet.content = tweet.content?.replace(u.url, '') ?? null
             }
         }
+        let media_urls = legacy.entities.media?.map((m: { url: string }) => m.url) || []
         for (const url of media_urls) {
             tweet.content = tweet.content?.replace(url, '') ?? null
         }
