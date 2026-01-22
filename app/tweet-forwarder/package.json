@@ -1,6 +1,6 @@
 {
     "name": "@idol-bbq-utils/tweet-forwarder",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "description": "Integrate web crawlers, store and push data, and provide forwarding functionality.",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
