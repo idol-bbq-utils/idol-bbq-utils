@@ -33,7 +33,7 @@ class QwenMTTranslator extends BaseQwen {
                     translation_options: {
                         source_lang: 'Japanese',
                         target_lang: 'Chinese',
-                    }
+                    },
                 },
                 ...this.config?.extended_payload,
             },

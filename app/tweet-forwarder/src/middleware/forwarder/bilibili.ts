@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Forwarder } from './base'
+import { Forwarder, type SendProps } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import FormData from 'form-data'
 import fs from 'fs'
@@ -11,17 +11,22 @@ interface BiliImageUploaded {
     img_height: number
     img_size: number
 }
+
 class BiliForwarder extends Forwarder {
     static _PLATFORM = ForwardTargetPlatformEnum.Bilibili
     NAME = 'bilibili'
     private bili_jct: string
     private sessdata: string
     private media_check_level: ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>['media_check_level']
-    BASIC_TEXT_LIMIT = 1000
+    protected override BASIC_TEXT_LIMIT = 1000
 
     constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
         super(config, ...rest)
-        const { bili_jct, sessdata, media_check_level = 'none' } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>
+        const {
+            bili_jct,
+            sessdata,
+            media_check_level = 'none',
+        } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>
         if (!bili_jct || !sessdata) {
             throw new Error(`forwarder ${this.NAME} bili_jct and sessdata are required`)
         }
@@ -29,7 +34,8 @@ class BiliForwarder extends Forwarder {
         this.sessdata = sessdata
         this.media_check_level = media_check_level
     }
-    public async realSend(...[texts, props]: [...Parameters<Forwarder['realSend']>]) {
+
+    protected async realSend(texts: string[], props?: SendProps): Promise<any> {
         let { media } = props || {}
         media = media || []
         const _log = this.log
@@ -99,7 +105,7 @@ class BiliForwarder extends Forwarder {
             headers: {
                 ...form.getHeaders(),
                 Cookie: `SESSDATA=${this.sessdata}`,
-            }
+            },
         })
         this.log?.debug(`Upload photo response: ${JSON.stringify(res.data)}`)
         return res.data.data

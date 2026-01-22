@@ -1,5 +1,5 @@
 import { Logger } from '@idol-bbq-utils/log'
-import { Spider, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
+import { spiderRegistry, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
 import { Page } from 'puppeteer-core'
 import { Browser } from 'puppeteer-core'
 import { CronJob } from 'cron'
@@ -11,7 +11,7 @@ import type { AppConfig } from '@/types'
 import type { Platform, TaskType, TaskTypeResult } from '@idol-bbq-utils/spider/types'
 import { BaseSpider } from '@idol-bbq-utils/spider'
 import { TranslatorProvider } from '@/types/translator'
-import { getTranslator } from '@/middleware/translator'
+import { translatorRegistry } from '@/middleware/translator'
 import { pRetry } from '@idol-bbq-utils/utils'
 import DB from '@/db'
 import type { Article } from '@/db'
@@ -209,20 +209,22 @@ class SpiderPools extends BaseCompatibleModel {
         }
 
         let { translator: _translator, interval_time } = cfg_crawler || {}
-        // try to get translation
-        let translator = undefined
+        let translator: BaseTranslator | undefined = undefined
         if (_translator) {
             const translator_cfg = _translator
             translator = this.translators.get(crawler_batch_id)
             if (!translator) {
-                const translatorBuilder = getTranslator(translator_cfg.provider)
-                if (translatorBuilder) {
-                    translator = new translatorBuilder(translator_cfg.api_key, this.log, translator_cfg.cfg_translator)
-                    await translator.init()
+                try {
+                    translator = await translatorRegistry.create(
+                        translator_cfg.provider,
+                        translator_cfg.api_key,
+                        this.log,
+                        translator_cfg.cfg_translator,
+                    )
                     this.translators.set(crawler_batch_id, translator)
                     ctx.log?.info(`Translator instance created for ${translator_cfg.provider}`)
-                } else {
-                    ctx.log?.warn(`Translator not found for ${translator_cfg.provider}`)
+                } catch (e) {
+                    ctx.log?.warn(`Translator not found for ${translator_cfg.provider}: ${e}`)
                 }
             }
         }
@@ -258,15 +260,15 @@ class SpiderPools extends BaseCompatibleModel {
                 // 单次系列爬虫任务
                 try {
                     const url = new URL(website)
-                    const spiderBuilder = await Spider.getSpider(url.href)
-                    if (!spiderBuilder) {
+                    const spiderPlugin = spiderRegistry.findByUrl(url.href)
+                    if (!spiderPlugin) {
                         ctx.log?.warn(`Spider not found for ${url.href}`)
                         continue
                     }
-                    let spider = this.spiders.get(spiderBuilder._VALID_URL.source)
+                    let spider = this.spiders.get(spiderPlugin.id)
                     if (!spider) {
-                        spider = new spiderBuilder(this.log).init()
-                        this.spiders.set(spiderBuilder._VALID_URL.source, spider)
+                        spider = spiderPlugin.create(this.log)
+                        this.spiders.set(spiderPlugin.id, spider)
                         ctx.log?.info(`Spider instance created for ${url.hostname}`)
                     }
 

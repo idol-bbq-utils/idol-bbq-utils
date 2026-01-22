@@ -91,7 +91,6 @@ function articleToText(article: Article) {
         } else {
             currentArticle = null
         }
-        
     }
     return format_article
 }

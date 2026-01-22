@@ -28,11 +28,11 @@ type PlatformExtractMap = {
 }
 
 type PlatformRefMap = {
-    [Platform.X]: string,
-    [Platform.Twitter]: string,
-    [Platform.Instagram]: null,
-    [Platform.TikTok]: null,
-    [Platform.YouTube]: null,
+    [Platform.X]: string
+    [Platform.Twitter]: string
+    [Platform.Instagram]: null
+    [Platform.TikTok]: null
+    [Platform.YouTube]: null
 }
 
 // related to platform

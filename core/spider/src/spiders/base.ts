@@ -1,21 +1,86 @@
 import { Platform, type CrawlEngine, type TaskType, type TaskTypeResult } from '@/types'
 import { Logger } from '@idol-bbq-utils/log'
 import { Page, type PageEvents } from 'puppeteer-core'
-// Replace PageEvent with its literal values
 type PageEvent = 'response' | 'request' | 'domcontentloaded' | 'load'
-import { Spider } from '.'
+
+export enum SpiderPriority {
+    LOWEST = 1,
+    LOW = 2,
+    NORMAL = 3,
+    HIGH = 4,
+    HIGHEST = 5,
+}
+
+export interface SpiderPlugin {
+    id: string
+    platform: Platform
+    priority: SpiderPriority
+    urlPattern: RegExp
+    create: (log?: Logger) => BaseSpider
+}
+
+class SpiderRegistry {
+    private static instance: SpiderRegistry
+    private plugins: Map<string, SpiderPlugin> = new Map()
+
+    private constructor() {}
+
+    static getInstance(): SpiderRegistry {
+        if (!SpiderRegistry.instance) {
+            SpiderRegistry.instance = new SpiderRegistry()
+        }
+        return SpiderRegistry.instance
+    }
+
+    register(plugin: SpiderPlugin): this {
+        if (this.plugins.has(plugin.id)) {
+            throw new Error(`Spider plugin ${plugin.id} already registered`)
+        }
+        this.plugins.set(plugin.id, plugin)
+        return this
+    }
+
+    findByUrl(url: string): SpiderPlugin | null {
+        const matches = Array.from(this.plugins.values())
+            .filter((p) => p.urlPattern.test(url))
+            .sort((a, b) => b.priority - a.priority)
+
+        return matches[0] || null
+    }
+
+    findById(id: string): SpiderPlugin | null {
+        return this.plugins.get(id) || null
+    }
+
+    findByPlatform(platform: Platform): SpiderPlugin[] {
+        return Array.from(this.plugins.values()).filter((p) => p.platform === platform)
+    }
+
+    extractBasicInfo(url: string): { u_id: string; platform: Platform } | undefined {
+        const plugin = this.findByUrl(url)
+        if (!plugin) return undefined
+
+        const match = plugin.urlPattern.exec(url)
+        if (match?.groups?.id) {
+            return {
+                u_id: match.groups.id,
+                platform: plugin.platform,
+            }
+        }
+        return undefined
+    }
+
+    getRegisteredPlugins(): SpiderPlugin[] {
+        return Array.from(this.plugins.values())
+    }
+}
 
 abstract class BaseSpider {
     static _VALID_URL: RegExp
-    /**
-     * Base URL of the spider
-     */
     abstract BASE_URL: string
-    /**
-     * (Optional) Name of the spider
-     */
     NAME: string = 'Base Spider'
     log?: Logger
+
     public crawl<T extends TaskType>(
         url: string,
         page: Page | undefined,
@@ -55,7 +120,7 @@ abstract class BaseSpider {
         return this
     }
 
-    _match_valid_url(url: string, matcher: Spider.SpiderConstructor): RegExpExecArray | null {
+    _match_valid_url(url: string, matcher: { _VALID_URL: RegExp }): RegExpExecArray | null {
         return matcher._VALID_URL.exec(url)
     }
 }
@@ -73,9 +138,6 @@ type WaitForEventResponse<T extends PageEvent> =
           error: Error
       }
 
-/**
- * Wait for an event to be emitted by the page
- */
 function waitForEvent<T extends PageEvent>(
     page: Page,
     eventName: T,
@@ -83,9 +145,6 @@ function waitForEvent<T extends PageEvent>(
     timeout: number = 30000,
 ): {
     promise: Promise<WaitForEventResponse<T>>
-    /**
-     * Cleanup the event listener manually. You shuold execute this function if error occurs.
-     */
     cleanup: () => void
 } {
     let promiseResolve: (value: { success: true; data: any; res: PageEvents[T] }) => void
@@ -163,4 +222,4 @@ const defaultViewport = {
     height: 1,
 }
 
-export { BaseSpider, waitForEvent, waitForResponse, defaultViewport }
+export { BaseSpider, SpiderRegistry, waitForEvent, waitForResponse, defaultViewport }

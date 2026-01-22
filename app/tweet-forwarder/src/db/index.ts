@@ -43,7 +43,6 @@ namespace DB {
                 if (typeof article.ref === 'string') {
                     ref = (await getByArticleCode(article.ref, article.platform))?.id
                 }
-               
             }
             const res = await prisma.crawler_article.create({
                 data: {
