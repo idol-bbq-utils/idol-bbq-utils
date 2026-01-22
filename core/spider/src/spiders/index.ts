@@ -1,9 +1,56 @@
 import { Platform } from '@/types'
-import { BaseSpider } from './base'
+import { BaseSpider, SpiderRegistry, SpiderPriority, type SpiderPlugin } from './base'
 import { InstagramSpider } from './instagram'
 import { XListSpider, XUserTimeLineSpider } from './x'
 import { TiktokSpider } from './tiktok'
 import { YoutubeSpider } from './youtube'
+
+const XUserTimelinePlugin: SpiderPlugin = {
+    id: 'x-timeline',
+    platform: Platform.X,
+    priority: SpiderPriority.NORMAL,
+    urlPattern: XUserTimeLineSpider._VALID_URL,
+    create: (log) => new XUserTimeLineSpider(log).init(),
+}
+
+const XListPlugin: SpiderPlugin = {
+    id: 'x-list',
+    platform: Platform.X,
+    priority: SpiderPriority.HIGH,
+    urlPattern: XListSpider._VALID_URL,
+    create: (log) => new XListSpider(log).init(),
+}
+
+const InstagramPlugin: SpiderPlugin = {
+    id: 'instagram',
+    platform: Platform.Instagram,
+    priority: SpiderPriority.NORMAL,
+    urlPattern: InstagramSpider._VALID_URL,
+    create: (log) => new InstagramSpider(log).init(),
+}
+
+const TiktokPlugin: SpiderPlugin = {
+    id: 'tiktok',
+    platform: Platform.TikTok,
+    priority: SpiderPriority.NORMAL,
+    urlPattern: TiktokSpider._VALID_URL,
+    create: (log) => new TiktokSpider(log).init(),
+}
+
+const YoutubePlugin: SpiderPlugin = {
+    id: 'youtube',
+    platform: Platform.YouTube,
+    priority: SpiderPriority.NORMAL,
+    urlPattern: YoutubeSpider._VALID_URL,
+    create: (log) => new YoutubeSpider(log).init(),
+}
+
+const spiderRegistry = SpiderRegistry.getInstance()
+    .register(XUserTimelinePlugin)
+    .register(XListPlugin)
+    .register(InstagramPlugin)
+    .register(TiktokPlugin)
+    .register(YoutubePlugin)
 
 namespace Spider {
     export interface SpiderConstructor {
@@ -20,6 +67,7 @@ namespace Spider {
         YoutubeSpider,
     ]
 
+    /** @deprecated Use spiderRegistry.findByUrl() instead */
     export function getSpider(url: string): SpiderConstructor | null {
         for (const spider of spiders) {
             if (spider._VALID_URL.test(url)) {
@@ -29,18 +77,13 @@ namespace Spider {
         return null
     }
 
+    /** @deprecated Use spiderRegistry.extractBasicInfo() instead */
     export function extractBasicInfo(url: string): { u_id: string; platform: Platform } | undefined {
-        for (const spider of spiders) {
-            const result = spider._VALID_URL.exec(url)
-            if (result) {
-                return { u_id: result.groups?.id || '', platform: spider._PLATFORM }
-            }
-        }
-        return
+        return spiderRegistry.extractBasicInfo(url)
     }
 }
 
-export { Spider }
+export { Spider, spiderRegistry }
 export * from './base'
 export * as X from './x'
 export * as Instagram from './instagram'
