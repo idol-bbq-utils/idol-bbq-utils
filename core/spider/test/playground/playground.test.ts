@@ -22,7 +22,7 @@ describe('playground', () => {
         ),
         transports: [new winston.transports.Console()],
     })
-    test('grap api info', async() => {
+    test('grap api info', async () => {
         // let html = readFileSync('x.html', 'utf-8');
         // const lists_graphql_js_pattern = /"([^"]*AudioSpacebarScr)"\s*:\s*"(\w+)"/
         // const match = html.match(lists_graphql_js_pattern)
@@ -41,64 +41,64 @@ describe('playground', () => {
         // }
         return
     }),
-    test('grab articles', async () => {
-        const url = 'https://x.com/i/lists/1966417359020912858'
-        const spider = Spider.getSpider(url)
-        if (spider) {
-            const spiderInstance = new spider(log).init()
-            const browser = await puppeteer.launch({
-                headless: true,
-                channel: 'chrome',
-            })
-            const page = await browser.newPage()
-            await page.setUserAgent(UserAgent.CHROME)
-            await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie('cookie.txt'))
-                        try {
-                console.time('test')
-                const articles = await spiderInstance.crawl(url, page, '', {
-                    // task_type: 'follows',
-                    // sub_task_type: ['replies'],
-                    crawl_engine: 'api-graphql',
+        test('grab articles', async () => {
+            const url = 'https://x.com/i/lists/1966417359020912858'
+            const spider = Spider.getSpider(url)
+            if (spider) {
+                const spiderInstance = new spider(log).init()
+                const browser = await puppeteer.launch({
+                    headless: true,
+                    channel: 'chrome',
                 })
-                // writeFileSync('1.json', JSON.stringify(articles))
-                console.timeEnd('test')
-                expect(articles.length).toBeGreaterThan(0)
-            } catch (e) {
-                console.error(e)
-            } finally {
-                await page.close()
-                await browser.close()
+                const page = await browser.newPage()
+                await page.setUserAgent(UserAgent.CHROME)
+                await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie('cookie.txt'))
+                try {
+                    console.time('test')
+                    const articles = await spiderInstance.crawl(url, page, '', {
+                        // task_type: 'follows',
+                        // sub_task_type: ['replies'],
+                        crawl_engine: 'api-graphql',
+                    })
+                    // writeFileSync('1.json', JSON.stringify(articles))
+                    console.timeEnd('test')
+                    expect(articles.length).toBeGreaterThan(0)
+                } catch (e) {
+                    console.error(e)
+                } finally {
+                    await page.close()
+                    await browser.close()
+                }
             }
-        }
-    }),
-    test('grab follows', async () => {
-        const url = 'https://x.com/i/lists/1966417359020912858'
-        const spider = Spider.getSpider(url)
-        if (spider) {
-            const spiderInstance = new spider(log).init()
-            const browser = await puppeteer.launch({
-                headless: true,
-                channel: 'chrome',
-            })
-            const page = await browser.newPage()
-            await page.setUserAgent(UserAgent.CHROME)
-            await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie('cookie.txt'))
-            try {
-                console.time('test')
-                const follows = await spiderInstance.crawl(url, page, '', {
-                    task_type: 'follows',
-                    // sub_task_type: ['replies'],
-                    crawl_engine: 'api-graphql',
+        }),
+        test('grab follows', async () => {
+            const url = 'https://x.com/i/lists/1966417359020912858'
+            const spider = Spider.getSpider(url)
+            if (spider) {
+                const spiderInstance = new spider(log).init()
+                const browser = await puppeteer.launch({
+                    headless: true,
+                    channel: 'chrome',
                 })
-                // writeFileSync('1.json', JSON.stringify(follows))
-                console.timeEnd('test')
-                expect(follows.length).toBeGreaterThan(0)
-            } catch (e) {
-                console.error(e)
-            } finally {
-                await page.close()
-                await browser.close()
+                const page = await browser.newPage()
+                await page.setUserAgent(UserAgent.CHROME)
+                await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie('cookie.txt'))
+                try {
+                    console.time('test')
+                    const follows = await spiderInstance.crawl(url, page, '', {
+                        task_type: 'follows',
+                        // sub_task_type: ['replies'],
+                        crawl_engine: 'api-graphql',
+                    })
+                    // writeFileSync('1.json', JSON.stringify(follows))
+                    console.timeEnd('test')
+                    expect(follows.length).toBeGreaterThan(0)
+                } catch (e) {
+                    console.error(e)
+                } finally {
+                    await page.close()
+                    await browser.close()
+                }
             }
-        }
-    }, 300000)
+        }, 300000)
 })

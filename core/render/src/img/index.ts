@@ -182,26 +182,26 @@ class ImgConverter {
     private fonts: Array<FontConfig>
     constructor() {
         const fontsDir = process.env.FONTS_DIR || './assets/fonts'
-        const fonts: FontConfig[] = JSON.parse(
-            fs.readFileSync(`${fontsDir}/fonts.json`, 'utf-8'),
-        )
+        const fonts: FontConfig[] = JSON.parse(fs.readFileSync(`${fontsDir}/fonts.json`, 'utf-8'))
         this.fonts = fonts
     }
     public async articleToImg(article: Article) {
         const { height, component: Card } = articleParser(article)
-        const fontsOptions: Font[] = this.fonts.map((font)=>{
-            try {
-                const data = fs.readFileSync(`${process.env.FONTS_DIR || './assets/fonts'}/${font.font_file_name}`)
-                return {
-                    name: font.name,
-                    data: data,
-                    weight: font.weight,
-                    style: font.style,
+        const fontsOptions: Font[] = this.fonts
+            .map((font) => {
+                try {
+                    const data = fs.readFileSync(`${process.env.FONTS_DIR || './assets/fonts'}/${font.font_file_name}`)
+                    return {
+                        name: font.name,
+                        data: data,
+                        weight: font.weight,
+                        style: font.style,
+                    }
+                } catch (e) {
+                    return undefined
                 }
-            } catch (e){
-                return undefined
-            }
-        }).filter(Boolean) as Font[]
+            })
+            .filter(Boolean) as Font[]
         const svg = await satori(Card, {
             width: CARD_WIDTH,
             height: height,

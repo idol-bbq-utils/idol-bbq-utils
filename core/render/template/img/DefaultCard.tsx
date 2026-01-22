@@ -242,7 +242,9 @@ function ArticleContent({ article, level = 0 }: { article: Article; level: numbe
                 )}
                 {((article.media && article.media.length > 0) || article.extra) && <Divider dash />}
                 {article.media && article.media.length > 0 && <MediaGroup media={article.media} level={level} />}
-                {article.ref && typeof article.ref === 'object' && <ArticleContent article={article.ref} level={level + 1} />}
+                {article.ref && typeof article.ref === 'object' && (
+                    <ArticleContent article={article.ref} level={level + 1} />
+                )}
             </div>
         )
     }
@@ -287,13 +289,12 @@ function flatArticle(article: Article): Array<Article> {
         } else {
             currentArticle = null
         }
-        
     }
     currentArticle && articles.push(currentArticle)
     return articles
 }
 
-function BaseCard({ article, paddingHeight }: { article: Article, paddingHeight: number }) {
+function BaseCard({ article, paddingHeight }: { article: Article; paddingHeight: number }) {
     const flattedArticle = flatArticle(article)
     return (
         <div
@@ -336,7 +337,9 @@ function estimatedArticleHeight(article: Article, level: number = 0): number {
         estimateTextLinesHeight(parseRawContent(article) ?? '', BASE_FONT_SIZE, getContentWidth(level)), // content
         article.has_media ? 12 : 0, // media or extra divider
         estimateImagesHeight(article.media ?? [], level), // media
-        article.ref && typeof article.ref === 'object' ? estimatedArticleHeight(article.ref, level + 1) + basePadding * (level + 1) : 0, // ref
+        article.ref && typeof article.ref === 'object'
+            ? estimatedArticleHeight(article.ref, level + 1) + basePadding * (level + 1)
+            : 0, // ref
     ]
     return _(articleHeightArray)
         .filter((item) => item > 0)

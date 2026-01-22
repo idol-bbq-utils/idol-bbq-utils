@@ -1,5 +1,5 @@
 import { Logger } from '@idol-bbq-utils/log'
-import { Spider, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
+import { spiderRegistry, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
 import { Page } from 'puppeteer-core'
 import { Browser } from 'puppeteer-core'
 import { CronJob } from 'cron'
@@ -260,15 +260,15 @@ class SpiderPools extends BaseCompatibleModel {
                 // 单次系列爬虫任务
                 try {
                     const url = new URL(website)
-                    const spiderBuilder = await Spider.getSpider(url.href)
-                    if (!spiderBuilder) {
+                    const spiderPlugin = spiderRegistry.findByUrl(url.href)
+                    if (!spiderPlugin) {
                         ctx.log?.warn(`Spider not found for ${url.href}`)
                         continue
                     }
-                    let spider = this.spiders.get(spiderBuilder._VALID_URL.source)
+                    let spider = this.spiders.get(spiderPlugin.id)
                     if (!spider) {
-                        spider = new spiderBuilder(this.log).init()
-                        this.spiders.set(spiderBuilder._VALID_URL.source, spider)
+                        spider = spiderPlugin.create(this.log)
+                        this.spiders.set(spiderPlugin.id, spider)
                         ctx.log?.info(`Spider instance created for ${url.hostname}`)
                     }
 

@@ -29,12 +29,6 @@ test.skip('spider', async () => {
                         return `${timestamp} ${metas}: ${message}`
                     }),
                 ),
-                transports: [
-                    new winston.transports.Console(),
-                    new winston.transports.File({
-                        filename: `/tmp/logs/tweet-forwarder-${new Date().getTime()}.log`,
-                    }),
-                ],
             }),
         ).init()
         let id = await spiderInstance._match_valid_url(url, spider)?.groups?.id

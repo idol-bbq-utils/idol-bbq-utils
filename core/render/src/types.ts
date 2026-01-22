@@ -1,4 +1,10 @@
-import type { ArticleExtractType, GenericArticle, GenericArticleRef, GenericMediaInfo, Platform } from '@idol-bbq-utils/spider/types'
+import type {
+    ArticleExtractType,
+    GenericArticle,
+    GenericArticleRef,
+    GenericMediaInfo,
+    Platform,
+} from '@idol-bbq-utils/spider/types'
 
 type MediaInfo = GenericMediaInfo & { translation?: string; translated_by?: string }
 type Article = Omit<GenericArticle<Platform>, 'media' | 'ref' | 'extra'> & {
@@ -15,9 +21,9 @@ type Article = Omit<GenericArticle<Platform>, 'media' | 'ref' | 'extra'> & {
 }
 
 type FontConfig = {
-    name: string,
-    font_file_name: string,
-    style: 'normal' | 'italic',
+    name: string
+    font_file_name: string
+    style: 'normal' | 'italic'
     weight: number
 }
 

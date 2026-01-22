@@ -71,7 +71,7 @@ interface ForwardTargetPlatformCommonConfig {
      * Block rule for the forwarder
      *
      * For example:
-     * 
+     *
      * ```
      * platform: Platform.X
      * task_type: 'article'
@@ -79,12 +79,12 @@ interface ForwardTargetPlatformCommonConfig {
      * block_type: 'once'
      * block_until: '6h'
      * ```
-     * 
+     *
      * This will only send once which article type is retweet from X.
      * And other retweets will be blocked until 6 hours later.
      */
     block_rules?: Array<{
-        platform: Platform,
+        platform: Platform
         /**
          * Default is `article`
          */
@@ -97,9 +97,8 @@ interface ForwardTargetPlatformCommonConfig {
          * Default is `none`
          * if always set, block_until will be ignored
          */
-        block_type?: 'always' | 'none' |
-                    'once' | 'once.media'
-                      
+        block_type?: 'always' | 'none' | 'once' | 'once.media'
+
         /**
          * default is `6h`
          */
@@ -172,4 +171,10 @@ interface Forwarder<T extends TaskType> {
 
 export { ForwardTargetPlatformEnum }
 
-export type { ForwardTarget, Forwarder, ForwarderConfig, ForwardTargetPlatformConfig, ForwardTargetPlatformCommonConfig }
+export type {
+    ForwardTarget,
+    Forwarder,
+    ForwarderConfig,
+    ForwardTargetPlatformConfig,
+    ForwardTargetPlatformCommonConfig,
+}

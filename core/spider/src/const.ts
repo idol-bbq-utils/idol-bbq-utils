@@ -40,7 +40,7 @@ const platformPresetHeadersMap: Record<Platform, Record<string, string>> = {
     [Platform.X]: {},
     [Platform.Instagram]: {},
     [Platform.TikTok]: {
-        'referer': 'https://www.tiktok.com/',
+        referer: 'https://www.tiktok.com/',
     },
     [Platform.YouTube]: {},
 }

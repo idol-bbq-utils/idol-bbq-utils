@@ -1,5 +1,5 @@
 import { Logger } from '@idol-bbq-utils/log'
-import { Spider } from '@idol-bbq-utils/spider'
+import { spiderRegistry } from '@idol-bbq-utils/spider'
 import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
@@ -370,7 +370,7 @@ class ForwarderPools extends BaseCompatibleModel {
         forwarders: Array<ForwardTargetInstanceWithRuntimeConfig>,
         cfg_forwarder: Forwarder['cfg_forwarder'],
     ) {
-        const { u_id, platform } = Spider.extractBasicInfo(url) ?? {}
+        const { u_id, platform } = spiderRegistry.extractBasicInfo(url) ?? {}
         if (!u_id || !platform) {
             ctx.log?.error(`Invalid url: ${url}`)
             return
@@ -415,12 +415,14 @@ class ForwarderPools extends BaseCompatibleModel {
         ctx.log?.info(`Ready to send articles for ${url}`)
         // 开始转发文章
         for (const { article, to } of articles_forwarders) {
-            // check article 
-            const article_is_blocked = to.every(({ forwarder: target, runtime_config })=> target.check_blocked("", {
-                timestamp: article.created_at,
-                runtime_config,
-                article: cloneDeep(article)
-            }))
+            // check article
+            const article_is_blocked = to.every(({ forwarder: target, runtime_config }) =>
+                target.check_blocked('', {
+                    timestamp: article.created_at,
+                    runtime_config,
+                    article: cloneDeep(article),
+                }),
+            )
             if (article_is_blocked) {
                 ctx.log?.warn(`Article ${article.a_id} is blocked by all forwarders, skipping...`)
                 // save forwardby
@@ -431,7 +433,7 @@ class ForwarderPools extends BaseCompatibleModel {
                         currentArticle = currentArticle.ref as ArticleWithId | null
                     }
                 }
-                continue;
+                continue
             }
 
             let articleToImgSuccess = false
@@ -447,9 +449,7 @@ class ForwarderPools extends BaseCompatibleModel {
             }
             if (cfg_forwarder?.render_type?.startsWith('img')) {
                 try {
-                    const imgBuffer = await this.ArticleConverter.articleToImg(
-                        cloneDeep(article)
-                    )
+                    const imgBuffer = await this.ArticleConverter.articleToImg(cloneDeep(article))
                     ctx.log?.debug(`Converted article ${article.a_id} to img successfully`)
                     const path = writeImgToFile(imgBuffer, `${ctx.taskId}-${article.a_id}-rendered.png`)
 
@@ -522,7 +522,9 @@ class ForwarderPools extends BaseCompatibleModel {
                 }
                 errorCount = errorCount + 1
                 if (errorCount > this.MAX_ERROR_COUNT) {
-                    ctx.log?.error(`Error count exceeded for ${cloned_article.a_id}, skipping this and tag forwarded...`)
+                    ctx.log?.error(
+                        `Error count exceeded for ${cloned_article.a_id}, skipping this and tag forwarded...`,
+                    )
                     for (const { forwarder: target } of to) {
                         let currentArticle: ArticleWithId | null = cloned_article
                         while (currentArticle && typeof currentArticle === 'object') {
@@ -571,7 +573,7 @@ class ForwarderPools extends BaseCompatibleModel {
         // 我们假设websites的网页并不完全相同，所以我们需要分类
         for (const website of websites) {
             const url = new URL(website)
-            const { platform, u_id } = Spider.extractBasicInfo(url.href) ?? {}
+            const { platform, u_id } = spiderRegistry.extractBasicInfo(url.href) ?? {}
             if (!platform || !u_id) {
                 ctx.log?.error(`Invalid url: ${url.href}`)
                 continue
@@ -636,21 +638,21 @@ class ForwarderPools extends BaseCompatibleModel {
             const newWrap = {
                 to: subscribers
                     ? subscribers.reduce((acc, s) => {
-                        if (typeof s === 'string') {
-                            acc[s] = common_cfg
-                        }
-                        if (typeof s === 'object') {
-                            acc[s.id] = {
-                                ...common_cfg,
-                                ...s.cfg_forward_target,
-                            }
-                        }
-                        return acc
-                    }, {} as ForwardTargetIdWithRuntimeConfig)
+                          if (typeof s === 'string') {
+                              acc[s] = common_cfg
+                          }
+                          if (typeof s === 'object') {
+                              acc[s.id] = {
+                                  ...common_cfg,
+                                  ...s.cfg_forward_target,
+                              }
+                          }
+                          return acc
+                      }, {} as ForwardTargetIdWithRuntimeConfig)
                     : this.forward_to.keys().reduce((acc, id) => {
-                        acc[id] = undefined
-                        return acc
-                    }, {} as ForwardTargetIdWithRuntimeConfig),
+                          acc[id] = undefined
+                          return acc
+                      }, {} as ForwardTargetIdWithRuntimeConfig),
                 cfg_forwarder: cfg,
             }
             this.subscribers.set(id, newWrap)
@@ -667,9 +669,9 @@ class ForwarderPools extends BaseCompatibleModel {
                     typeof s === 'string'
                         ? common_cfg
                         : {
-                            ...common_cfg,
-                            ...s.cfg_forward_target,
-                        }
+                              ...common_cfg,
+                              ...s.cfg_forward_target,
+                          }
             }
         })
         return Object.entries(to)
@@ -686,20 +688,29 @@ class ForwarderPools extends BaseCompatibleModel {
             .filter((i) => i !== undefined)
     }
 
-    async handleMedia(ctx: TaskScheduler.TaskCtx, article: Article, media: Media): Promise<Array<{
-        path: string
-        media_type: MediaType
-    }>> {
+    async handleMedia(
+        ctx: TaskScheduler.TaskCtx,
+        article: Article,
+        media: Media,
+    ): Promise<
+        Array<{
+            path: string
+            media_type: MediaType
+        }>
+    > {
         let maybe_media_files = [] as Array<{
             path: string
             media_type: MediaType
         }>
         let currentArticle: Article | null = article
         while (currentArticle) {
-            let new_files = [] as Array<{
-                path: string
-                media_type: MediaType
-            } | undefined>
+            let new_files = [] as Array<
+                | {
+                      path: string
+                      media_type: MediaType
+                  }
+                | undefined
+            >
             if (currentArticle.has_media) {
                 ctx.log?.debug(`Downloading media files for ${currentArticle.a_id}`)
                 let cookie: string | undefined = undefined
@@ -714,7 +725,9 @@ class ForwarderPools extends BaseCompatibleModel {
                                 // TODO: better way to set referer
                                 const path = await plainDownloadMediaFile(url, ctx.taskId, {
                                     cookie: cookie || '',
-                                    ...(currentArticle?.platform ? platformPresetHeadersMap[currentArticle.platform] : {})
+                                    ...(currentArticle?.platform
+                                        ? platformPresetHeadersMap[currentArticle.platform]
+                                        : {}),
                                 })
                                 return {
                                     path,
@@ -753,7 +766,7 @@ class ForwarderPools extends BaseCompatibleModel {
                 }
                 if (new_files.length > 0) {
                     ctx.log?.debug(`Downloaded media files: ${new_files.join(', ')}`)
-                    maybe_media_files = maybe_media_files.concat(new_files.filter(i => i !== undefined))
+                    maybe_media_files = maybe_media_files.concat(new_files.filter((i) => i !== undefined))
                 }
             }
             if (currentArticle.ref && typeof currentArticle.ref === 'object') {

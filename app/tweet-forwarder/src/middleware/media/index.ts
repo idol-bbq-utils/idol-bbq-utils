@@ -77,8 +77,7 @@ async function tryGetCookie(url: string) {
     try {
         const res = await fetch(url)
         cookieString = res.headers.get('set-cookie')
-    } catch (e) {
-    }
+    } catch (e) {}
     if (!cookieString) {
         return
     }
