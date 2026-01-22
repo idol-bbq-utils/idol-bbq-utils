@@ -3,34 +3,47 @@ import type { Article } from '@/db'
 import {
     type ForwardTarget,
     type ForwardTargetPlatformCommonConfig,
-    type ForwardTargetPlatformConfig,
     ForwardTargetPlatformEnum,
 } from '@/types/forwarder'
 import { BaseCompatibleModel } from '@/utils/base'
-import { formatTime, getSubtractTime } from '@/utils/time'
-import { isStringArrayArray } from '@/utils/typeguards'
 import { Logger } from '@idol-bbq-utils/log'
-import { articleToText } from '@idol-bbq-utils/render'
-import { SimpleExpiringCache } from '@idol-bbq-utils/spider'
 import type { MediaType } from '@idol-bbq-utils/spider/types'
 import { pRetry } from '@idol-bbq-utils/utils'
-import dayjs from 'dayjs'
 import { noop } from 'lodash'
+import {
+    MiddlewarePipeline,
+    TimeFilterMiddleware,
+    KeywordFilterMiddleware,
+    BlockRuleMiddleware,
+    TextReplaceMiddleware,
+    TextChunkMiddleware,
+    type ForwarderContext,
+    type ForwarderMiddleware,
+} from './pipeline'
 
-const CHUNK_SEPARATOR_NEXT = '\n\n----⬇️----'
-const CHUNK_SEPARATOR_PREV = '----⬆️----\n\n'
-const PADDING_LENGTH = 24
+export interface SendProps {
+    media?: Array<{
+        media_type: MediaType
+        path: string
+    }>
+    timestamp?: number
+    runtime_config?: ForwardTargetPlatformCommonConfig
+    article?: Article
+}
 
 abstract class BaseForwarder extends BaseCompatibleModel {
     static _PLATFORM = ForwardTargetPlatformEnum.None
     log?: Logger
     id: string
     protected config: ForwardTarget['cfg_platform']
+    protected pipeline: MiddlewarePipeline
+
     constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
         super()
         this.log = log
         this.config = config
         this.id = String(id)
+        this.pipeline = this.createDefaultPipeline()
     }
 
     async init(): Promise<void> {
@@ -38,202 +51,145 @@ abstract class BaseForwarder extends BaseCompatibleModel {
         this.log?.debug(`loaded with config ${this.config}`)
     }
 
-    async drop(...args: any[]): Promise<void> {
+    async drop(..._args: any[]): Promise<void> {
         noop()
     }
 
-    public abstract send(
-        text: string,
-        props?: {
-            media?: Array<{
-                media_type: MediaType
-                // local file path
-                path: string
-            }>
-            timestamp?: number
-            runtime_config?: ForwardTargetPlatformCommonConfig
-            article?: Article
-        },
-    ): Promise<any>
-
-    public abstract check_blocked(
-        text: string,
-        props: Parameters<BaseForwarder['send']>[1]
-    ): boolean
-}
-
-abstract class Forwarder extends BaseForwarder {
-    protected BASIC_TEXT_LIMIT = 1000
-    TEXT_LIMIT: number
-    private cache: SimpleExpiringCache = new SimpleExpiringCache()
-    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
-        super(config, id, log)
-        if (this.config?.replace_regex) {
-            try {
-                this.log?.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)
-                this.textFilter('test', this.config?.replace_regex)
-            } catch (e) {
-                this.log?.error(`replace regex is invalid for reason: ${e}`)
-                throw e
-            }
-        }
-        this.TEXT_LIMIT =
-            this.BASIC_TEXT_LIMIT - CHUNK_SEPARATOR_NEXT.length - CHUNK_SEPARATOR_PREV.length - PADDING_LENGTH
+    protected createDefaultPipeline(): MiddlewarePipeline {
+        return new MiddlewarePipeline()
+            .use(new TimeFilterMiddleware())
+            .use(new KeywordFilterMiddleware())
+            .use(new BlockRuleMiddleware())
+            .use(new TextReplaceMiddleware())
+            .use(new TextChunkMiddleware(this.getTextLimit()))
     }
 
-    public check_blocked(text: string, props: Parameters<BaseForwarder['send']>[1]) {
-        const { timestamp, runtime_config: _runtime_config, article } = props || {}
-        const runtime_config = {
-            ...this.config,
-            ..._runtime_config,
-        }
-        const { block_until, filter_keywords, accept_keywords, block_rules } = runtime_config
-        const block_until_date = getSubtractTime(dayjs().unix(), block_until || '30m')
-        if (timestamp && timestamp < block_until_date) {
-            this.log?.warn(`blocked: can not send before ${formatTime(block_until_date)}`)
-            return true
-        }
-        const original_text = accept_keywords || filter_keywords ? articleToText(article) : undefined
-        // 白名单
-        if (accept_keywords) {
-            const regex = new RegExp(accept_keywords.join('|'), 'i')
-            let blocked = false
-            // 如果需要转发的内容不包含关键词
-            // 如果原文为空则ok，否则检查原文是否包含关键词
-            // 如果原文也不包含关键词，则不转发
-            if (!regex.test(text)) {
-                blocked = true
-            }
-            blocked = original_text ? !regex.test(original_text) : blocked
-            if (blocked) {
-                this.log?.warn(`blocked: accept keywords matched`)
-                return true
-            }
-        }
-        // 黑名单
-        if (filter_keywords) {
-            const regex = new RegExp(filter_keywords.join('|'), 'i')
-            let blocked = false
-            // 如果需要转发的内容包含关键词 或者 原文包含关键词，则不转发
-            if (regex.test(text)) {
-                blocked = true
-            }
-            blocked = original_text ? regex.test(original_text) : blocked
-            if (blocked) {
-                this.log?.warn(`blocked: filter keywords matched`)
-                return true
-            }
-        }
-        // block rule
-        const blocked_by_rules = block_rules?.some(({
-            platform,
-            task_type = 'article',
-            sub_type = [],
-            block_type = 'none',
-            block_until = '6h',
-        }) => {
-            if (platform !== article?.platform) {
-                return false
-            }
-            // Maybe this is not important
-            if (task_type !== 'article') {
-                return false
-            }
-            if (block_type === 'none') {
-                return false
-            }
-            // apply block rule
-            // always and once
-            if (sub_type.includes(article?.type)) {
-                const cache_key = `${article.platform}::${article.a_id}::block`
-                let cached = this.cache.get(cache_key)
-                if (!cached && block_type.startsWith('once')) {
-                    let has_media = false
-                    if (block_type === 'once.media') {
-                        let currentArticle: Article | null = article
-                        while (currentArticle) { 
-                            if (currentArticle.has_media) {
-                                has_media = true
-                                break
-                            }
-                            if (currentArticle.ref && typeof currentArticle.ref === 'object') {
-                                currentArticle = currentArticle.ref
-                            } else {
-                                currentArticle = null
-                            }
-                        }
-                    }
-                    (block_until === 'once' || has_media) && this.cache.set(cache_key, block_type, getSubtractTime(dayjs().unix(), block_until))
-                    return false
-                    
-                }
-                return true
-            }
-
-            return false
-        })
-        if (blocked_by_rules) {
-            this.log?.warn(`blocked: block rules matched`)
-            return true
-        }
-        return false
+    protected getTextLimit(): number {
+        return 1000
     }
 
-    async send(text: string, props: Parameters<BaseForwarder['send']>[1]) {
-        const { runtime_config: _runtime_config } = props || {}
-        const runtime_config = {
+    public check_blocked(text: string, props: SendProps): boolean {
+        const { timestamp, runtime_config, article } = props || {}
+        const mergedConfig: ForwardTargetPlatformCommonConfig = {
             ...this.config,
-            ..._runtime_config,
+            ...runtime_config,
         }
-        const { replace_regex } = runtime_config
-        if (this.check_blocked(text, props)) {
+
+        const context: ForwarderContext = {
+            text,
+            article,
+            media: props?.media,
+            timestamp,
+            config: mergedConfig,
+            metadata: new Map(),
+            aborted: false,
+        }
+
+        const blockCheckPipeline = new MiddlewarePipeline()
+            .use(new TimeFilterMiddleware())
+            .use(new KeywordFilterMiddleware())
+            .use(new BlockRuleMiddleware())
+
+        let blocked = false
+        blockCheckPipeline
+            .execute(context)
+            .then((result) => {
+                blocked = !result
+            })
+            .catch(() => {
+                blocked = true
+            })
+
+        return blocked
+    }
+
+    public async send(text: string, props?: SendProps): Promise<any> {
+        const { runtime_config } = props || {}
+        const mergedConfig: ForwardTargetPlatformCommonConfig = {
+            ...this.config,
+            ...runtime_config,
+        }
+
+        const context: ForwarderContext = {
+            text,
+            article: props?.article,
+            media: props?.media,
+            timestamp: props?.timestamp,
+            config: mergedConfig,
+            metadata: new Map(),
+            aborted: false,
+        }
+
+        const shouldSend = await this.pipeline.execute(context)
+
+        if (!shouldSend) {
+            this.log?.warn(context.abortReason || 'Message blocked by middleware')
             return Promise.resolve()
         }
-        // 替换关键词
-        if (replace_regex) {
-            text = this.textFilter(text, replace_regex)
-        }
 
+        const chunks = (context.metadata.get('chunks') as string[]) || [context.text]
         const _log = this.log
-        _log?.debug(`trying to send text with length ${text.length}`)
 
-        let text_to_be_sent = text
-        let i = 0
-        let texts = []
-        while (text_to_be_sent.length > this.BASIC_TEXT_LIMIT) {
-            const current_chunk = text_to_be_sent.slice(0, this.TEXT_LIMIT)
-            texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${current_chunk}${CHUNK_SEPARATOR_NEXT}`)
-            text_to_be_sent = text_to_be_sent.slice(this.TEXT_LIMIT)
-            i = i + 1
-        }
-        texts.push(`${i > 0 ? CHUNK_SEPARATOR_PREV : ''}${text_to_be_sent}`)
-        await pRetry(() => this.realSend(texts, props), {
+        _log?.debug(`trying to send text with length ${context.text.length}`)
+
+        await pRetry(() => this.realSend(chunks, props), {
             retries: RETRY_LIMIT,
             onFailedAttempt(e) {
                 _log?.error(`send texts failed, retrying...: ${e.originalError.message}`)
             },
         })
-        return
     }
 
-    textFilter(text: string, regexps: ForwardTarget['cfg_platform']['replace_regex']): string {
-        if (!regexps) {
-            return text
+    protected abstract realSend(texts: string[], props?: SendProps): Promise<any>
+}
+
+abstract class Forwarder extends BaseForwarder {
+    protected BASIC_TEXT_LIMIT = 1000
+
+    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
+        super(config, id, log)
+        if (this.config?.replace_regex) {
+            try {
+                this.log?.debug(`checking config replace_regex: ${JSON.stringify(this.config.replace_regex)}`)
+                this.validateReplaceRegex(this.config.replace_regex)
+            } catch (e) {
+                this.log?.error(`replace regex is invalid for reason: ${e}`)
+                throw e
+            }
         }
+    }
+
+    protected override createDefaultPipeline(): MiddlewarePipeline {
+        return new MiddlewarePipeline()
+            .use(new TimeFilterMiddleware())
+            .use(new KeywordFilterMiddleware())
+            .use(new BlockRuleMiddleware())
+            .use(new TextReplaceMiddleware())
+            .use(new TextChunkMiddleware(this.BASIC_TEXT_LIMIT))
+    }
+
+    protected override getTextLimit(): number {
+        return this.BASIC_TEXT_LIMIT
+    }
+
+    private validateReplaceRegex(regexps: ForwardTarget['cfg_platform']['replace_regex']): void {
+        if (!regexps) return
+
         if (typeof regexps === 'string') {
-            return text.replace(new RegExp(regexps, 'g'), '')
+            new RegExp(regexps, 'g')
+            return
         }
 
-        if (isStringArrayArray(regexps)) {
-            return regexps.reduce((acc, [reg, replace]) => acc.replace(new RegExp(reg, 'g'), replace || ''), text)
+        if (Array.isArray(regexps)) {
+            if (regexps.length > 0 && Array.isArray(regexps[0])) {
+                for (const [reg] of regexps as Array<[string, string]>) {
+                    new RegExp(reg, 'g')
+                }
+            } else {
+                new RegExp((regexps as [string, string])[0], 'g')
+            }
         }
-        return text.replace(new RegExp(regexps[0], 'g'), regexps.length > 1 ? regexps[1] : '')
     }
-
-    protected abstract realSend(
-        texts: Array<string>,
-        props: Parameters<BaseForwarder['send']>[1],
-    ): ReturnType<BaseForwarder['send']>
 }
 
 export { BaseForwarder, Forwarder }

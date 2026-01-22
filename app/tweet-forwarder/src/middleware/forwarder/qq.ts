@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Forwarder } from './base'
+import { Forwarder, type SendProps } from './base'
 import { type ForwardTargetPlatformConfig, ForwardTargetPlatformEnum } from '@/types/forwarder'
 
 class QQForwarder extends Forwarder {
@@ -8,7 +8,8 @@ class QQForwarder extends Forwarder {
     private url: string
     private token: string
     NAME = 'qq'
-    BASIC_TEXT_LIMIT = 4000
+    protected override BASIC_TEXT_LIMIT = 4000
+
     constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
         super(config, ...rest)
         const { group_id, url, token } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.QQ>
@@ -19,7 +20,8 @@ class QQForwarder extends Forwarder {
         this.url = url
         this.token = token
     }
-    public async realSend(...[texts, props]: [...Parameters<Forwarder['realSend']>]) {
+
+    protected async realSend(texts: string[], props?: SendProps): Promise<any> {
         let { media } = props || {}
         media = media || []
         const _log = this.log

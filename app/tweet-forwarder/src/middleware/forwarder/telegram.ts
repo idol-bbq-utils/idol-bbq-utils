@@ -1,11 +1,11 @@
 import { Input, Telegraf } from 'telegraf'
-import { Forwarder } from './base.js'
+import { Forwarder, type SendProps } from './base'
 import type { InputMediaPhoto, InputMediaVideo } from 'telegraf/types'
-import { type ForwardTargetPlatformConfig, ForwardTargetPlatformEnum } from '@/types/forwarder.js'
+import { type ForwardTargetPlatformConfig, ForwardTargetPlatformEnum } from '@/types/forwarder'
 
 class TgForwarder extends Forwarder {
     static _PLATFORM = ForwardTargetPlatformEnum.Telegram
-    BASIC_TEXT_LIMIT = 1024
+    protected override BASIC_TEXT_LIMIT = 1024
     NAME = 'telegram'
     private chat_id: string
     private bot: Telegraf
@@ -19,7 +19,8 @@ class TgForwarder extends Forwarder {
         this.chat_id = chat_id
         this.bot = new Telegraf(token)
     }
-    public async realSend(...[texts, props]: [...Parameters<Forwarder['realSend']>]) {
+
+    protected async realSend(texts: string[], props?: SendProps): Promise<any> {
         const { media } = props || {}
         for (const text of texts) {
             if (media && media.length !== 0) {
