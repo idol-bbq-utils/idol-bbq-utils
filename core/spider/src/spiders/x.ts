@@ -67,11 +67,12 @@ class XUserTimeLineSpider extends BaseSpider {
 
     async _crawl<T extends TaskType>(
         url: string,
-        page: Page,
+        page: Page | undefined,
         config: {
             crawl_engine: CrawlEngine
             task_type: T
             sub_task_type?: Array<string>
+            cookieString?: string
         },
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XUserTimeLineSpider)?.groups
@@ -83,22 +84,36 @@ class XUserTimeLineSpider extends BaseSpider {
             throw new Error(`Invalid URL: ${url}, id not found`)
         }
 
-        const { crawl_engine, task_type, sub_task_type } = config
+        const { crawl_engine, task_type, sub_task_type, cookieString } = config
 
         if (crawl_engine === 'api') {
             this.log?.warn(`[Engine Api] API engine will be banned by X if you use it too much`)
             try {
-                const cookie = await page.browserContext().cookies()
-                const cookie_string = cookie.map((c) => `${c.name}=${c.value}`).join('; ')
+                let cookie_string = cookieString
+                if (!cookie_string && page) {
+                    const cookie = await page.browserContext().cookies()
+                    cookie_string = cookie.map((c) => `${c.name}=${c.value}`).join('; ')
+                }
+                if (!cookie_string) {
+                    throw new Error('Cookie string is required for API mode')
+                }
 
                 if (task_type === 'article') {
                     let res = []
-                    if (!sub_task_type || sub_task_type.length === 0 || sub_task_type.includes(XTweetsTaskType.tweets)) {
+                    if (
+                        !sub_task_type ||
+                        sub_task_type.length === 0 ||
+                        sub_task_type.includes(XTweetsTaskType.tweets)
+                    ) {
                         this.log?.info(`Trying to grab tweets for ${id}.`)
                         const tweets = await this.API_CLIENT.grabTweets(id, cookie_string)
                         res.push(...tweets)
                     }
-                    if (!sub_task_type || sub_task_type.length === 0 || sub_task_type.includes(XTweetsTaskType.replies)) {
+                    if (
+                        !sub_task_type ||
+                        sub_task_type.length === 0 ||
+                        sub_task_type.includes(XTweetsTaskType.replies)
+                    ) {
                         this.log?.info(`Trying to grab replies for ${id}.`)
                         const replies = await this.API_CLIENT.grabReplies(id, cookie_string)
                         res.push(...replies)
@@ -115,6 +130,10 @@ class XUserTimeLineSpider extends BaseSpider {
             } finally {
                 noop()
             }
+        }
+
+        if (!page) {
+            throw new Error('Browser mode requires a Page instance')
         }
 
         const _url = `${this.BASE_URL}${id}`
@@ -156,11 +175,12 @@ class XListSpider extends BaseSpider {
 
     async _crawl<T extends TaskType>(
         url: string,
-        page: Page,
+        page: Page | undefined,
         config: {
             crawl_engine: CrawlEngine
             task_type: T
             sub_task_type?: Array<string>
+            cookieString?: string
         },
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XListSpider)?.groups
@@ -172,8 +192,14 @@ class XListSpider extends BaseSpider {
             throw new Error(`Invalid URL: ${url}, id not found`)
         }
 
-        const { task_type } = config
-        const cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
+        const { task_type, cookieString } = config
+        let cookie_string = cookieString
+        if (!cookie_string && page) {
+            cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
+        }
+        if (!cookie_string) {
+            throw new Error('Cookie string is required for X List Spider')
+        }
         if (task_type === 'article') {
             this.log?.warn('Replies are not supported in this mode for now.')
             this.log?.info(`Trying to grab tweets for ${id}.`)
@@ -274,7 +300,7 @@ class XListSpider extends BaseSpider {
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
                 authorization: this.PUBLIC_TOKEN,
-                "user-agent": UserAgent.CHROME,
+                'user-agent': UserAgent.CHROME,
                 cookie: cookie_string,
             },
         })
@@ -287,14 +313,16 @@ class XListSpider extends BaseSpider {
             throw new Error('Failed to fetch follows with empty json')
         }
 
-        return json?.users?.map(XApiJsonParser.oldTweetMemeberParser).filter(Boolean) as Array<GenericArticle<Platform.X>>
+        return json?.users?.map(XApiJsonParser.oldTweetMemeberParser).filter(Boolean) as Array<
+            GenericArticle<Platform.X>
+        >
     }
 
     async grabFollows(id: string, cookie: string): Promise<Array<GenericFollows>> {
         const url = `${this.API_PREFIX}/1.1/lists/members.json`
         const params = new URLSearchParams({
             list_id: id,
-            count: '99'
+            count: '99',
         })
         const res = await fetch(`${url}?${params.toString()}`, {
             headers: {
@@ -381,21 +409,23 @@ class XApiClient {
     }
 
     // 获取graphql query id, 备份用
-    async getGraphqlQueryId() { //
+    async getGraphqlQueryId() {
+        //
         let webpage = await fetch(this.BASE_URL, {
             headers: {
                 'user-agent': UserAgent.CHROME,
                 referer: 'https://x.com/',
                 origin: 'https://x.com',
-            }
+            },
         })
         const html = await webpage.text()
         // extract "": "md5/hash"
-        {// List
+        {
+            // List
             const lists_graphql_js_pattern = /"([^"]*AudioSpacebarScr)"\s*:\s*"(\w+)"/
             const match = html.match(lists_graphql_js_pattern)
             if (match) {
-                const js_url =  `${this.ASSETS_BASE_URL}/${match[1]}.${match[2]}a.js` // a is magic maybe changed in the future
+                const js_url = `${this.ASSETS_BASE_URL}/${match[1]}.${match[2]}a.js` // a is magic maybe changed in the future
                 console.log(js_url)
                 const js_code = await (await fetch(js_url)).text()
                 const queryId = this.getQueryId(js_code, XApis.ListLatestTweetsTimeline)
@@ -404,7 +434,6 @@ class XApiClient {
                 }
             }
         }
-
     }
 
     /**
@@ -654,13 +683,50 @@ class XApiClient {
 
     async grabTweetsFromList(list_id: string, cookie: string) {
         const _ = await this.getTransaction()
-        const query_id = this.api_with_queryid[XApis.ListLatestTweetsTimeline] ?? "NRigOCel0QKiWs_GuBgOzw" // abs.twimg.com\responsive-web\client-web\sharedloader.Dockbundle.Articlesbundle.AudioSpaceDetailbundle.AudioSpaceDiscoverybundle.AudioSpacebarScr.e8195e0a.js
+        const query_id = this.api_with_queryid[XApis.ListLatestTweetsTimeline] ?? 'NRigOCel0QKiWs_GuBgOzw' // abs.twimg.com\responsive-web\client-web\sharedloader.Dockbundle.Articlesbundle.AudioSpaceDetailbundle.AudioSpaceDiscoverybundle.AudioSpacebarScr.e8195e0a.js
         // https://abs.twimg.com/responsive-web/client-web/shared~loader.Dock~bundle.Articles~bundle.AudioSpaceDetail~bundle.AudioSpaceDiscovery~bundle.AudioSpacebarScr.523665ea.js
         const query_path = `${this.API_PREFIX}/${query_id}/ListLatestTweetsTimeline`
         // const transaction_id = await transaction.generateTransactionId('GET', query_path)
         const csrf_token = this.getCsrfToken(cookie)
         const variables = { listId: list_id, count: 20 }
-        const features = {"rweb_video_screen_enabled":false,"profile_label_improvements_pcf_label_in_post_enabled":true,"responsive_web_profile_redirect_enabled":false,"rweb_tipjar_consumption_enabled":true,"verified_phone_label_enabled":false,"creator_subscriptions_tweet_preview_api_enabled":true,"responsive_web_graphql_timeline_navigation_enabled":true,"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,"premium_content_api_read_enabled":false,"communities_web_enable_tweet_community_results_fetch":true,"c9s_tweet_anatomy_moderator_badge_enabled":true,"responsive_web_grok_analyze_button_fetch_trends_enabled":false,"responsive_web_grok_analyze_post_followups_enabled":true,"responsive_web_jetfuel_frame":true,"responsive_web_grok_share_attachment_enabled":true,"responsive_web_grok_annotations_enabled":false,"articles_preview_enabled":true,"responsive_web_edit_tweet_api_enabled":true,"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,"view_counts_everywhere_api_enabled":true,"longform_notetweets_consumption_enabled":true,"responsive_web_twitter_article_tweet_consumption_enabled":true,"tweet_awards_web_tipping_enabled":false,"responsive_web_grok_show_grok_translated_post":false,"responsive_web_grok_analysis_button_from_backend":true,"post_ctas_fetch_enabled":false,"creator_subscriptions_quote_tweet_preview_enabled":false,"freedom_of_speech_not_reach_fetch_enabled":true,"standardized_nudges_misinfo":true,"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,"longform_notetweets_rich_text_read_enabled":true,"longform_notetweets_inline_media_enabled":true,"responsive_web_grok_image_annotation_enabled":true,"responsive_web_grok_imagine_annotation_enabled":true,"responsive_web_grok_community_note_auto_translation_is_enabled":false,"responsive_web_enhance_cards_enabled":false}
+        const features = {
+            rweb_video_screen_enabled: false,
+            profile_label_improvements_pcf_label_in_post_enabled: true,
+            responsive_web_profile_redirect_enabled: false,
+            rweb_tipjar_consumption_enabled: true,
+            verified_phone_label_enabled: false,
+            creator_subscriptions_tweet_preview_api_enabled: true,
+            responsive_web_graphql_timeline_navigation_enabled: true,
+            responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+            premium_content_api_read_enabled: false,
+            communities_web_enable_tweet_community_results_fetch: true,
+            c9s_tweet_anatomy_moderator_badge_enabled: true,
+            responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+            responsive_web_grok_analyze_post_followups_enabled: true,
+            responsive_web_jetfuel_frame: true,
+            responsive_web_grok_share_attachment_enabled: true,
+            responsive_web_grok_annotations_enabled: false,
+            articles_preview_enabled: true,
+            responsive_web_edit_tweet_api_enabled: true,
+            graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+            view_counts_everywhere_api_enabled: true,
+            longform_notetweets_consumption_enabled: true,
+            responsive_web_twitter_article_tweet_consumption_enabled: true,
+            tweet_awards_web_tipping_enabled: false,
+            responsive_web_grok_show_grok_translated_post: false,
+            responsive_web_grok_analysis_button_from_backend: true,
+            post_ctas_fetch_enabled: false,
+            creator_subscriptions_quote_tweet_preview_enabled: false,
+            freedom_of_speech_not_reach_fetch_enabled: true,
+            standardized_nudges_misinfo: true,
+            tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+            longform_notetweets_rich_text_read_enabled: true,
+            longform_notetweets_inline_media_enabled: true,
+            responsive_web_grok_image_annotation_enabled: true,
+            responsive_web_grok_imagine_annotation_enabled: true,
+            responsive_web_grok_community_note_auto_translation_is_enabled: false,
+            responsive_web_enhance_cards_enabled: false,
+        }
         const query = this.generateParams(features, variables)
 
         const url = `${this.BASE_URL}${query_path}?${query.toString()}`
@@ -687,12 +753,48 @@ class XApiClient {
 
     async grabFollowsFromList(list_id: string, cookie: string) {
         // const transaction = await this.getTransaction()
-        const query_id = "8oGwd_SHm0nGs91qI4znfA" // abs.twimg.com/responsive-web/client-web/shared~loader.Dock~bundle.Articles~bundle.AudioSpaceDetail~bundle.AudioSpaceDiscovery~bundle.AudioSpacebarScr.6cb481aa.js
+        const query_id = '8oGwd_SHm0nGs91qI4znfA' // abs.twimg.com/responsive-web/client-web/shared~loader.Dock~bundle.Articles~bundle.AudioSpaceDetail~bundle.AudioSpaceDiscovery~bundle.AudioSpacebarScr.6cb481aa.js
         const query_path = `${this.API_PREFIX}/${query_id}/ListMembers`
         // const transaction_id = await transaction.generateTransactionId('GET', query_path)
         const csrf_token = this.getCsrfToken(cookie)
         const variables = { listId: list_id, count: 99 }
-        const features = {"rweb_video_screen_enabled":false,"payments_enabled":false,"profile_label_improvements_pcf_label_in_post_enabled":true,"responsive_web_profile_redirect_enabled":false,"rweb_tipjar_consumption_enabled":true,"verified_phone_label_enabled":false,"creator_subscriptions_tweet_preview_api_enabled":true,"responsive_web_graphql_timeline_navigation_enabled":true,"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,"premium_content_api_read_enabled":false,"communities_web_enable_tweet_community_results_fetch":true,"c9s_tweet_anatomy_moderator_badge_enabled":true,"responsive_web_grok_analyze_button_fetch_trends_enabled":false,"responsive_web_grok_analyze_post_followups_enabled":true,"responsive_web_jetfuel_frame":true,"responsive_web_grok_share_attachment_enabled":true,"articles_preview_enabled":true,"responsive_web_edit_tweet_api_enabled":true,"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,"view_counts_everywhere_api_enabled":true,"longform_notetweets_consumption_enabled":true,"responsive_web_twitter_article_tweet_consumption_enabled":true,"tweet_awards_web_tipping_enabled":false,"responsive_web_grok_show_grok_translated_post":false,"responsive_web_grok_analysis_button_from_backend":true,"creator_subscriptions_quote_tweet_preview_enabled":false,"freedom_of_speech_not_reach_fetch_enabled":true,"standardized_nudges_misinfo":true,"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,"longform_notetweets_rich_text_read_enabled":true,"longform_notetweets_inline_media_enabled":true,"responsive_web_grok_image_annotation_enabled":true,"responsive_web_grok_imagine_annotation_enabled":true,"responsive_web_grok_community_note_auto_translation_is_enabled":false,"responsive_web_enhance_cards_enabled":false}
+        const features = {
+            rweb_video_screen_enabled: false,
+            payments_enabled: false,
+            profile_label_improvements_pcf_label_in_post_enabled: true,
+            responsive_web_profile_redirect_enabled: false,
+            rweb_tipjar_consumption_enabled: true,
+            verified_phone_label_enabled: false,
+            creator_subscriptions_tweet_preview_api_enabled: true,
+            responsive_web_graphql_timeline_navigation_enabled: true,
+            responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+            premium_content_api_read_enabled: false,
+            communities_web_enable_tweet_community_results_fetch: true,
+            c9s_tweet_anatomy_moderator_badge_enabled: true,
+            responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+            responsive_web_grok_analyze_post_followups_enabled: true,
+            responsive_web_jetfuel_frame: true,
+            responsive_web_grok_share_attachment_enabled: true,
+            articles_preview_enabled: true,
+            responsive_web_edit_tweet_api_enabled: true,
+            graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+            view_counts_everywhere_api_enabled: true,
+            longform_notetweets_consumption_enabled: true,
+            responsive_web_twitter_article_tweet_consumption_enabled: true,
+            tweet_awards_web_tipping_enabled: false,
+            responsive_web_grok_show_grok_translated_post: false,
+            responsive_web_grok_analysis_button_from_backend: true,
+            creator_subscriptions_quote_tweet_preview_enabled: false,
+            freedom_of_speech_not_reach_fetch_enabled: true,
+            standardized_nudges_misinfo: true,
+            tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+            longform_notetweets_rich_text_read_enabled: true,
+            longform_notetweets_inline_media_enabled: true,
+            responsive_web_grok_image_annotation_enabled: true,
+            responsive_web_grok_imagine_annotation_enabled: true,
+            responsive_web_grok_community_note_auto_translation_is_enabled: false,
+            responsive_web_enhance_cards_enabled: false,
+        }
         const query = this.generateParams(features, variables)
 
         const url = `${this.BASE_URL}${query_path}?${query.toString()}`
@@ -957,8 +1059,8 @@ namespace XApiJsonParser {
             ref: result.quoted_status_result?.result
                 ? tweetParser(result.quoted_status_result.result)
                 : result.retweeted_status_result?.result
-                    ? tweetParser(result.retweeted_status_result.result)
-                    : null,
+                  ? tweetParser(result.retweeted_status_result.result)
+                  : null,
             media: mediaParser(legacy?.extended_entities?.media || legacy?.entities?.media),
             has_media: !!legacy?.extended_entities?.media || !!legacy?.entities?.media,
             extra: Card.cardParser(result.card?.legacy),
@@ -1000,12 +1102,15 @@ namespace XApiJsonParser {
         const userLegacy = json?.user
         let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
         let ref: GenericArticleRef<Platform.X> | null = null
-        if (legacy?.retweeted_status) { // high priority
+        if (legacy?.retweeted_status) {
+            // high priority
             type = ArticleTypeEnum.RETWEET
             ref = oldTweetParser(legacy?.retweeted_status) as GenericArticleRef<Platform.X>
         } else if (legacy?.is_quote_status) {
             type = ArticleTypeEnum.QUOTED
-            ref = legacy?.quoted_status ? oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X> : legacy?.quoted_status_id_str || null
+            ref = legacy?.quoted_status
+                ? (oldTweetParser(legacy?.quoted_status) as GenericArticleRef<Platform.X>)
+                : legacy?.quoted_status_id_str || null
         } else if (legacy?.in_reply_to_status_id_str) {
             type = ArticleTypeEnum.CONVERSATION
             ref = legacy?.in_reply_to_status_id_str
@@ -1055,7 +1160,8 @@ namespace XApiJsonParser {
         const legacy = json?.status
         const userLegacy = json
         let type: ArticleTypeEnum = ArticleTypeEnum.TWEET
-        if (legacy?.retweeted_status) { // high priority
+        if (legacy?.retweeted_status) {
+            // high priority
             type = ArticleTypeEnum.RETWEET
         } else if (legacy?.is_quote_status) {
             type = ArticleTypeEnum.QUOTED
@@ -1155,7 +1261,7 @@ namespace XApiJsonParser {
 
     export function tweetsFollowsFromListParser(json: any): Array<GenericFollows> {
         const results = JSONPath({ path: '$..user_results.result', json })
-        return results.map((r: any)=> {
+        return results.map((r: any) => {
             return {
                 platform: Platform.X,
                 username: r?.core?.name,
@@ -1191,8 +1297,8 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-                viewport: defaultViewport,
-            },
+            viewport: defaultViewport,
+        },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()
@@ -1242,8 +1348,8 @@ namespace XApiJsonParser {
                 height: number
             }
         } = {
-                viewport: defaultViewport,
-            },
+            viewport: defaultViewport,
+        },
     ): Promise<Array<GenericArticle<Platform.X>>> {
         const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
             const url = response.url()

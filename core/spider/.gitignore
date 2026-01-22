@@ -1,1 +1,6 @@
 _data
+*.html
+*.txt
+*.json
+*.png
+*.js

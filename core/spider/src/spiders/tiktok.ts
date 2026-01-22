@@ -25,11 +25,12 @@ class TiktokSpider extends BaseSpider {
 
     async _crawl<T extends TaskType>(
         url: string,
-        page: Page,
+        page: Page | undefined,
         config: {
             task_type: T
             crawl_engine: CrawlEngine
             sub_task_type?: Array<string>
+            cookieString?: string
         },
     ): Promise<TaskTypeResult<T, Platform.TikTok>> {
         const result = super._match_valid_url(url, TiktokSpider)?.groups

@@ -137,5 +137,15 @@ lib/
 *.db
 
 !assets/**/*
+assets/fonts/*.woff
+assets/fonts/*.woff2
+assets/fonts/*.ttf
+
 
 *.cookies
+
+*.yaml
+!config.example.yaml
+*.md
+!README.md
+.vscode/

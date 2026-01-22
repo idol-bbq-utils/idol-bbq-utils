@@ -7,9 +7,18 @@ services:
     container_name: 'sns-forwarder'
     network_mode: 'host'
     restart: 'on-failure'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+        compress: "true"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
     environment:
       - TZ=Asia/Shanghai
       - NO_SANDBOX=true
+      - LOG_LEVEL=info
     volumes:
       - './assets/tweet-forwarder/config.example.yaml:/app/config.yaml'
       - './assets/tweet-forwarder/data.db:/app/data.db'

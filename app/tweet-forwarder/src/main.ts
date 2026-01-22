@@ -1,11 +1,17 @@
 import puppeteer from 'puppeteer-core'
 import { SpiderPools, SpiderTaskScheduler } from './managers/spider-manager'
-import { configParser, log } from './config'
+import { configParser, log, CACHE_DIR_ROOT } from './config'
 import EventEmitter from 'events'
 import { ForwarderPools, ForwarderTaskScheduler } from './managers/forwarder-manager'
 import { BaseCompatibleModel, TaskScheduler } from './utils/base'
+import tmp from 'tmp'
+import { initializeCacheDirectories } from './utils/directories'
+
+tmp.setGracefulCleanup()
 
 async function main() {
+    initializeCacheDirectories(CACHE_DIR_ROOT)
+
     const taskSchedulers: Array<TaskScheduler.TaskScheduler> = []
     const compatibleModels: Array<BaseCompatibleModel> = []
     const emitter = new EventEmitter()
@@ -18,13 +24,21 @@ async function main() {
     const { crawlers, cfg_crawler, forward_targets, cfg_forward_target, forwarders, cfg_forwarder } = config
 
     if (crawlers && crawlers.length > 0) {
+        const tmpDir = tmp.dirSync({
+            prefix: 'puppeteer-',
+            unsafeCleanup: true,
+        })
+
+        log.info(`Puppeteer userDataDir: ${tmpDir.name}`)
+
         const browser = await puppeteer.launch({
             headless: true,
             handleSIGINT: false,
             handleSIGHUP: false,
             handleSIGTERM: false,
-            args: [process.env.NO_SANDBOX ? '--no-sandbox' : ''],
+            args: [process.env.NO_SANDBOX ? '--no-sandbox' : '', '--disable-dev-shm-usage'].filter(Boolean),
             channel: 'chrome',
+            userDataDir: tmpDir.name,
         })
         // @ts-ignore
         const spiderPools = new SpiderPools(browser, emitter, log)
@@ -74,6 +88,8 @@ async function main() {
     }
 
     async function exitHandler() {
+        log.info('Shutting down gracefully...')
+
         for (const taskScheduler of taskSchedulers) {
             await taskScheduler.stop()
             await taskScheduler.drop()
@@ -81,6 +97,8 @@ async function main() {
         for (const c of compatibleModels) {
             await c.drop()
         }
+
+        log.info('Cleanup completed')
         process.exit(0)
     }
     process.on('SIGINT', exitHandler)

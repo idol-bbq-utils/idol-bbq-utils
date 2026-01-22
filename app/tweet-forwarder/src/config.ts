@@ -1,11 +1,15 @@
 import type { AppConfig } from './types'
 import fs from 'fs'
-import os from 'os'
+import path from 'path'
 import YAML from 'yaml'
 import { createLogger, Logger, winston, format } from '@idol-bbq-utils/log'
+import { getCacheRoot, ensureDirectoryExists } from './utils/directories'
 
-const CACHE_DIR_ROOT = process.env.CACHE_DIR || `${os.tmpdir()}/tweet-forwarder`
+const CACHE_DIR_ROOT = getCacheRoot()
 const RETRY_LIMIT = 2
+
+ensureDirectoryExists(CACHE_DIR_ROOT)
+ensureDirectoryExists(path.join(CACHE_DIR_ROOT, 'logs'))
 
 const log: Logger = createLogger({
     defaultMeta: { service: 'tweet-forwarder' },
@@ -22,12 +26,16 @@ const log: Logger = createLogger({
         }),
     ),
     transports: [
-        new winston.transports.Console(),
+        new winston.transports.Console({
+            handleExceptions: true,
+            handleRejections: true,
+        }),
         new winston.transports.DailyRotateFile({
-            filename: `${CACHE_DIR_ROOT}/logs/tweet-forwarder-%DATE%.log`,
+            filename: path.join(CACHE_DIR_ROOT, 'logs', 'tweet-forwarder-%DATE%.log'),
             datePattern: 'YYYY-MM-DD',
             maxSize: '20m',
             maxFiles: '3d',
+            auditFile: path.join(CACHE_DIR_ROOT, 'logs', '.audit.json'),
         }),
     ],
 })

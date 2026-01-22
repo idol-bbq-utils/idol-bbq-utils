@@ -12,9 +12,15 @@ const default_format = printf(({ timestamp, level, message, ...meta }) => {
 })
 
 const default_config = {
-    level: 'info',
+    level: process.env.LOG_LEVEL || 'info',
     format: combine(colorize(), timestamp(), default_format),
-    transports: [new winston.transports.Console()],
+    transports: [
+        new winston.transports.Console({
+            handleExceptions: true,
+            handleRejections: true,
+        }),
+    ],
+    exitOnError: false,
 }
 
 const default_log = winston.createLogger(default_config)

@@ -45,10 +45,12 @@
         "lodash": "^4.17.21",
         "puppeteer-core": "^24.6.0",
         "telegraf": "^4.16.3",
+        "tmp": "^0.2.5",
         "yaml": "^2.4.5"
     },
     "devDependencies": {
         "@types/lodash": "^4.17.6",
+        "@types/tmp": "^0.2.6",
         "prisma": "^6.3.0"
     }
 }

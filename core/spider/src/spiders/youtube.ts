@@ -28,11 +28,12 @@ class YoutubeSpider extends BaseSpider {
 
     async _crawl<T extends TaskType>(
         url: string,
-        page: Page,
+        page: Page | undefined,
         config: {
             task_type: T
             crawl_engine: CrawlEngine
             sub_task_type?: Array<string>
+            cookieString?: string
         },
     ): Promise<TaskTypeResult<T, Platform.YouTube>> {
         const result = super._match_valid_url(url, YoutubeSpider)?.groups
@@ -42,6 +43,11 @@ class YoutubeSpider extends BaseSpider {
         const { id } = result
         const _url = `${this.BASE_URL}@${id}`
         const { task_type } = config
+
+        if (!page) {
+            throw new Error('YouTube spider requires a Page instance')
+        }
+
         if (task_type === 'article') {
             this.log?.info('Trying to grab posts.')
             const res = await YoutubeApiJsonParser.grabPosts(page, `${_url}/community`)

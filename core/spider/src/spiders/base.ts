@@ -18,12 +18,13 @@ abstract class BaseSpider {
     log?: Logger
     public crawl<T extends TaskType>(
         url: string,
-        page: Page,
+        page: Page | undefined,
         trace_id?: string,
         config?: {
             task_type?: T
             sub_task_type?: Array<string>
             crawl_engine?: CrawlEngine
+            cookieString?: string
         },
     ): Promise<TaskTypeResult<T, Platform>> {
         this.log = this.log?.child({ trace_id })
@@ -36,11 +37,12 @@ abstract class BaseSpider {
 
     protected abstract _crawl<T extends TaskType>(
         url: string,
-        page: Page,
+        page: Page | undefined,
         config: {
             task_type: T
             crawl_engine: CrawlEngine
             sub_task_type?: Array<string>
+            cookieString?: string
         },
     ): Promise<TaskTypeResult<T, Platform>>
 

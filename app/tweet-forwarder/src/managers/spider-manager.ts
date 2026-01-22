@@ -227,12 +227,16 @@ class SpiderPools extends BaseCompatibleModel {
             }
         }
 
-        // 如果未来对每个网页地址单独设置了cookie，需要移动至下方逻辑设置cookie
-        const page = await this.browser.newPage()
+        let cookieString: string | undefined
+        let page: Page | undefined
+
         const cookie_file = cfg_crawler?.cookie_file
+        if (cookie_file) {
+            const cookies = parseNetscapeCookieToPuppeteerCookie(cookie_file)
+            cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+        }
+
         const user_agent = cfg_crawler?.user_agent
-        cookie_file && (await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file)))
-        await page.setUserAgent(user_agent || UserAgent.CHROME)
 
         interval_time = {
             ...{
@@ -245,68 +249,97 @@ class SpiderPools extends BaseCompatibleModel {
 
         let result: Array<CrawlerTaskResult> = []
         let errors: Array<any> = []
-        // 开始任务
-        for (const website of websites) {
-            this.log?.info(`[${taskId}] crawler wait for ${time}ms`)
-            await delay(time)
-            // 单次系列爬虫任务
-            try {
-                const url = new URL(website)
-                const spiderBuilder = await Spider.getSpider(url.href)
-                if (!spiderBuilder) {
-                    ctx.log?.warn(`Spider not found for ${url.href}`)
-                    continue
-                }
-                let spider = this.spiders.get(spiderBuilder._VALID_URL.source)
-                if (!spider) {
-                    // 需要用详细的网页地址匹配
-                    spider = new spiderBuilder(this.log).init()
-                    this.spiders.set(spiderBuilder._VALID_URL.source, spider)
-                    ctx.log?.info(`Spider instance created for ${url.hostname}`)
-                }
 
-                if (task_type === 'article') {
-                    let saved_article_ids = await this.crawlArticle(ctx, spider, url, page, translator)
+        try {
+            // 开始任务
+            for (const website of websites) {
+                this.log?.info(`[${taskId}] crawler wait for ${time}ms`)
+                await delay(time)
+                // 单次系列爬虫任务
+                try {
+                    const url = new URL(website)
+                    const spiderBuilder = await Spider.getSpider(url.href)
+                    if (!spiderBuilder) {
+                        ctx.log?.warn(`Spider not found for ${url.href}`)
+                        continue
+                    }
+                    let spider = this.spiders.get(spiderBuilder._VALID_URL.source)
+                    if (!spider) {
+                        spider = new spiderBuilder(this.log).init()
+                        this.spiders.set(spiderBuilder._VALID_URL.source, spider)
+                        ctx.log?.info(`Spider instance created for ${url.hostname}`)
+                    }
 
-                    result.push({
-                        task_type: 'article',
-                        url: url.href,
-                        data: saved_article_ids,
-                    })
-                }
-
-                if (task_type === 'follows') {
                     const crawl_engine = cfg_crawler?.engine
-                    const sub_task_type = cfg_crawler?.sub_task_type
-                    const follows_res = (await pRetry(
-                        () =>
-                            spider.crawl(url.href, page, taskId, {
-                                task_type: 'follows',
-                                crawl_engine,
-                                sub_task_type,
-                            }),
-                        {
-                            retries: RETRY_LIMIT,
-                            onFailedAttempt: (error) => {
-                                ctx.log?.error(
-                                    `[${url.href}] Crawl follows failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
-                                )
-                            },
-                        },
-                    )) as TaskTypeResult<'follows', Platform>
-                    for (const follows of follows_res) {
-                        let saved_follows_id = (await DB.Follow.save(follows)).id
+                    const needsBrowser = !crawl_engine?.startsWith('api')
+
+                    if (needsBrowser && !page) {
+                        ctx.log?.info(`Creating browser page for engine: ${crawl_engine || 'browser'}`)
+                        page = await this.browser.newPage()
+                        await page.setUserAgent(user_agent || UserAgent.CHROME)
+
+                        if (cookie_file) {
+                            await page.browserContext().setCookie(...parseNetscapeCookieToPuppeteerCookie(cookie_file))
+                        }
+                    } else if (!needsBrowser) {
+                        ctx.log?.debug(`Using API engine: ${crawl_engine}, no page needed`)
+                    }
+
+                    if (task_type === 'article') {
+                        let saved_article_ids = await this.crawlArticle(
+                            ctx,
+                            spider,
+                            url,
+                            page,
+                            translator,
+                            cookieString,
+                        )
+
                         result.push({
-                            task_type: 'follows',
+                            task_type: 'article',
                             url: url.href,
-                            data: [saved_follows_id],
+                            data: saved_article_ids,
                         })
                     }
+
+                    if (task_type === 'follows') {
+                        const sub_task_type = cfg_crawler?.sub_task_type
+                        const follows_res = (await pRetry(
+                            () =>
+                                spider.crawl(url.href, page, taskId, {
+                                    task_type: 'follows',
+                                    crawl_engine,
+                                    sub_task_type,
+                                    cookieString,
+                                }),
+                            {
+                                retries: RETRY_LIMIT,
+                                onFailedAttempt: (error) => {
+                                    ctx.log?.error(
+                                        `[${url.href}] Crawl follows failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                                    )
+                                },
+                            },
+                        )) as TaskTypeResult<'follows', Platform>
+                        for (const follows of follows_res) {
+                            let saved_follows_id = (await DB.Follow.save(follows)).id
+                            result.push({
+                                task_type: 'follows',
+                                url: url.href,
+                                data: [saved_follows_id],
+                            })
+                        }
+                    }
+                } catch (error) {
+                    ctx.log?.error(`Error while crawling for ${website}: ${error}`)
+                    errors.push(error)
+                    continue
                 }
-            } catch (error) {
-                ctx.log?.error(`Error while crawling for ${website}: ${error}`)
-                errors.push(error)
-                continue
+            }
+        } finally {
+            if (page) {
+                await page.close()
+                ctx.log?.info('Browser page closed')
             }
         }
 
@@ -322,10 +355,6 @@ class SpiderPools extends BaseCompatibleModel {
                 immediate_notify: cfg_crawler?.immediate_notify,
             } as TaskResult)
         }
-
-        // close page
-        await page.close()
-        ctx.log?.info(`Page closed.`)
     }
 
     async drop(...args: any[]): Promise<void> {
@@ -342,8 +371,9 @@ class SpiderPools extends BaseCompatibleModel {
         ctx: TaskScheduler.TaskCtx,
         spider: BaseSpider,
         url: URL,
-        page: Page,
+        page?: Page,
         translator?: BaseTranslator,
+        cookieString?: string,
     ): Promise<Array<number>> {
         const { cfg_crawler } = ctx.task.data as Crawler
         const { engine, sub_task_type } = cfg_crawler || {}
@@ -353,6 +383,7 @@ class SpiderPools extends BaseCompatibleModel {
                     task_type: 'article',
                     crawl_engine: engine,
                     sub_task_type,
+                    cookieString,
                 }),
             {
                 retries: RETRY_LIMIT,
@@ -416,7 +447,6 @@ class SpiderPools extends BaseCompatibleModel {
             } else {
                 currentArticle = null
             }
-            
         }
         /**
          * 并行翻译
