@@ -26,6 +26,7 @@
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
         "axios": "^1.7.2",
         "dayjs": "^1.11.11",
         "form-data": "^4.0.0",

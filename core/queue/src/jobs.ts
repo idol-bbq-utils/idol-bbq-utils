@@ -1,7 +1,15 @@
 import type { Platform, TaskType, CrawlEngine } from '@idol-bbq-utils/spider/types'
+import type { ForwardTargetPlatformEnum } from '@idol-bbq-utils/forwarder'
+
+export interface ForwarderTarget {
+    id: string
+    platform: ForwardTargetPlatformEnum
+    cfg_platform: Record<string, any>
+    runtime_config?: Record<string, any>
+}
 
 export interface ForwarderConfig {
-    targets: string[]
+    targets: ForwarderTarget[]
     renderType?: 'text' | 'img' | 'img-with-meta'
     media?: {
         type: string

@@ -3,7 +3,7 @@ import { execSync } from 'child_process'
 import { CACHE_DIR_ROOT, log } from '@/config'
 import path from 'path'
 import type { MediaToolConfigMap } from '@/types/media'
-import type { MediaType } from '@idol-bbq-utils/spider/types'
+import type { MediaType } from '@idol-bbq-utils/utils'
 import { UserAgent } from '@idol-bbq-utils/spider'
 
 const MATCH_FILE_NAME = /(?<filename>[^/]+)\.(?<ext>[^.]+)$/

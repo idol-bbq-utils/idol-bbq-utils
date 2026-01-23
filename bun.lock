@@ -30,13 +30,11 @@
       "name": "@idol-bbq-utils/forwarder-service",
       "version": "0.1.0",
       "dependencies": {
+        "@idol-bbq-utils/forwarder": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/render": "workspace:^",
         "@prisma/client": "^6.3.0",
-        "axios": "^1.7.2",
-        "form-data": "^4.0.0",
-        "telegraf": "^4.16.3",
       },
       "devDependencies": {
         "@types/node": "^22.15.3",
@@ -49,6 +47,8 @@
       "dependencies": {
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/translator": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
         "@prisma/client": "^6.3.0",
       },
       "devDependencies": {
@@ -61,10 +61,12 @@
       "version": "0.3.2",
       "dependencies": {
         "@google/generative-ai": "^0.14.1",
+        "@idol-bbq-utils/forwarder": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/render": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/translator": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
         "@prisma/client": "^6.3.0",
         "axios": "^1.7.2",
@@ -83,6 +85,23 @@
         "@types/lodash": "^4.17.6",
         "@types/tmp": "^0.2.6",
         "prisma": "^6.3.0",
+      },
+    },
+    "core/forwarder": {
+      "name": "@idol-bbq-utils/forwarder",
+      "version": "0.3.0",
+      "dependencies": {
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+        "axios": "^1.7.2",
+        "dayjs": "^1.11.11",
+        "form-data": "^4.0.0",
+        "lodash": "^4.17.21",
+        "telegraf": "^4.16.3",
+      },
+      "devDependencies": {
+        "@types/lodash": "^4.17.6",
       },
     },
     "core/log": {
@@ -136,6 +155,19 @@
       },
       "devDependencies": {
         "@types/web": "^0.0.231",
+      },
+    },
+    "core/translator": {
+      "name": "@idol-bbq-utils/translator",
+      "version": "0.3.0",
+      "dependencies": {
+        "@google/generative-ai": "^0.14.1",
+        "@idol-bbq-utils/log": "workspace:^",
+        "axios": "^1.7.2",
+        "lodash": "^4.17.21",
+      },
+      "devDependencies": {
+        "@types/lodash": "^4.17.6",
       },
     },
     "core/utils": {
@@ -204,6 +236,8 @@
 
     "@idol-bbq-utils/crawler-service": ["@idol-bbq-utils/crawler-service@workspace:app/crawler-service"],
 
+    "@idol-bbq-utils/forwarder": ["@idol-bbq-utils/forwarder@workspace:core/forwarder"],
+
     "@idol-bbq-utils/forwarder-service": ["@idol-bbq-utils/forwarder-service@workspace:app/forwarder-service"],
 
     "@idol-bbq-utils/log": ["@idol-bbq-utils/log@workspace:core/log"],
@@ -215,6 +249,8 @@
     "@idol-bbq-utils/spider": ["@idol-bbq-utils/spider@workspace:core/spider"],
 
     "@idol-bbq-utils/storage-service": ["@idol-bbq-utils/storage-service@workspace:app/storage-service"],
+
+    "@idol-bbq-utils/translator": ["@idol-bbq-utils/translator@workspace:core/translator"],
 
     "@idol-bbq-utils/tweet-forwarder": ["@idol-bbq-utils/tweet-forwarder@workspace:app/tweet-forwarder"],
 
@@ -730,8 +766,6 @@
 
     "zod": ["zod@3.24.2", "", {}, "sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ=="],
 
-    "@idol-bbq-utils/tweet-forwarder/cron": ["cron@4.1.4", "", { "dependencies": { "@types/luxon": "~3.6.0", "luxon": "~3.6.0" } }, "sha512-PpAGyOyWZuGT3I50iGKeyZzNsDn/hp2AzRGUzXIlmnwC+bHZFTs1itnQKx171FeocEej+zTYV2JIgQM8M46LaQ=="],
-
     "@puppeteer/browsers/semver": ["semver@7.7.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA=="],
 
     "@types/yauzl/@types/node": ["@types/node@22.14.0", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-Kmpl+z84ILoG+3T/zQFyAJsU6EPTmOCj8/2+83fSN6djd6I4o7uOuGIH6vq3PrjY5BGitSbFuMN18j3iknubbA=="],
@@ -751,9 +785,5 @@
     "fluent-ffmpeg/async": ["async@0.2.10", "", {}, "sha512-eAkdoKxU6/LkKDBzLpT+t6Ff5EtfSF4wx1WfJiPEEV7WNLnDaRXk0oVysiEPm262roaachGexwUv94WhSgN5TQ=="],
 
     "string-width/emoji-regex": ["emoji-regex@8.0.0", "", {}, "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A=="],
-
-    "@idol-bbq-utils/tweet-forwarder/cron/@types/luxon": ["@types/luxon@3.6.2", "", {}, "sha512-R/BdP7OxEMc44l2Ex5lSXHoIXTB2JLNa3y2QISIbr58U/YcsffyQrYW//hZSdrfxrjRZj3GcUoxMPGdO8gSYuw=="],
-
-    "@idol-bbq-utils/tweet-forwarder/cron/luxon": ["luxon@3.6.1", "", {}, "sha512-tJLxrKJhO2ukZ5z0gyjY1zPh3Rh88Ej9P7jNrZiHMUXHae1yvI2imgOZtL1TO8TW6biMMKfTtAOoEJANgtWBMQ=="],
   }
 }

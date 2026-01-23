@@ -3,9 +3,21 @@ import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { ForwarderJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
 import { PrismaClient } from '../prisma/client'
-import { articleToText, formatMetaline } from '@idol-bbq-utils/render'
+import { articleToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
+import { getForwarder } from '@idol-bbq-utils/forwarder'
+import {
+    plainDownloadMediaFile,
+    galleryDownloadMediaFile,
+    writeImgToFile,
+    cleanupMediaFiles,
+} from '@idol-bbq-utils/utils'
+import { Platform } from '@idol-bbq-utils/spider/types'
+import type { MediaType } from '@idol-bbq-utils/utils'
+import { platformPresetHeadersMap } from '@idol-bbq-utils/spider/const'
 
 const log = createLogger({ defaultMeta: { service: 'ForwarderService' } })
+const CACHE_DIR = process.env.CACHE_DIR_ROOT || '/tmp'
+const articleConverter = new ImgConverter()
 
 interface ForwarderServiceConfig {
     redis: {
@@ -39,44 +51,188 @@ async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResul
     let successCount = 0
     let errorCount = 0
 
-    for (const article of articles) {
+    for (const target of forwarderConfig.targets) {
+        jobLog.info(`Processing target: ${target.id} (${target.platform})`)
+
         try {
-            const text = articleToText(article as any)
+            const ForwarderClass = getForwarder(target.platform)
+            if (!ForwarderClass) {
+                jobLog.error(`Unknown platform: ${target.platform}`)
+                errorCount++
+                continue
+            }
 
-            for (const targetId of forwarderConfig.targets) {
+            const forwarder = new ForwarderClass(target.cfg_platform, target.id, jobLog)
+            await forwarder.init()
+
+            for (const article of articles) {
+                let mediaFiles: Array<{ path: string; media_type: MediaType }> = []
+
                 try {
-                    jobLog.info(`Forwarding article ${article.a_id} to ${targetId}`)
-
                     const exists = await prisma.forward_by.findFirst({
                         where: {
                             ref_id: article.id,
-                            bot_id: targetId,
+                            bot_id: target.id,
                             task_type: 'article',
                         },
                     })
 
-                    if (!exists) {
+                    if (exists) {
+                        jobLog.debug(`Article ${article.a_id} already forwarded to ${target.id}`)
+                        continue
+                    }
+
+                    let articleToImgSuccess = false
+
+                    if (forwarderConfig.media && article.has_media && article.media) {
+                        jobLog.debug(`Downloading media files for article ${article.a_id}`)
+
+                        const mediaArray = Array.isArray(article.media) ? article.media : []
+
+                        for (const mediaItem of mediaArray) {
+                            if (!mediaItem) continue
+
+                            try {
+                                const url =
+                                    typeof mediaItem === 'object' && 'url' in mediaItem && mediaItem.url
+                                        ? String(mediaItem.url)
+                                        : String(mediaItem)
+                                const type =
+                                    typeof mediaItem === 'object' && 'type' in mediaItem && mediaItem.type
+                                        ? String(mediaItem.type)
+                                        : 'photo'
+
+                                const headers: Record<string, string> = {}
+                                if (article.platform && platformPresetHeadersMap[article.platform as Platform]) {
+                                    Object.assign(headers, platformPresetHeadersMap[article.platform as Platform])
+                                }
+
+                                let filePath: string | undefined
+                                if (
+                                    forwarderConfig.media.use?.tool === 'gallery-dl' &&
+                                    forwarderConfig.media.use.path
+                                ) {
+                                    const paths = galleryDownloadMediaFile(
+                                        url,
+                                        CACHE_DIR,
+                                        {
+                                            path: forwarderConfig.media.use.path,
+                                            cookie_file: forwarderConfig.media.use.cookieFile,
+                                        },
+                                        taskId,
+                                    )
+                                    if (paths.length > 0) {
+                                        filePath = paths[0]
+                                    }
+                                } else {
+                                    filePath = await plainDownloadMediaFile(url, CACHE_DIR, taskId, headers)
+                                }
+
+                                if (filePath) {
+                                    mediaFiles.push({
+                                        path: filePath,
+                                        media_type: type as MediaType,
+                                    })
+                                }
+                            } catch (mediaError) {
+                                jobLog.error(`Error downloading media: ${mediaError}`)
+                            }
+                        }
+                    }
+
+                    if (forwarderConfig.renderType?.startsWith('img')) {
+                        try {
+                            const imgBuffer = await articleConverter.articleToImg({
+                                ...article,
+                                content: article.content || '',
+                                created_at: article.created_at,
+                                media: article.media as any,
+                                extra: article.extra as any,
+                            } as any)
+
+                            const imgPath = writeImgToFile(
+                                imgBuffer,
+                                CACHE_DIR,
+                                `${taskId}-${article.a_id}-rendered.png`,
+                            )
+
+                            mediaFiles.unshift({
+                                path: imgPath,
+                                media_type: 'photo',
+                            })
+                            articleToImgSuccess = true
+                            jobLog.debug(`Converted article ${article.a_id} to image`)
+                        } catch (imgError) {
+                            jobLog.error(`Error converting article to image: ${imgError}`)
+                        }
+                    }
+
+                    const fullText = articleToText({
+                        ...article,
+                        content: article.content || '',
+                        created_at: article.created_at,
+                    })
+
+                    let text = articleToImgSuccess
+                        ? formatMetaline({
+                              ...article,
+                              content: article.content || '',
+                              created_at: article.created_at,
+                          } as any)
+                        : fullText
+
+                    text = forwarderConfig.renderType === 'img' ? '' : text
+
+                    await forwarder.send(text, {
+                        media: mediaFiles,
+                        article: {
+                            ...article,
+                            content: article.content || '',
+                            created_at: article.created_at,
+                        } as any,
+                        timestamp: article.created_at,
+                        runtime_config: target.runtime_config,
+                    })
+
+                    let currentArticleId: number | null = article.id
+                    while (currentArticleId) {
                         await prisma.forward_by.create({
                             data: {
-                                ref_id: article.id,
-                                bot_id: targetId,
+                                ref_id: currentArticleId,
+                                bot_id: target.id,
                                 task_type: 'article',
                             },
                         })
-                        successCount++
-                        jobLog.debug(`Marked article ${article.a_id} as forwarded to ${targetId}`)
+
+                        const refArticle = await prisma.crawler_article.findUnique({
+                            where: { id: currentArticleId },
+                        })
+
+                        if (refArticle && refArticle.ref && typeof refArticle.ref === 'number') {
+                            currentArticleId = refArticle.ref
+                        } else {
+                            currentArticleId = null
+                        }
                     }
-                } catch (targetError) {
-                    jobLog.error(`Error forwarding to ${targetId}: ${targetError}`)
+
+                    successCount++
+                    jobLog.info(`Forwarded article ${article.a_id} to ${target.id}`)
+                } catch (articleError) {
+                    jobLog.error(`Error forwarding article ${article.a_id} to ${target.id}: ${articleError}`)
                     errorCount++
+                } finally {
+                    if (mediaFiles.length > 0) {
+                        cleanupMediaFiles(mediaFiles.map((f) => f.path))
+                        jobLog.debug(`Cleaned up ${mediaFiles.length} media files`)
+                    }
                 }
             }
-
-            await job.updateProgress(((articles.indexOf(article) + 1) / articles.length) * 100)
-        } catch (error) {
-            jobLog.error(`Error processing article ${article.a_id}: ${error}`)
+        } catch (targetError) {
+            jobLog.error(`Error initializing forwarder for ${target.id}: ${targetError}`)
             errorCount++
         }
+
+        await job.updateProgress(((forwarderConfig.targets.indexOf(target) + 1) / forwarderConfig.targets.length) * 100)
     }
 
     jobLog.info(`Forwarder job completed: ${successCount} forwarded, ${errorCount} errors`)

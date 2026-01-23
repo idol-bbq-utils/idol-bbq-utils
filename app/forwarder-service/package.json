@@ -13,13 +13,13 @@
         "db:generate": "bunx prisma generate"
     },
     "dependencies": {
+        "@idol-bbq-utils/forwarder": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/render": "workspace:^",
-        "@prisma/client": "^6.3.0",
-        "axios": "^1.7.2",
-        "form-data": "^4.0.0",
-        "telegraf": "^4.16.3"
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+        "@prisma/client": "^6.3.0"
     },
     "devDependencies": {
         "@types/node": "^22.15.3",

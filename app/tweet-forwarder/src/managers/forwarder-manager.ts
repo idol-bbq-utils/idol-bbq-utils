@@ -149,8 +149,33 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
                 forwarder.cfg_forwarder?.cron,
             )
 
-            const targets = forwarder.subscribers?.map((s) => (typeof s === 'string' ? s : s.id)) ?? []
             const media = forwarder.cfg_forwarder?.media
+
+            const targets = (forwarder.subscribers
+                ?.map((s: string | { id: string; cfg_forward_target?: any }) => {
+                    const targetId = typeof s === 'string' ? s : s.id
+                    const runtimeConfig = typeof s === 'object' ? s.cfg_forward_target : undefined
+
+                    const targetConfig = this.props.forward_targets?.find(
+                        (t: ForwardTarget) =>
+                            (t.id ||
+                                `${t.platform}-${crypto.createHash('md5').update(JSON.stringify(t)).digest('hex')}`) ===
+                            targetId,
+                    )
+
+                    if (!targetConfig) {
+                        this.log?.warn(`Target ${targetId} not found in forward_targets config`)
+                        return null
+                    }
+
+                    return {
+                        id: targetId,
+                        platform: targetConfig.platform,
+                        cfg_platform: targetConfig.cfg_platform,
+                        runtime_config: runtimeConfig,
+                    }
+                })
+                .filter((t: any) => t !== null) ?? []) as import('@idol-bbq-utils/queue/jobs').ForwarderTarget[]
 
             const jobData: ForwarderJobData = {
                 type: 'forwarder',

@@ -1,6 +1,6 @@
 import type { ArticleLike } from '../article'
 import type { ForwardTargetPlatformCommonConfig } from '../types'
-import type { MediaType } from '@idol-bbq-utils/spider/types'
+import type { MediaType } from '@idol-bbq-utils/utils'
 
 /**
  * 中间件处理上下文

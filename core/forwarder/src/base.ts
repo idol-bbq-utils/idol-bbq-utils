@@ -2,7 +2,7 @@ import type { ArticleLike } from './article'
 import { type ForwardTarget, type ForwardTargetPlatformCommonConfig, ForwardTargetPlatformEnum } from './types'
 import { BaseCompatibleModel } from './base-model'
 import { Logger } from '@idol-bbq-utils/log'
-import type { MediaType } from '@idol-bbq-utils/spider/types'
+import type { MediaType } from '@idol-bbq-utils/utils'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { noop } from 'lodash'
 import {
