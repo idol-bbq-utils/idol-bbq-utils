@@ -3,6 +3,7 @@ import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { StorageJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
 import { PrismaClient } from '../prisma/client'
+import { pRetry } from '@idol-bbq-utils/utils'
 
 const log = createLogger({ defaultMeta: { service: 'StorageService' } })
 
@@ -19,14 +20,32 @@ interface StorageServiceConfig {
 const prisma = new PrismaClient()
 
 async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
-    const { taskId, crawlerTaskId, articles } = job.data
+    const { taskId, crawlerTaskId, articles, translatorConfig } = job.data
     const jobLog = log.child({ taskId, crawlerTaskId })
 
     jobLog.info(`Processing storage job: ${articles.length} articles`)
 
     const savedIds: number[] = []
     let errorCount = 0
+    let translator: any = undefined
 
+    // 1. 如果配置了翻译器，初始化翻译器
+    if (translatorConfig) {
+        try {
+            const { translatorRegistry } = await import('@idol-bbq-utils/translator')
+            translator = await translatorRegistry.create(
+                translatorConfig.provider,
+                translatorConfig.apiKey,
+                jobLog,
+                translatorConfig.config,
+            )
+            jobLog.info(`Translator initialized: ${translatorConfig.provider}`)
+        } catch (error) {
+            jobLog.error(`Failed to initialize translator: ${error}`)
+        }
+    }
+
+    // 2. 遍历每篇文章：判重 → 翻译（如果是新文章）→ 存储
     for (const article of articles) {
         try {
             const exists = await prisma.crawler_article.findFirst({
@@ -37,6 +56,30 @@ async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
             })
 
             if (!exists) {
+                // ⭐ 新文章：先翻译再保存
+                let translation = article.translation
+                let translated_by = article.translated_by
+
+                if (translator && !translation) {
+                    try {
+                        translation = await pRetry(() => translator.translate(article.content), {
+                            retries: 3,
+                            onFailedAttempt: (error) => {
+                                jobLog.warn(
+                                    `Translation failed for ${article.a_id}, ${error.retriesLeft} retries left: ${error.message}`,
+                                )
+                            },
+                        })
+                        translated_by = translatorConfig?.provider
+                        jobLog.debug(`Translated article ${article.a_id}`)
+                    } catch (error) {
+                        jobLog.error(`Translation error for ${article.a_id}: ${error}`)
+                        translation = '[Translation Error]'
+                        translated_by = translatorConfig?.provider
+                    }
+                }
+
+                // 保存文章（包含翻译）
                 const saved = await prisma.crawler_article.create({
                     data: {
                         platform: article.platform,
@@ -45,8 +88,8 @@ async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
                         username: article.username,
                         created_at: article.created_at,
                         content: article.content,
-                        translation: article.translation,
-                        translated_by: article.translated_by,
+                        translation: translation || null,
+                        translated_by: translated_by || null,
                         url: article.url,
                         type: article.type,
                         has_media: article.has_media,
@@ -100,11 +143,11 @@ async function main() {
     })
 
     worker.on('completed', (job) => {
-        log.info(`✅ Job ${job.id} completed`)
+        log.info(`Job ${job.id} completed`)
     })
 
     worker.on('failed', (job, err) => {
-        log.error(`❌ Job ${job?.id} failed: ${err.message}`)
+        log.error(`Job ${job?.id} failed: ${err.message}`)
     })
 
     worker.on('error', (err) => {

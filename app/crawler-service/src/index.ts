@@ -161,6 +161,7 @@ async function processCrawlerJob(
                 taskId: `${taskId}-storage`,
                 crawlerTaskId: taskId,
                 articles: allArticles,
+                translatorConfig: config.translator,
             }
             await storageQueue.add('store', storageJobData, {
                 jobId: `${taskId}-storage`,
@@ -212,11 +213,11 @@ async function main() {
     })
 
     worker.on('completed', (job) => {
-        log.info(`✅ Job ${job.id} completed`)
+        log.info(`Job ${job.id} completed`)
     })
 
     worker.on('failed', (job, err) => {
-        log.error(`❌ Job ${job?.id} failed: ${err.message}`)
+        log.error(`Job ${job?.id} failed: ${err.message}`)
     })
 
     worker.on('error', (err) => {

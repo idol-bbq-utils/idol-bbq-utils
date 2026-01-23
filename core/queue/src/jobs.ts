@@ -58,6 +58,11 @@ export interface StorageJobData {
     taskId: string
     crawlerTaskId: string
     articles: ArticleData[]
+    translatorConfig?: {
+        provider: string
+        apiKey: string
+        config?: Record<string, unknown>
+    }
 }
 
 export interface ForwarderJobData {

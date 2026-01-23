@@ -1,0 +1,34 @@
+{
+    "name": "@idol-bbq-utils/translator",
+    "version": "0.3.0",
+    "description": "Multi-provider LLM translation service",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "main": "src/index.ts",
+    "directories": {
+        "lib": "lib"
+    },
+    "files": [
+        "lib"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
+    },
+    "bugs": {
+        "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+    },
+    "dependencies": {
+        "@google/generative-ai": "^0.14.1",
+        "@idol-bbq-utils/log": "workspace:^",
+        "axios": "^1.7.2",
+        "lodash": "^4.17.21"
+    },
+    "devDependencies": {
+        "@types/lodash": "^4.17.6"
+    }
+}
