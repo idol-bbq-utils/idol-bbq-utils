@@ -31,6 +31,7 @@
     },
     "dependencies": {
         "@google/generative-ai": "^0.14.1",
+        "@idol-bbq-utils/forwarder": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/render": "workspace:^",
