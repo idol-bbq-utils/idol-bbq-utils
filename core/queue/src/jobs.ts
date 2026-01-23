@@ -1,4 +1,4 @@
-import type { Platform, TaskType, CrawlEngine } from '@idol-bbq-utils/spider/types'
+import type { Platform, TaskType, CrawlEngine, GenericArticle, GenericFollows } from '@idol-bbq-utils/spider/types'
 import type { ForwardTargetPlatformEnum } from '@idol-bbq-utils/forwarder'
 
 export interface ForwarderTarget {
@@ -44,28 +44,18 @@ export interface CrawlerJobData {
     }
 }
 
-export interface ArticleData {
-    platform: Platform
-    a_id: string
-    u_id: string
-    username: string
-    content: string
-    translation?: string
-    translated_by?: string
-    url: string
-    type: string
-    created_at: number
-    has_media: boolean
-    media?: Array<{ url: string; type: string; alt?: string }>
-    ref?: unknown
-    extra?: unknown
-}
+export type SpiderArticleResult = GenericArticle<Platform>
+
+export type SpiderFollowsResult = GenericFollows
+
+export type SpiderResult = SpiderArticleResult | SpiderFollowsResult
 
 export interface StorageJobData {
     type: 'storage'
     taskId: string
     crawlerTaskId: string
-    articles: ArticleData[]
+    taskType: TaskType
+    data: SpiderResult[]
     translatorConfig?: {
         provider: string
         apiKey: string

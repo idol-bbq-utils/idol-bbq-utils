@@ -1,9 +1,12 @@
 import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
-import type { StorageJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
+import type { StorageJobData, JobResult, SpiderArticleResult, SpiderFollowsResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
 import { prisma } from '@idol-bbq-utils/db/client'
+import DB from '@idol-bbq-utils/db'
+import type { Article } from '@idol-bbq-utils/db'
 import { pRetry } from '@idol-bbq-utils/utils'
+import { BaseTranslator, TRANSLATION_ERROR_FALLBACK } from '@idol-bbq-utils/translator'
 
 const log = createLogger({ defaultMeta: { service: 'StorageService' } })
 
@@ -17,18 +20,177 @@ interface StorageServiceConfig {
     concurrency?: number
 }
 
-async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
-    const { taskId, crawlerTaskId, articles, translatorConfig } = job.data
-    const jobLog = log.child({ taskId, crawlerTaskId })
+async function doTranslate(
+    article: Article,
+    translator: BaseTranslator,
+    jobLog: ReturnType<typeof log.child>,
+): Promise<Article> {
+    const { username, a_id } = article
+    jobLog.info(`[${username}] [${a_id}] Translating article...`)
 
-    jobLog.info(`Processing storage job: ${articles.length} articles`)
+    let currentArticle: Article | null = article
+    let articleNeedTobeTranslated: Array<Article> = []
 
+    while (currentArticle && typeof currentArticle === 'object') {
+        articleNeedTobeTranslated.push(currentArticle)
+        if (typeof currentArticle.ref !== 'string') {
+            currentArticle = currentArticle.ref as Article
+        } else {
+            currentArticle = null
+        }
+    }
+
+    jobLog.info(`[${username}] [${a_id}] Starting batch translating ${articleNeedTobeTranslated.length} articles...`)
+
+    await Promise.all(
+        articleNeedTobeTranslated.map(async (currentArticle) => {
+            const { a_id, username, platform } = currentArticle
+
+            const article_maybe_translated = await DB.Article.getByArticleCode(a_id, platform)
+
+            if (currentArticle.content && !BaseTranslator.isValidTranslation(article_maybe_translated?.translation)) {
+                const content = currentArticle.content
+                jobLog.info(`[${username}] [${a_id}] Starting to translate content...`)
+                const content_translation = await pRetry(() => translator.translate(content), {
+                    retries: 3,
+                    onFailedAttempt: (error) => {
+                        jobLog.warn(
+                            `[${username}] [${a_id}] Translation content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                        )
+                    },
+                })
+                    .then((res) => res)
+                    .catch((err) => {
+                        jobLog.error(`[${username}] [${a_id}] Error while translating content: ${err}`)
+                        return TRANSLATION_ERROR_FALLBACK
+                    })
+                jobLog.debug(`[${username}] [${a_id}] Translation content: ${content_translation}`)
+                jobLog.info(`[${username}] [${a_id}] Translation complete.`)
+                currentArticle.translation = content_translation
+                currentArticle.translated_by = translator.NAME
+            }
+
+            if (currentArticle.media) {
+                for (const [idx, media] of currentArticle.media.entries()) {
+                    if (
+                        media.alt &&
+                        !BaseTranslator.isValidTranslation(
+                            (article_maybe_translated?.media as unknown as Article['media'])?.[idx]?.translation,
+                        )
+                    ) {
+                        const alt = media.alt
+                        const caption_translation = await pRetry(() => translator.translate(alt), {
+                            retries: 3,
+                            onFailedAttempt: (error) => {
+                                jobLog.warn(
+                                    `[${username}] [${a_id}] Translation media alt failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                                )
+                            },
+                        })
+                            .then((res) => res)
+                            .catch((err) => {
+                                jobLog.error(`[${username}] [${a_id}] Error while translating media alt: ${err}`)
+                                return TRANSLATION_ERROR_FALLBACK
+                            })
+                        media.translation = caption_translation
+                        media.translated_by = translator.NAME
+                    }
+                }
+            }
+
+            if (currentArticle.extra) {
+                const extra_ref = currentArticle.extra
+                let { content, translation } = extra_ref
+                if (content && !BaseTranslator.isValidTranslation(translation)) {
+                    const content_translation = await pRetry(() => translator.translate(content), {
+                        retries: 3,
+                        onFailedAttempt: (error) => {
+                            jobLog.warn(
+                                `[${username}] [${a_id}] Translation extra content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                            )
+                        },
+                    })
+                        .then((res) => res)
+                        .catch((err) => {
+                            jobLog.error(`[${username}] [${a_id}] Error while translating extra content: ${err}`)
+                            return TRANSLATION_ERROR_FALLBACK
+                        })
+                    extra_ref.translation = content_translation
+                    extra_ref.translated_by = translator.NAME
+                }
+            }
+        }),
+    )
+
+    jobLog.info(`[${username}] [${a_id}] ${articleNeedTobeTranslated.length} Articles are translated.`)
+    return article
+}
+
+async function processArticleStorage(
+    articles: SpiderArticleResult[],
+    translator: BaseTranslator | undefined,
+    jobLog: ReturnType<typeof log.child>,
+): Promise<{ savedIds: number[]; errorCount: number }> {
     const savedIds: number[] = []
     let errorCount = 0
-    let translator: any = undefined
 
-    // 1. 如果配置了翻译器，初始化翻译器
-    if (translatorConfig) {
+    for (const article of articles) {
+        try {
+            const exists = await DB.Article.checkExist(article)
+
+            if (!exists) {
+                let translatedArticle = article
+                if (translator) {
+                    translatedArticle = await doTranslate(article, translator, jobLog)
+                }
+
+                const saved = await DB.Article.trySave(translatedArticle)
+                if (saved) {
+                    savedIds.push(saved.id)
+                    jobLog.debug(`Saved article ${article.a_id} with id ${saved.id}`)
+                }
+            } else {
+                jobLog.debug(`Article ${article.a_id} already exists, skipping`)
+            }
+        } catch (error) {
+            jobLog.error(`Error saving article ${article.a_id}: ${error}`)
+            errorCount++
+        }
+    }
+
+    return { savedIds, errorCount }
+}
+
+async function processFollowsStorage(
+    followsList: SpiderFollowsResult[],
+    jobLog: ReturnType<typeof log.child>,
+): Promise<{ savedIds: number[]; errorCount: number }> {
+    const savedIds: number[] = []
+    let errorCount = 0
+
+    for (const follows of followsList) {
+        try {
+            const saved = await DB.Follow.save(follows)
+            savedIds.push(saved.id)
+            jobLog.debug(`Saved follows for ${follows.username} with id ${saved.id}`)
+        } catch (error) {
+            jobLog.error(`Error saving follows for ${follows.username}: ${error}`)
+            errorCount++
+        }
+    }
+
+    return { savedIds, errorCount }
+}
+
+async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
+    const { taskId, crawlerTaskId, taskType, data, translatorConfig } = job.data
+    const jobLog = log.child({ taskId, crawlerTaskId, taskType })
+
+    jobLog.info(`Processing storage job: ${data.length} items (type: ${taskType})`)
+
+    let translator: BaseTranslator | undefined = undefined
+
+    if (translatorConfig && taskType === 'article') {
         try {
             const { translatorRegistry } = await import('@idol-bbq-utils/translator')
             translator = await translatorRegistry.create(
@@ -43,77 +205,29 @@ async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
         }
     }
 
-    // 2. 遍历每篇文章：判重 → 翻译（如果是新文章）→ 存储
-    for (const article of articles) {
-        try {
-            const exists = await prisma.crawler_article.findFirst({
-                where: {
-                    a_id: article.a_id,
-                    platform: article.platform,
-                },
-            })
+    let result: { savedIds: number[]; errorCount: number }
 
-            if (!exists) {
-                // ⭐ 新文章：先翻译再保存
-                let translation = article.translation
-                let translated_by = article.translated_by
-
-                if (translator && !translation) {
-                    try {
-                        translation = await pRetry(() => translator.translate(article.content), {
-                            retries: 3,
-                            onFailedAttempt: (error) => {
-                                jobLog.warn(
-                                    `Translation failed for ${article.a_id}, ${error.retriesLeft} retries left: ${error.message}`,
-                                )
-                            },
-                        })
-                        translated_by = translatorConfig?.provider
-                        jobLog.debug(`Translated article ${article.a_id}`)
-                    } catch (error) {
-                        jobLog.error(`Translation error for ${article.a_id}: ${error}`)
-                        translation = '[Translation Error]'
-                        translated_by = translatorConfig?.provider
-                    }
-                }
-
-                // 保存文章（包含翻译）
-                const saved = await prisma.crawler_article.create({
-                    data: {
-                        platform: article.platform,
-                        a_id: article.a_id,
-                        u_id: article.u_id,
-                        username: article.username,
-                        created_at: article.created_at,
-                        content: article.content,
-                        translation: translation || null,
-                        translated_by: translated_by || null,
-                        url: article.url,
-                        type: article.type,
-                        has_media: article.has_media,
-                        media: article.media ? JSON.parse(JSON.stringify(article.media)) : null,
-                        extra: article.extra ? JSON.parse(JSON.stringify(article.extra)) : null,
-                    },
-                })
-                savedIds.push(saved.id)
-                jobLog.debug(`Saved article ${article.a_id}`)
-            } else {
-                jobLog.debug(`Article ${article.a_id} already exists, skipping`)
-            }
-
-            await job.updateProgress(((articles.indexOf(article) + 1) / articles.length) * 100)
-        } catch (error) {
-            jobLog.error(`Error saving article ${article.a_id}: ${error}`)
-            errorCount++
+    if (taskType === 'article') {
+        result = await processArticleStorage(data as SpiderArticleResult[], translator, jobLog)
+        await job.updateProgress(100)
+    } else if (taskType === 'follows') {
+        result = await processFollowsStorage(data as SpiderFollowsResult[], jobLog)
+        await job.updateProgress(100)
+    } else {
+        jobLog.error(`Unknown task type: ${taskType}`)
+        return {
+            success: false,
+            count: 0,
+            error: `Unknown task type: ${taskType}`,
         }
     }
 
-    jobLog.info(`Storage job completed: ${savedIds.length} saved, ${errorCount} errors`)
+    jobLog.info(`Storage job completed: ${result.savedIds.length} saved, ${result.errorCount} errors`)
 
     return {
-        success: errorCount === 0,
-        count: savedIds.length,
-        data: { savedIds, errorCount },
+        success: result.errorCount === 0,
+        count: result.savedIds.length,
+        data: { savedIds: result.savedIds, errorCount: result.errorCount },
     }
 }
 

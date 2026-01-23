@@ -1,6 +1,6 @@
 import { createLogger } from '@idol-bbq-utils/log'
 import { createCrawlerWorker, QueueManager, QueueName, type Job } from '@idol-bbq-utils/queue'
-import type { CrawlerJobData, JobResult, ArticleData, StorageJobData } from '@idol-bbq-utils/queue/jobs'
+import type { CrawlerJobData, JobResult, SpiderResult, StorageJobData } from '@idol-bbq-utils/queue/jobs'
 import { spiderRegistry, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
 import puppeteer, { type Browser, type Page } from 'puppeteer-core'
 import { pRetry } from '@idol-bbq-utils/utils'
@@ -86,7 +86,7 @@ async function processCrawlerJob(
     jobLog.info(`Processing crawler job: ${websites.length} websites`)
 
     let page: Page | undefined
-    const allArticles: ArticleData[] = []
+    const results: SpiderResult[] = []
 
     try {
         const needsBrowser = !config.engine?.startsWith('api')
@@ -125,7 +125,7 @@ async function processCrawlerJob(
                     await new Promise((r) => setTimeout(r, delay))
                 }
 
-                const articles = await pRetry(
+                const cur_results = await pRetry(
                     () =>
                         spider.crawl(website, page, taskId, {
                             task_type: taskType,
@@ -141,12 +141,10 @@ async function processCrawlerJob(
                             )
                         },
                     },
-                )
+                ) as Array<SpiderResult>
 
-                if (Array.isArray(articles)) {
-                    allArticles.push(...(articles as ArticleData[]))
-                }
-                jobLog.info(`Crawled ${website}: ${Array.isArray(articles) ? articles.length : 1} items`)
+                results?.push(...cur_results)
+                jobLog.info(`Crawled ${website}: ${cur_results.length} items`)
 
                 await job.updateProgress(((websites.indexOf(website) + 1) / websites.length) * 100)
             } catch (error) {
@@ -154,25 +152,26 @@ async function processCrawlerJob(
             }
         }
 
-        if (allArticles.length > 0) {
+        if (results.length > 0) {
             const storageQueue = queueManager.getQueue(QueueName.STORAGE)
             const storageJobData: StorageJobData = {
                 type: 'storage',
                 taskId: `${taskId}-storage`,
                 crawlerTaskId: taskId,
-                articles: allArticles,
+                data: results,
+                taskType: taskType,
                 translatorConfig: config.translator,
             }
             await storageQueue.add('store', storageJobData, {
                 jobId: `${taskId}-storage`,
             })
-            jobLog.info(`Dispatched ${allArticles.length} articles to storage queue`)
+            jobLog.info(`Dispatched ${results.length} items to storage queue`)
         }
 
         return {
             success: true,
-            count: allArticles.length,
-            data: { articlesCount: allArticles.length },
+            count: results.length,
+            data: { itemsCount: results.length },
         }
     } finally {
         if (page) {
