@@ -1,0 +1,28 @@
+{
+    "name": "@idol-bbq-utils/forwarder-service",
+    "version": "0.1.0",
+    "description": "Standalone forwarder worker service for distributed deployment",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "main": "src/index.ts",
+    "scripts": {
+        "dev": "bun src/index.ts",
+        "start": "bun src/index.ts",
+        "build": "bun build src/index.ts --outdir=./build --target=bun --minify",
+        "db:generate": "bunx prisma generate"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
+        "@prisma/client": "^6.3.0",
+        "axios": "^1.7.2",
+        "form-data": "^4.0.0",
+        "telegraf": "^4.16.3"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.3",
+        "prisma": "^6.3.0"
+    }
+}

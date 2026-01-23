@@ -3,7 +3,7 @@ import { spiderRegistry } from '@idol-bbq-utils/spider'
 import { CronJob } from 'cron'
 import EventEmitter from 'events'
 import { BaseCompatibleModel, sanitizeWebsites, TaskScheduler } from '@/utils/base'
-import type { AppConfig } from '@/types'
+import type { AppConfig, QueueModeConfig } from '@/types'
 import { Platform, type MediaType, type TaskType } from '@idol-bbq-utils/spider/types'
 import DB from '@/db'
 import type { Article, ArticleWithId, DBFollows } from '@/db'
@@ -24,6 +24,8 @@ import { existsSync, unlinkSync } from 'fs'
 import dayjs from 'dayjs'
 import { cloneDeep, orderBy } from 'lodash'
 import { platformPresetHeadersMap } from '@idol-bbq-utils/spider/const'
+import { QueueManager, QueueName, generateJobId, getLockKey, acquireLock, releaseLock } from '@idol-bbq-utils/queue'
+import type { ForwarderJobData } from '@idol-bbq-utils/queue/jobs'
 
 type Forwarder = RealForwarder<TaskType>
 
@@ -46,12 +48,27 @@ interface CrawlerTaskResult {
 class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
     NAME: string = 'ForwarderTaskScheduler'
     protected log?: Logger
-    private props: Pick<AppConfig, 'cfg_forwarder' | 'forwarders'>
+    private props: Pick<AppConfig, 'cfg_forwarder' | 'forwarders' | 'forward_targets'>
+    private queueManager?: QueueManager
+    private useQueueMode: boolean = false
 
-    constructor(props: Pick<AppConfig, 'cfg_forwarder' | 'forwarders'>, emitter: EventEmitter, log?: Logger) {
+    constructor(
+        props: Pick<AppConfig, 'cfg_forwarder' | 'forwarders' | 'forward_targets'>,
+        emitter: EventEmitter,
+        log?: Logger,
+        queueConfig?: QueueModeConfig,
+    ) {
         super(emitter)
         this.log = log?.child({ subservice: this.NAME })
         this.props = props
+
+        if (queueConfig?.enabled) {
+            this.useQueueMode = true
+            this.queueManager = new QueueManager({
+                redis: queueConfig.redis,
+            })
+            this.log?.info('Queue mode enabled')
+        }
     }
 
     async init() {
@@ -62,12 +79,12 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
             return
         }
 
-        // 注册基本的监听器
-        for (const [eventName, listener] of Object.entries(this.taskHandlers)) {
-            this.emitter.on(`forwarder:${eventName}`, listener)
+        if (!this.useQueueMode) {
+            for (const [eventName, listener] of Object.entries(this.taskHandlers)) {
+                this.emitter.on(`forwarder:${eventName}`, listener)
+            }
         }
 
-        // 遍历爬虫配置，为每个爬虫创建定时任务
         for (const forwarder of this.props.forwarders) {
             forwarder.cfg_forwarder = {
                 cron: '*/30 * * * *',
@@ -82,24 +99,139 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
             }
             const { cron } = forwarder.cfg_forwarder
             const { task_title, name } = forwarder
-            // 定时dispatch任务
             const job = new CronJob(cron as string, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
                 this.log?.info(`starting to dispatch task ${[name, task_title].filter(Boolean).join(' ')}...`)
-                const task: TaskScheduler.Task = {
-                    id: taskId,
-                    status: TaskScheduler.TaskStatus.PENDING,
-                    data: forwarder,
+
+                if (this.useQueueMode && this.queueManager) {
+                    await this.dispatchToQueue(taskId, forwarder)
+                } else {
+                    this.dispatchToEmitter(taskId, forwarder)
                 }
-                this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.DISPATCH}`, {
-                    taskId,
-                    task: task,
-                })
-                this.tasks.set(taskId, task)
             })
             this.log?.debug(`Task dispatcher created with detail: ${JSON.stringify(forwarder)}`)
             this.cronJobs.push(job)
         }
+    }
+
+    private async dispatchToQueue(taskId: string, forwarder: Forwarder): Promise<void> {
+        if (!this.queueManager) return
+
+        const websites = sanitizeWebsites({
+            websites: forwarder.websites,
+            origin: forwarder.origin,
+            paths: forwarder.paths,
+        })
+
+        const lockKey = getLockKey('forwarder', forwarder.name || 'unnamed')
+        const redis = this.queueManager.getConnection()
+
+        const acquired = await acquireLock(redis, lockKey, taskId, 60)
+        if (!acquired) {
+            this.log?.debug(`[${taskId}] Lock not acquired for ${forwarder.name}, another scheduler is processing`)
+            return
+        }
+
+        try {
+            const articleIds = await this.queryPendingArticleIds(websites, forwarder)
+
+            if (articleIds.length === 0) {
+                this.log?.debug(`[${taskId}] No pending articles for ${forwarder.name || 'unnamed'}`)
+                return
+            }
+
+            const jobId = generateJobId(
+                'forwarder',
+                `${forwarder.name}:${websites.join(',')}`,
+                forwarder.cfg_forwarder?.cron,
+            )
+
+            const targets = forwarder.subscribers?.map((s) => (typeof s === 'string' ? s : s.id)) ?? []
+            const media = forwarder.cfg_forwarder?.media
+
+            const jobData: ForwarderJobData = {
+                type: 'forwarder',
+                taskId,
+                storageTaskId: taskId,
+                articleIds,
+                urls: websites,
+                forwarderConfig: {
+                    targets,
+                    renderType: forwarder.cfg_forwarder?.render_type,
+                    media: media
+                        ? {
+                              type: media.type,
+                              use: media.use
+                                  ? {
+                                        tool: media.use.tool,
+                                        path: 'path' in media.use ? media.use.path : undefined,
+                                        cookieFile: 'cookie_file' in media.use ? media.use.cookie_file : undefined,
+                                    }
+                                  : undefined,
+                          }
+                        : undefined,
+                },
+            }
+
+            const forwarderQueue = this.queueManager.getQueue(QueueName.FORWARDER)
+            await forwarderQueue.add('forward', jobData, {
+                jobId,
+            })
+
+            this.log?.info(
+                `[${taskId}] Dispatched ${articleIds.length} articles to forwarder queue: ${forwarder.name} (jobId: ${jobId.substring(0, 8)}...)`,
+            )
+        } finally {
+            await releaseLock(redis, lockKey, taskId)
+        }
+    }
+
+    private async queryPendingArticleIds(websites: string[], forwarder: Forwarder): Promise<number[]> {
+        const articleIdsSet: Set<number> = new Set()
+        const targets = forwarder.subscribers?.map((s) => (typeof s === 'string' ? s : s.id)) ?? []
+
+        for (const website of websites) {
+            const { u_id, platform } = spiderRegistry.extractBasicInfo(website) ?? {}
+            if (!u_id || !platform) continue
+
+            const articles = await DB.Article.getArticlesByName(u_id, platform)
+            if (articles.length === 0) continue
+
+            const articleIdList = articles.map((a) => a.id)
+
+            const forwardedRecords = await DB.ForwardBy.batchCheckExist(articleIdList, targets, 'article')
+
+            const forwardedMap = new Map<number, Set<string>>()
+            for (const record of forwardedRecords) {
+                if (!forwardedMap.has(record.ref_id)) {
+                    forwardedMap.set(record.ref_id, new Set())
+                }
+                forwardedMap.get(record.ref_id)!.add(record.bot_id)
+            }
+
+            for (const article of articles) {
+                const forwardedTargets = forwardedMap.get(article.id) || new Set()
+                const needsForwarding = targets.some((t) => !forwardedTargets.has(t))
+                if (needsForwarding) {
+                    articleIdsSet.add(article.id)
+                }
+            }
+        }
+
+        return Array.from(articleIdsSet)
+    }
+
+    private dispatchToEmitter(taskId: string, forwarder: Forwarder): void {
+        const task: TaskScheduler.Task = {
+            id: taskId,
+            status: TaskScheduler.TaskStatus.PENDING,
+            data: forwarder,
+        }
+        this.emitter.emit(`forwarder:${TaskScheduler.TaskEvent.DISPATCH}`, {
+            taskId,
+            task: task,
+        })
+        this.tasks.set(taskId, task)
     }
 
     /**
@@ -127,9 +259,14 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
     }
 
     async drop() {
-        // 清除所有任务
         this.tasks.clear()
-        this.emitter.removeAllListeners()
+        if (!this.useQueueMode) {
+            this.emitter.removeAllListeners()
+        }
+        if (this.queueManager) {
+            await this.queueManager.close()
+            this.log?.info('Queue manager closed')
+        }
         this.log?.info('Manager dropped')
     }
 

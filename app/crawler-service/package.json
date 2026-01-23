@@ -1,0 +1,24 @@
+{
+    "name": "@idol-bbq-utils/crawler-service",
+    "version": "0.1.0",
+    "description": "Standalone crawler worker service for distributed deployment",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "main": "src/index.ts",
+    "scripts": {
+        "dev": "bun src/index.ts",
+        "start": "bun src/index.ts",
+        "build": "bun build src/index.ts --outdir=./build --target=bun --minify"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+        "puppeteer-core": "^24.6.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.3"
+    }
+}

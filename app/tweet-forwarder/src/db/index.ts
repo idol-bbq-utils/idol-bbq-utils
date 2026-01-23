@@ -191,6 +191,17 @@ namespace DB {
             })
         }
 
+        export async function batchCheckExist(articleIds: number[], targetIds: string[], taskType: string) {
+            return await prisma.forward_by.findMany({
+                where: {
+                    ref_id: { in: articleIds },
+                    bot_id: { in: targetIds },
+                    task_type: taskType,
+                },
+                select: { ref_id: true, bot_id: true },
+            })
+        }
+
         export async function save(ref_id: number, bot_id: string, task_type: string) {
             let exist_one = await checkExist(ref_id, bot_id, task_type)
             if (exist_one) {
