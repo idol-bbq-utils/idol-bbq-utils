@@ -1,0 +1,50 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Temp files
+.tmp
+tmp
+*.tmp
+
+# Git
+.git
+.gitignore
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage
+.nyc_output
+
+# Misc
+*.pid
+*.seed
+*.pid.lock

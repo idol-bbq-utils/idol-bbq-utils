@@ -10,7 +10,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
-COPY ./app/tweet-forwarder ./app/tweet-forwarder
+COPY ./app ./app
 COPY ./core ./core
 COPY ./assets/fonts ./assets/fonts
 

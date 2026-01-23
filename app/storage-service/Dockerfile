@@ -7,7 +7,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
-COPY ./app/storage-service ./app/storage-service
+COPY ./app ./app
 COPY ./core ./core
 
 ENV DATABASE_URL="file:/app/data.db"

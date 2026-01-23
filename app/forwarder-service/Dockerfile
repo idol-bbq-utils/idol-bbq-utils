@@ -7,7 +7,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
-COPY ./app/forwarder-service ./app/forwarder-service
+COPY ./app ./app
 COPY ./core ./core
 COPY ./assets/fonts ./assets/fonts
 

@@ -5,7 +5,7 @@ FROM base AS builder
 
 WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
-COPY ./app/crawler-service ./app/crawler-service
+COPY ./app ./app
 COPY ./core ./core
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
