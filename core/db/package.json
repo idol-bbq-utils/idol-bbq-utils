@@ -32,7 +32,8 @@
     "scripts": {
         "generate": "prisma generate --schema=./prisma/schema.prisma",
         "migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
-        "studio": "prisma studio --schema=./prisma/schema.prisma"
+        "studio": "prisma studio --schema=./prisma/schema.prisma",
+        "postinstall": "bun run generate"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
