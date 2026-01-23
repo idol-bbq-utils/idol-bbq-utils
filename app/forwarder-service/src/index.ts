@@ -2,7 +2,8 @@ import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { ForwarderJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
-import { prisma } from '@idol-bbq-utils/db/client'
+import DB from '@idol-bbq-utils/db'
+import type { Article, ArticleWithId } from '@idol-bbq-utils/db'
 import { articleToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { getForwarder } from '@idol-bbq-utils/forwarder'
 import {
@@ -10,10 +11,12 @@ import {
     galleryDownloadMediaFile,
     writeImgToFile,
     cleanupMediaFiles,
+    getMediaType,
+    tryGetCookie,
 } from '@idol-bbq-utils/utils'
-import { Platform } from '@idol-bbq-utils/spider/types'
-import type { MediaType } from '@idol-bbq-utils/utils'
+import { Platform, type MediaType } from '@idol-bbq-utils/spider/types'
 import { platformPresetHeadersMap } from '@idol-bbq-utils/spider/const'
+import { cloneDeep } from 'lodash'
 import fs from 'fs'
 import path from 'path'
 
@@ -31,19 +34,125 @@ interface ForwarderServiceConfig {
     concurrency?: number
 }
 
+const MAX_ERROR_COUNT = 3
+const errorCounter = new Map<string, number>()
+
+async function handleMedia(
+    article: Article,
+    forwarderConfig: ForwarderJobData['forwarderConfig'],
+    taskId: string,
+    jobLog: ReturnType<typeof log.child>,
+): Promise<Array<{ path: string; media_type: MediaType }>> {
+    const maybe_media_files: Array<{ path: string; media_type: MediaType }> = []
+
+    if (!forwarderConfig.media) {
+        return maybe_media_files
+    }
+
+    let currentArticle: Article | null = article
+
+    while (currentArticle) {
+        if (currentArticle.has_media) {
+            jobLog.debug(`Downloading media files for article ${currentArticle.a_id}`)
+
+            let cookie: string | undefined = undefined
+            if ([Platform.TikTok].includes(currentArticle.platform)) {
+                cookie = await tryGetCookie(currentArticle.url)
+            }
+
+            const downloadWithHeaders = async (url: string, type: MediaType, overrideType?: boolean) => {
+                try {
+                    const headers: Record<string, string> = {
+                        ...(cookie ? { cookie } : {}),
+                        ...(currentArticle?.platform ? platformPresetHeadersMap[currentArticle.platform] : {}),
+                    }
+
+                    let filePath: string | undefined
+
+                    if (forwarderConfig.media?.use?.tool === 'gallery-dl' && forwarderConfig.media.use.path) {
+                        const paths = galleryDownloadMediaFile(
+                            url,
+                            CACHE_DIR,
+                            {
+                                path: forwarderConfig.media.use.path,
+                                cookie_file: forwarderConfig.media.use.cookieFile,
+                            },
+                            taskId,
+                        )
+                        if (paths.length > 0) {
+                            filePath = paths[0]
+                        }
+                    } else {
+                        filePath = await plainDownloadMediaFile(url, CACHE_DIR, taskId, headers)
+                    }
+
+                    if (filePath) {
+                        return {
+                            path: filePath,
+                            media_type: overrideType ? getMediaType(filePath) : type,
+                        }
+                    }
+                } catch (error) {
+                    jobLog.error(`Error downloading media file: ${error}, skipping ${url}`)
+                }
+                return undefined
+            }
+
+            if (currentArticle.media) {
+                const mediaArray = Array.isArray(currentArticle.media) ? currentArticle.media : []
+                const files = await Promise.all(
+                    mediaArray
+                        .filter((m) => m)
+                        .map((m) => {
+                            const url = typeof m === 'object' && 'url' in m ? String(m.url) : String(m)
+                            const type = (typeof m === 'object' && 'type' in m ? String(m.type) : 'photo') as MediaType
+                            return downloadWithHeaders(url, type)
+                        }),
+                )
+                maybe_media_files.push(...files.filter((f) => f !== undefined))
+            }
+
+            if (currentArticle.extra?.media) {
+                const extraMediaArray = Array.isArray(currentArticle.extra.media) ? currentArticle.extra.media : []
+                const extraFiles = await Promise.all(
+                    extraMediaArray
+                        .filter((m) => m)
+                        .map((m) => {
+                            const url = typeof m === 'object' && 'url' in m ? String(m.url) : String(m)
+                            const type = (typeof m === 'object' && 'type' in m ? String(m.type) : 'photo') as MediaType
+                            return downloadWithHeaders(url, type, true)
+                        }),
+                )
+                maybe_media_files.push(...extraFiles.filter((f) => f !== undefined))
+            }
+        }
+
+        if (currentArticle.ref && typeof currentArticle.ref === 'object') {
+            currentArticle = currentArticle.ref as Article
+        } else {
+            currentArticle = null
+        }
+    }
+
+    return maybe_media_files
+}
+
 async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResult> {
     const { taskId, storageTaskId, articleIds, forwarderConfig } = job.data
     const jobLog = log.child({ taskId, storageTaskId })
 
     jobLog.info(`Processing forwarder job: ${articleIds.length} articles to ${forwarderConfig.targets.length} targets`)
 
-    const articles = await prisma.crawler_article.findMany({
-        where: {
-            id: { in: articleIds },
-        },
-    })
+    const allArticles: ArticleWithId[] = []
 
-    if (articles.length === 0) {
+    for (const id of articleIds) {
+        const article = await DB.Article.getSingleArticle(id)
+        if (article) {
+            allArticles.push(article)
+        }
+    }
+
+    if (allArticles.length === 0) {
         jobLog.warn('No articles found for forwarding')
         return { success: true, count: 0 }
     }
@@ -65,90 +174,40 @@ async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResul
             const forwarder = new ForwarderClass(target.cfg_platform, target.id, jobLog)
             await forwarder.init()
 
-            for (const article of articles) {
+            for (const article of allArticles) {
                 let mediaFiles: Array<{ path: string; media_type: MediaType }> = []
 
                 try {
-                    const exists = await prisma.forward_by.findFirst({
-                        where: {
-                            ref_id: article.id,
-                            bot_id: target.id,
-                            task_type: 'article',
-                        },
-                    })
+                    const exists = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
 
                     if (exists) {
                         jobLog.debug(`Article ${article.a_id} already forwarded to ${target.id}`)
                         continue
                     }
 
+                    const article_is_blocked = forwarder.check_blocked('', {
+                        timestamp: article.created_at,
+                        runtime_config: target.runtime_config,
+                        article: cloneDeep(article),
+                    })
+
+                    if (article_is_blocked) {
+                        jobLog.warn(`Article ${article.a_id} is blocked by ${target.id}, marking as forwarded`)
+                        let currentArticle: ArticleWithId | null = article
+                        while (currentArticle && typeof currentArticle === 'object') {
+                            await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                            currentArticle = currentArticle.ref as ArticleWithId | null
+                        }
+                        continue
+                    }
+
                     let articleToImgSuccess = false
 
-                    if (forwarderConfig.media && article.has_media && article.media) {
-                        jobLog.debug(`Downloading media files for article ${article.a_id}`)
-
-                        const mediaArray = Array.isArray(article.media) ? article.media : []
-
-                        for (const mediaItem of mediaArray) {
-                            if (!mediaItem) continue
-
-                            try {
-                                const url =
-                                    typeof mediaItem === 'object' && 'url' in mediaItem && mediaItem.url
-                                        ? String(mediaItem.url)
-                                        : String(mediaItem)
-                                const type =
-                                    typeof mediaItem === 'object' && 'type' in mediaItem && mediaItem.type
-                                        ? String(mediaItem.type)
-                                        : 'photo'
-
-                                const headers: Record<string, string> = {}
-                                if (article.platform && platformPresetHeadersMap[article.platform as Platform]) {
-                                    Object.assign(headers, platformPresetHeadersMap[article.platform as Platform])
-                                }
-
-                                let filePath: string | undefined
-                                if (
-                                    forwarderConfig.media.use?.tool === 'gallery-dl' &&
-                                    forwarderConfig.media.use.path
-                                ) {
-                                    const paths = galleryDownloadMediaFile(
-                                        url,
-                                        CACHE_DIR,
-                                        {
-                                            path: forwarderConfig.media.use.path,
-                                            cookie_file: forwarderConfig.media.use.cookieFile,
-                                        },
-                                        taskId,
-                                    )
-                                    if (paths.length > 0) {
-                                        filePath = paths[0]
-                                    }
-                                } else {
-                                    filePath = await plainDownloadMediaFile(url, CACHE_DIR, taskId, headers)
-                                }
-
-                                if (filePath) {
-                                    mediaFiles.push({
-                                        path: filePath,
-                                        media_type: type as MediaType,
-                                    })
-                                }
-                            } catch (mediaError) {
-                                jobLog.error(`Error downloading media: ${mediaError}`)
-                            }
-                        }
-                    }
+                    mediaFiles = await handleMedia(article, forwarderConfig, taskId, jobLog)
 
                     if (forwarderConfig.renderType?.startsWith('img')) {
                         try {
-                            const imgBuffer = await articleConverter.articleToImg({
-                                ...article,
-                                content: article.content || '',
-                                created_at: article.created_at,
-                                media: article.media as any,
-                                extra: article.extra as any,
-                            } as any)
+                            const imgBuffer = await articleConverter.articleToImg(cloneDeep(article))
 
                             const imgPath = writeImgToFile(
                                 imgBuffer,
@@ -167,56 +226,63 @@ async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResul
                         }
                     }
 
-                    const fullText = articleToText({
-                        ...article,
-                        content: article.content || '',
-                        created_at: article.created_at,
-                    })
+                    const fullText = articleToText(article)
 
-                    let text = articleToImgSuccess
-                        ? formatMetaline({
-                              ...article,
-                              content: article.content || '',
-                              created_at: article.created_at,
-                          } as any)
-                        : fullText
+                    let text = articleToImgSuccess ? formatMetaline(article) : fullText
 
                     text = forwarderConfig.renderType === 'img' ? '' : text
 
-                    await forwarder.send(text, {
-                        media: mediaFiles,
-                        article: {
-                            ...article,
-                            content: article.content || '',
-                            created_at: article.created_at,
-                        } as any,
-                        timestamp: article.created_at,
-                        runtime_config: target.runtime_config,
-                    })
-
-                    let currentArticleId: number | null = article.id
-                    while (currentArticleId) {
-                        await prisma.forward_by.create({
-                            data: {
-                                ref_id: currentArticleId,
-                                bot_id: target.id,
-                                task_type: 'article',
-                            },
-                        })
-
-                        const refArticle = await prisma.crawler_article.findUnique({
-                            where: { id: currentArticleId },
-                        })
-
-                        if (refArticle && refArticle.ref && typeof refArticle.ref === 'number') {
-                            currentArticleId = refArticle.ref
-                        } else {
-                            currentArticleId = null
-                        }
+                    let currentArticle: ArticleWithId | null = article
+                    while (currentArticle && typeof currentArticle === 'object') {
+                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                        currentArticle = currentArticle.ref as ArticleWithId | null
                     }
 
-                    successCount++
-                    jobLog.info(`Forwarded article ${article.a_id} to ${target.id}`)
+                    let sendSuccess = false
+                    try {
+                        await forwarder.send(text, {
+                            media: mediaFiles,
+                            article: cloneDeep(article),
+                            timestamp: article.created_at,
+                            runtime_config: target.runtime_config,
+                        })
+                        sendSuccess = true
+                        successCount++
+                        jobLog.info(`Forwarded article ${article.a_id} to ${target.id}`)
+
+                        const errorKey = `${article.platform}:${article.a_id}`
+                        if (errorCounter.has(errorKey)) {
+                            errorCounter.delete(errorKey)
+                        }
+                    } catch (sendError) {
+                        jobLog.error(`Error sending article ${article.a_id} to ${target.id}: ${sendError}`)
+
+                        let currentArticle: ArticleWithId | null = article
+                        while (currentArticle && typeof currentArticle === 'object') {
+                            await DB.ForwardBy.deleteRecord(currentArticle.id, target.id, 'article')
+                            currentArticle = currentArticle.ref as ArticleWithId | null
+                        }
+
+                        const errorKey = `${article.platform}:${article.a_id}`
+                        const currentErrorCount = (errorCounter.get(errorKey) || 0) + 1
+
+                        if (currentErrorCount > MAX_ERROR_COUNT) {
+                            jobLog.error(
+                                `Error count exceeded for ${article.a_id} (${currentErrorCount} attempts), marking as forwarded to skip`,
+                            )
+                            let currentArticle: ArticleWithId | null = article
+                            while (currentArticle && typeof currentArticle === 'object') {
+                                await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                                currentArticle = currentArticle.ref as ArticleWithId | null
+                            }
+                            errorCounter.delete(errorKey)
+                        } else {
+                            errorCounter.set(errorKey, currentErrorCount)
+                            jobLog.warn(`Error count for ${article.a_id}: ${currentErrorCount}/${MAX_ERROR_COUNT}`)
+                        }
+
+                        errorCount++
+                    }
                 } catch (articleError) {
                     jobLog.error(`Error forwarding article ${article.a_id} to ${target.id}: ${articleError}`)
                     errorCount++
@@ -267,9 +333,6 @@ async function main() {
         }
     })
 
-    await prisma.$connect()
-    log.info('Database connected')
-
     const worker = new Worker<ForwarderJobData, JobResult>(QueueName.FORWARDER, processForwarderJob, {
         connection: config.redis,
         concurrency: config.concurrency,
@@ -296,7 +359,6 @@ async function main() {
     async function shutdown() {
         log.info('Shutting down...')
         await worker.close()
-        await prisma.$disconnect()
         log.info('Shutdown complete')
         process.exit(0)
     }
