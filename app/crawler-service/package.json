@@ -16,7 +16,9 @@
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
-        "puppeteer-core": "^24.6.0"
+        "@types/tmp": "^0.2.6",
+        "puppeteer-core": "^24.6.0",
+        "tmp": "^0.2.5"
     },
     "devDependencies": {
         "@types/node": "^22.15.3"

@@ -4,6 +4,9 @@ import type { CrawlerJobData, JobResult, ArticleData, StorageJobData } from '@id
 import { spiderRegistry, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
 import puppeteer, { type Browser, type Page } from 'puppeteer-core'
 import { pRetry } from '@idol-bbq-utils/utils'
+import tmp from 'tmp'
+
+tmp.setGracefulCleanup()
 
 const log = createLogger({ defaultMeta: { service: 'CrawlerService' } })
 
@@ -20,6 +23,7 @@ interface CrawlerServiceConfig {
 
 class BrowserPool {
     private browsers: Browser[] = []
+    private tmpDirs: tmp.DirResult[] = []
     private currentIndex = 0
     private maxBrowsers: number
 
@@ -30,10 +34,18 @@ class BrowserPool {
     async init(): Promise<void> {
         log.info(`Initializing browser pool with ${this.maxBrowsers} browsers...`)
         for (let i = 0; i < this.maxBrowsers; i++) {
+            const tmpDir = tmp.dirSync({
+                prefix: `puppeteer-${i}-`,
+                unsafeCleanup: true,
+            })
+            this.tmpDirs.push(tmpDir)
+            log.info(`Browser ${i + 1} userDataDir: ${tmpDir.name}`)
+
             const browser = await puppeteer.launch({
                 headless: true,
                 args: [process.env.NO_SANDBOX ? '--no-sandbox' : '', '--disable-dev-shm-usage'].filter(Boolean),
                 channel: 'chrome',
+                userDataDir: tmpDir.name,
             })
             this.browsers.push(browser)
             log.info(`Browser ${i + 1} launched`)
@@ -52,6 +64,13 @@ class BrowserPool {
     async close(): Promise<void> {
         log.info('Closing browser pool...')
         await Promise.all(this.browsers.map((b) => b.close()))
+        this.tmpDirs.forEach((tmpDir) => {
+            try {
+                tmpDir.removeCallback()
+            } catch (error) {
+                log.warn(`Failed to cleanup tmpDir: ${error}`)
+            }
+        })
         log.info('Browser pool closed')
     }
 }

@@ -23,26 +23,49 @@ async function main() {
     }
     const { crawlers, cfg_crawler, forward_targets, cfg_forward_target, forwarders, cfg_forwarder } = config
 
+    const queueMode = process.env.QUEUE_MODE === 'true'
+    const queueConfig = queueMode
+        ? {
+              enabled: true,
+              redis: {
+                  host: process.env.REDIS_HOST || 'localhost',
+                  port: parseInt(process.env.REDIS_PORT || '6379'),
+                  password: process.env.REDIS_PASSWORD,
+                  db: parseInt(process.env.REDIS_DB || '0'),
+              },
+          }
+        : undefined
+
+    if (queueMode) {
+        log.info('Queue mode enabled')
+        log.info(`Redis: ${queueConfig?.redis.host}:${queueConfig?.redis.port}`)
+    } else {
+        log.info('EventEmitter mode (standalone)')
+    }
+
     if (crawlers && crawlers.length > 0) {
-        const tmpDir = tmp.dirSync({
-            prefix: 'puppeteer-',
-            unsafeCleanup: true,
-        })
+        if (!queueMode) {
+            const tmpDir = tmp.dirSync({
+                prefix: 'puppeteer-',
+                unsafeCleanup: true,
+            })
 
-        log.info(`Puppeteer userDataDir: ${tmpDir.name}`)
+            log.info(`Puppeteer userDataDir: ${tmpDir.name}`)
 
-        const browser = await puppeteer.launch({
-            headless: true,
-            handleSIGINT: false,
-            handleSIGHUP: false,
-            handleSIGTERM: false,
-            args: [process.env.NO_SANDBOX ? '--no-sandbox' : '', '--disable-dev-shm-usage'].filter(Boolean),
-            channel: 'chrome',
-            userDataDir: tmpDir.name,
-        })
-        // @ts-ignore
-        const spiderPools = new SpiderPools(browser, emitter, log)
-        compatibleModels.push(spiderPools)
+            const browser = await puppeteer.launch({
+                headless: true,
+                handleSIGINT: false,
+                handleSIGHUP: false,
+                handleSIGTERM: false,
+                args: [process.env.NO_SANDBOX ? '--no-sandbox' : '', '--disable-dev-shm-usage'].filter(Boolean),
+                channel: 'chrome',
+                userDataDir: tmpDir.name,
+            })
+            // @ts-ignore
+            const spiderPools = new SpiderPools(browser, emitter, log)
+            compatibleModels.push(spiderPools)
+        }
+
         const spiderTaskScheduler = new SpiderTaskScheduler(
             {
                 crawlers,
@@ -50,11 +73,12 @@ async function main() {
             },
             emitter,
             log,
+            queueConfig,
         )
         taskSchedulers.push(spiderTaskScheduler)
     }
 
-    if (forward_targets && forward_targets.length > 0) {
+    if (forward_targets && forward_targets.length > 0 && !queueMode) {
         const forwarderPools = new ForwarderPools(
             {
                 forward_targets,
@@ -71,9 +95,11 @@ async function main() {
             {
                 forwarders,
                 cfg_forwarder,
+                forward_targets,
             },
             emitter,
             log,
+            queueConfig,
         )
         taskSchedulers.push(forwarderTaskScheduler)
     }
