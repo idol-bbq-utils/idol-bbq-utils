@@ -1,4 +1,4 @@
-import type { Article } from '@/db'
+import type { Article } from '@idol-bbq-utils/db'
 import type { MessageRenderer } from './types'
 
 export class PlainTextRenderer implements MessageRenderer {

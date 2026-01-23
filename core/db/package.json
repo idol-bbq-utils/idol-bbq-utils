@@ -1,0 +1,49 @@
+{
+    "name": "@idol-bbq-utils/db",
+    "version": "0.1.0",
+    "description": "Database layer with Prisma for idol-bbq-utils",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        },
+        "./client": {
+            "types": "./src/client.ts",
+            "default": "./src/client.ts"
+        }
+    },
+    "directories": {
+        "lib": "lib"
+    },
+    "files": [
+        "lib",
+        "prisma"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
+    },
+    "scripts": {
+        "generate": "prisma generate --schema=./prisma/schema.prisma",
+        "migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+        "studio": "prisma studio --schema=./prisma/schema.prisma"
+    },
+    "bugs": {
+        "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/render": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+        "@prisma/client": "^6.2.0"
+    },
+    "devDependencies": {
+        "prisma": "^6.2.0"
+    }
+}

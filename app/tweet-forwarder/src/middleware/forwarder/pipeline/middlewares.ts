@@ -1,9 +1,9 @@
 import type { ForwarderContext, ForwarderMiddleware } from './types'
-import { formatTime, getSubtractTime } from '@/utils/time'
+import { formatTime, getSubtractTime } from '@idol-bbq-utils/utils/time'
 import { isStringArrayArray } from '@/utils/typeguards'
 import { articleToText } from '@idol-bbq-utils/render'
 import { SimpleExpiringCache } from '@idol-bbq-utils/spider'
-import type { Article } from '@/db'
+import type { Article } from '@idol-bbq-utils/db'
 import dayjs from 'dayjs'
 
 export class TimeFilterMiddleware implements ForwarderMiddleware {

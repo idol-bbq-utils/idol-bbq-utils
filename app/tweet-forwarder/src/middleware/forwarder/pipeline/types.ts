@@ -1,4 +1,4 @@
-import type { Article } from '@/db'
+import type { Article } from '@idol-bbq-utils/db'
 import type { ForwardTargetPlatformCommonConfig } from '@/types/forwarder'
 import type { MediaType } from '@idol-bbq-utils/utils'
 

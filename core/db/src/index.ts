@@ -1,7 +1,7 @@
 import { Platform } from '@idol-bbq-utils/spider/types'
 import type { ArticleExtractType, GenericArticle, GenericFollows, GenericMediaInfo } from '@idol-bbq-utils/spider/types'
 import { prisma, Prisma } from './client'
-import { getSubtractTime } from '@/utils/time'
+import { getSubtractTime } from '@idol-bbq-utils/utils'
 import type { Article } from '@idol-bbq-utils/render/types'
 
 type ArticleWithId = Article & { id: number }

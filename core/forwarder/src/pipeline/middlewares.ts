@@ -1,5 +1,5 @@
 import type { ForwarderContext, ForwarderMiddleware } from './types'
-import { formatTime, getSubtractTime, isStringArrayArray } from '../utils'
+import { formatTime, getSubtractTime, isStringArrayArray } from '@idol-bbq-utils/utils/time'
 import { articleToText } from '@idol-bbq-utils/render'
 import { SimpleExpiringCache } from '@idol-bbq-utils/spider'
 import type { ArticleLike } from '../article'

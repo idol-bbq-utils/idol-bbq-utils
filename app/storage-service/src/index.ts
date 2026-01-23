@@ -2,7 +2,7 @@ import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { StorageJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
-import { PrismaClient } from '../prisma/client'
+import { prisma } from '@idol-bbq-utils/db/client'
 import { pRetry } from '@idol-bbq-utils/utils'
 
 const log = createLogger({ defaultMeta: { service: 'StorageService' } })
@@ -16,8 +16,6 @@ interface StorageServiceConfig {
     }
     concurrency?: number
 }
-
-const prisma = new PrismaClient()
 
 async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
     const { taskId, crawlerTaskId, articles, translatorConfig } = job.data

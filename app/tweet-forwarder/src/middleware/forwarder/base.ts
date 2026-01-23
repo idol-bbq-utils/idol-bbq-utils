@@ -1,5 +1,5 @@
 import { RETRY_LIMIT } from '@/config'
-import type { Article } from '@/db'
+import type { Article } from '@idol-bbq-utils/db'
 import {
     type ForwardTarget,
     type ForwardTargetPlatformCommonConfig,

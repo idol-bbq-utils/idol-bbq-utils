@@ -9,18 +9,16 @@
     "scripts": {
         "dev": "bun src/index.ts",
         "start": "bun src/index.ts",
-        "build": "bun build src/index.ts --outdir=./build --target=bun --minify",
-        "db:generate": "bunx prisma generate"
+        "build": "bun build src/index.ts --outdir=./build --target=bun --minify"
     },
     "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/translator": "workspace:^",
-        "@idol-bbq-utils/utils": "workspace:^",
-        "@prisma/client": "^6.3.0"
+        "@idol-bbq-utils/utils": "workspace:^"
     },
     "devDependencies": {
-        "@types/node": "^22.15.3",
-        "prisma": "^6.3.0"
+        "@types/node": "^22.15.3"
     }
 }

@@ -18,7 +18,6 @@ ENV PUPPETEER_SKIP_DOWNLOAD true
 ENV DATABASE_URL="file:/app/data.db"
 
 RUN bun install --filter "./app/tweet-forwarder" --filter "./core/*" --frozen-lockfile --production
-RUN bun --filter "@idol-bbq-utils/tweet-forwarder" db:generate-client
 RUN bun --filter "@idol-bbq-utils/tweet-forwarder" build
 
 FROM base AS runner
@@ -44,7 +43,7 @@ RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSI
 WORKDIR /app
 COPY --from=builder /app/app/tweet-forwarder/build/main.js /app/bin.js
 COPY --from=builder /app/app/tweet-forwarder/build/resvgjs* /app/
-COPY --from=builder /app/app/tweet-forwarder/prisma/client /app/prisma/client
+COPY --from=builder /app/core/db/prisma/client /app/prisma/client
 COPY --from=builder /app/assets/fonts /app/assets/fonts
 
 RUN chown -R bun:bun /app/

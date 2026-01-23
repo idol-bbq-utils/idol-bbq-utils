@@ -30,30 +30,30 @@
       "name": "@idol-bbq-utils/forwarder-service",
       "version": "0.1.0",
       "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/forwarder": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/render": "workspace:^",
-        "@prisma/client": "^6.3.0",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
       },
       "devDependencies": {
         "@types/node": "^22.15.3",
-        "prisma": "^6.3.0",
       },
     },
     "app/storage-service": {
       "name": "@idol-bbq-utils/storage-service",
       "version": "0.1.0",
       "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/translator": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
-        "@prisma/client": "^6.3.0",
       },
       "devDependencies": {
         "@types/node": "^22.15.3",
-        "prisma": "^6.3.0",
       },
     },
     "app/tweet-forwarder": {
@@ -61,6 +61,7 @@
       "version": "0.3.2",
       "dependencies": {
         "@google/generative-ai": "^0.14.1",
+        "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/forwarder": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
@@ -87,11 +88,25 @@
         "prisma": "^6.3.0",
       },
     },
+    "core/db": {
+      "name": "@idol-bbq-utils/db",
+      "version": "0.1.0",
+      "dependencies": {
+        "@idol-bbq-utils/render": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+        "@prisma/client": "^6.2.0",
+      },
+      "devDependencies": {
+        "prisma": "^6.2.0",
+      },
+    },
     "core/forwarder": {
       "name": "@idol-bbq-utils/forwarder",
       "version": "0.3.0",
       "dependencies": {
         "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
         "axios": "^1.7.2",
@@ -174,6 +189,7 @@
       "name": "@idol-bbq-utils/utils",
       "version": "0.3.0",
       "dependencies": {
+        "dayjs": "^1.11.13",
         "retry": "^0.13.1",
       },
       "devDependencies": {
@@ -235,6 +251,8 @@
     "@google/generative-ai": ["@google/generative-ai@0.14.1", "", {}, "sha512-pevEyZCb0Oc+dYNlSberW8oZBm4ofeTD5wN01TowQMhTwdAbGAnJMtQzoklh6Blq2AKsx8Ox6FWa44KioZLZiA=="],
 
     "@idol-bbq-utils/crawler-service": ["@idol-bbq-utils/crawler-service@workspace:app/crawler-service"],
+
+    "@idol-bbq-utils/db": ["@idol-bbq-utils/db@workspace:core/db"],
 
     "@idol-bbq-utils/forwarder": ["@idol-bbq-utils/forwarder@workspace:core/forwarder"],
 

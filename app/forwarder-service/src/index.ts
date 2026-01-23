@@ -2,7 +2,7 @@ import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { ForwarderJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
-import { PrismaClient } from '../prisma/client'
+import { prisma } from '@idol-bbq-utils/db/client'
 import { articleToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { getForwarder } from '@idol-bbq-utils/forwarder'
 import {
@@ -14,6 +14,8 @@ import {
 import { Platform } from '@idol-bbq-utils/spider/types'
 import type { MediaType } from '@idol-bbq-utils/utils'
 import { platformPresetHeadersMap } from '@idol-bbq-utils/spider/const'
+import fs from 'fs'
+import path from 'path'
 
 const log = createLogger({ defaultMeta: { service: 'ForwarderService' } })
 const CACHE_DIR = process.env.CACHE_DIR_ROOT || '/tmp'
@@ -28,8 +30,6 @@ interface ForwarderServiceConfig {
     }
     concurrency?: number
 }
-
-const prisma = new PrismaClient()
 
 async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResult> {
     const { taskId, storageTaskId, articleIds, forwarderConfig } = job.data
@@ -258,6 +258,14 @@ async function main() {
     log.info('Starting Forwarder Service...')
     log.info(`Redis: ${config.redis.host}:${config.redis.port}`)
     log.info(`Concurrency: ${config.concurrency}`)
+
+    const cacheDirs = [path.join(CACHE_DIR, 'media', 'plain'), path.join(CACHE_DIR, 'media', 'gallery-dl')]
+    cacheDirs.forEach((dir) => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+            log.info(`Created cache directory: ${dir}`)
+        }
+    })
 
     await prisma.$connect()
     log.info('Database connected')
