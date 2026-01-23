@@ -177,11 +177,14 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
                 })
                 .filter((t: any) => t !== null) ?? []) as import('@idol-bbq-utils/queue/jobs').ForwarderTarget[]
 
+            const taskType = forwarder.task_type || 'article'
+
             const jobData: ForwarderJobData = {
                 type: 'forwarder',
                 taskId,
                 storageTaskId: taskId,
-                articleIds,
+                taskType,
+                articleIds: taskType === 'article' ? articleIds : undefined,
                 urls: websites,
                 forwarderConfig: {
                     targets,
@@ -199,6 +202,13 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
                           }
                         : undefined,
                 },
+                followsConfig:
+                    taskType === 'follows'
+                        ? {
+                              taskTitle: forwarder.task_title,
+                              comparisonWindow: forwarder.cfg_task?.comparison_window || '1d',
+                          }
+                        : undefined,
             }
 
             const forwarderQueue = this.queueManager.getQueue(QueueName.FORWARDER)

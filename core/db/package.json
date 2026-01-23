@@ -42,9 +42,7 @@
         "@idol-bbq-utils/render": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
-        "@prisma/client": "^6.2.0"
-    },
-    "devDependencies": {
+        "@prisma/client": "^6.2.0",
         "prisma": "^6.2.0"
     }
 }

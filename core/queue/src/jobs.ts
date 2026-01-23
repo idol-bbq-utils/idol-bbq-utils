@@ -67,9 +67,14 @@ export interface ForwarderJobData {
     type: 'forwarder'
     taskId: string
     storageTaskId: string
-    articleIds: number[]
+    taskType: 'article' | 'follows'
+    articleIds?: number[]
     urls: string[]
     forwarderConfig: ForwarderConfig
+    followsConfig?: {
+        taskTitle?: string
+        comparisonWindow?: string
+    }
 }
 
 export type JobData = CrawlerJobData | StorageJobData | ForwarderJobData

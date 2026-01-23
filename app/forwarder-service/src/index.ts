@@ -3,8 +3,8 @@ import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { ForwarderJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
 import DB from '@idol-bbq-utils/db'
-import type { Article, ArticleWithId } from '@idol-bbq-utils/db'
-import { articleToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
+import type { Article, ArticleWithId, DBFollows } from '@idol-bbq-utils/db'
+import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { getForwarder } from '@idol-bbq-utils/forwarder'
 import {
     plainDownloadMediaFile,
@@ -16,9 +16,12 @@ import {
 } from '@idol-bbq-utils/utils'
 import { Platform, type MediaType } from '@idol-bbq-utils/spider/types'
 import { platformPresetHeadersMap } from '@idol-bbq-utils/spider/const'
-import { cloneDeep } from 'lodash'
+import { spiderRegistry } from '@idol-bbq-utils/spider'
+import { cloneDeep, orderBy } from 'lodash'
+import dayjs from 'dayjs'
 import fs from 'fs'
 import path from 'path'
+import { Redis } from 'ioredis'
 
 const log = createLogger({ defaultMeta: { service: 'ForwarderService' } })
 const CACHE_DIR = process.env.CACHE_DIR_ROOT || '/tmp'
@@ -35,7 +38,42 @@ interface ForwarderServiceConfig {
 }
 
 const MAX_ERROR_COUNT = 3
-const errorCounter = new Map<string, number>()
+const ERROR_COUNTER_TTL = 86400
+
+let redisConnection: Redis | null = null
+
+function getRedisConnection(): Redis {
+    if (!redisConnection) {
+        redisConnection = new Redis({
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+            password: process.env.REDIS_PASSWORD,
+            db: parseInt(process.env.REDIS_DB || '0'),
+        })
+    }
+    return redisConnection
+}
+
+async function getErrorCount(platform: Platform, articleId: string, targetId: string): Promise<number> {
+    const redis = getRedisConnection()
+    const key = `error_count:${platform}:${articleId}:${targetId}`
+    const count = await redis.get(key)
+    return count ? parseInt(count, 10) : 0
+}
+
+async function incrementErrorCount(platform: Platform, articleId: string, targetId: string): Promise<number> {
+    const redis = getRedisConnection()
+    const key = `error_count:${platform}:${articleId}:${targetId}`
+    const newCount = await redis.incr(key)
+    await redis.expire(key, ERROR_COUNTER_TTL)
+    return newCount
+}
+
+async function deleteErrorCount(platform: Platform, articleId: string, targetId: string): Promise<void> {
+    const redis = getRedisConnection()
+    const key = `error_count:${platform}:${articleId}:${targetId}`
+    await redis.del(key)
+}
 
 async function handleMedia(
     article: Article,
@@ -98,18 +136,39 @@ async function handleMedia(
                 return undefined
             }
 
-            if (currentArticle.media) {
-                const mediaArray = Array.isArray(currentArticle.media) ? currentArticle.media : []
-                const files = await Promise.all(
-                    mediaArray
-                        .filter((m) => m)
-                        .map((m) => {
-                            const url = typeof m === 'object' && 'url' in m ? String(m.url) : String(m)
-                            const type = (typeof m === 'object' && 'type' in m ? String(m.type) : 'photo') as MediaType
-                            return downloadWithHeaders(url, type)
-                        }),
+            if (forwarderConfig.media.use?.tool === 'gallery-dl' && forwarderConfig.media.use.path) {
+                jobLog.debug(`Downloading media with gallery-dl for article URL: ${currentArticle.url}`)
+                const paths = galleryDownloadMediaFile(
+                    currentArticle.url,
+                    CACHE_DIR,
+                    {
+                        path: forwarderConfig.media.use.path,
+                        cookie_file: forwarderConfig.media.use.cookieFile,
+                    },
+                    taskId,
                 )
-                maybe_media_files.push(...files.filter((f) => f !== undefined))
+                maybe_media_files.push(
+                    ...paths.map((path) => ({
+                        path,
+                        media_type: getMediaType(path),
+                    })),
+                )
+            } else {
+                if (currentArticle.media) {
+                    const mediaArray = Array.isArray(currentArticle.media) ? currentArticle.media : []
+                    const files = await Promise.all(
+                        mediaArray
+                            .filter((m) => m)
+                            .map((m) => {
+                                const url = typeof m === 'object' && 'url' in m ? String(m.url) : String(m)
+                                const type = (
+                                    typeof m === 'object' && 'type' in m ? String(m.type) : 'photo'
+                                ) as MediaType
+                                return downloadWithHeaders(url, type)
+                            }),
+                    )
+                    maybe_media_files.push(...files.filter((f) => f !== undefined))
+                }
             }
 
             if (currentArticle.extra?.media) {
@@ -137,9 +196,103 @@ async function handleMedia(
     return maybe_media_files
 }
 
+async function processFollowsTask(
+    job: Job<ForwarderJobData>,
+    jobLog: ReturnType<typeof log.child>,
+): Promise<JobResult> {
+    const { taskId, urls, forwarderConfig, followsConfig } = job.data
+    const { taskTitle, comparisonWindow = '1d' } = followsConfig || {}
+
+    jobLog.info(`Processing follows forwarding for ${urls.length} websites`)
+
+    const results = new Map<Platform, Array<[DBFollows, DBFollows | null]>>()
+
+    for (const website of urls) {
+        try {
+            const url = new URL(website)
+            const { platform, u_id } = spiderRegistry.extractBasicInfo(url.href) ?? {}
+
+            if (!platform || !u_id) {
+                jobLog.error(`Invalid url: ${url.href}`)
+                continue
+            }
+
+            const follows = await DB.Follow.getLatestAndComparisonFollowsByName(u_id, platform, comparisonWindow)
+            if (!follows) {
+                jobLog.warn(`No follows found for ${url.href}`)
+                continue
+            }
+
+            let result = results.get(platform)
+            if (!result) {
+                result = []
+                results.set(platform, result)
+            }
+            result.push(follows)
+        } catch (error) {
+            jobLog.error(`Error processing website ${website}: ${error}`)
+        }
+    }
+
+    if (results.size === 0) {
+        jobLog.warn('No follows data to send')
+        return { success: true, count: 0 }
+    }
+
+    let texts_to_send = followsToText(orderBy(Array.from(results.entries()), (i) => i[0], 'asc'))
+    if (taskTitle) {
+        texts_to_send = `${taskTitle}\n${texts_to_send}`
+    }
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const target of forwarderConfig.targets) {
+        try {
+            const ForwarderClass = getForwarder(target.platform)
+            if (!ForwarderClass) {
+                jobLog.error(`Unknown platform: ${target.platform}`)
+                errorCount++
+                continue
+            }
+
+            const forwarder = new ForwarderClass(target.cfg_platform, target.id, jobLog)
+            await forwarder.init()
+
+            await forwarder.send(texts_to_send, {
+                timestamp: dayjs().unix(),
+                runtime_config: target.runtime_config,
+            })
+
+            successCount++
+            jobLog.info(`Forwarded follows to ${target.id}`)
+        } catch (error) {
+            jobLog.error(`Error forwarding follows to ${target.id}: ${error}`)
+            errorCount++
+        }
+    }
+
+    jobLog.info(`Follows forwarding completed: ${successCount} succeeded, ${errorCount} failed`)
+
+    return {
+        success: errorCount === 0,
+        count: successCount,
+        data: { successCount, errorCount },
+    }
+}
+
 async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResult> {
-    const { taskId, storageTaskId, articleIds, forwarderConfig } = job.data
-    const jobLog = log.child({ taskId, storageTaskId })
+    const { taskId, storageTaskId, taskType, articleIds, forwarderConfig } = job.data
+    const jobLog = log.child({ taskId, storageTaskId, taskType })
+
+    if (taskType === 'follows') {
+        return await processFollowsTask(job, jobLog)
+    }
+
+    if (!articleIds || articleIds.length === 0) {
+        jobLog.warn('No article IDs provided')
+        return { success: true, count: 0 }
+    }
 
     jobLog.info(`Processing forwarder job: ${articleIds.length} articles to ${forwarderConfig.targets.length} targets`)
 
@@ -250,10 +403,7 @@ async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResul
                         successCount++
                         jobLog.info(`Forwarded article ${article.a_id} to ${target.id}`)
 
-                        const errorKey = `${article.platform}:${article.a_id}`
-                        if (errorCounter.has(errorKey)) {
-                            errorCounter.delete(errorKey)
-                        }
+                        await deleteErrorCount(article.platform, article.a_id, target.id)
                     } catch (sendError) {
                         jobLog.error(`Error sending article ${article.a_id} to ${target.id}: ${sendError}`)
 
@@ -263,22 +413,22 @@ async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResul
                             currentArticle = currentArticle.ref as ArticleWithId | null
                         }
 
-                        const errorKey = `${article.platform}:${article.a_id}`
-                        const currentErrorCount = (errorCounter.get(errorKey) || 0) + 1
+                        const currentErrorCount = await incrementErrorCount(article.platform, article.a_id, target.id)
 
                         if (currentErrorCount > MAX_ERROR_COUNT) {
                             jobLog.error(
-                                `Error count exceeded for ${article.a_id} (${currentErrorCount} attempts), marking as forwarded to skip`,
+                                `Error count exceeded for ${article.a_id} to ${target.id} (${currentErrorCount} attempts), marking as forwarded to skip`,
                             )
                             let currentArticle: ArticleWithId | null = article
                             while (currentArticle && typeof currentArticle === 'object') {
                                 await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
                                 currentArticle = currentArticle.ref as ArticleWithId | null
                             }
-                            errorCounter.delete(errorKey)
+                            await deleteErrorCount(article.platform, article.a_id, target.id)
                         } else {
-                            errorCounter.set(errorKey, currentErrorCount)
-                            jobLog.warn(`Error count for ${article.a_id}: ${currentErrorCount}/${MAX_ERROR_COUNT}`)
+                            jobLog.warn(
+                                `Error count for ${article.a_id} to ${target.id}: ${currentErrorCount}/${MAX_ERROR_COUNT}`,
+                            )
                         }
 
                         errorCount++
@@ -359,6 +509,10 @@ async function main() {
     async function shutdown() {
         log.info('Shutting down...')
         await worker.close()
+        if (redisConnection) {
+            await redisConnection.quit()
+            log.info('Redis connection closed')
+        }
         log.info('Shutdown complete')
         process.exit(0)
     }
