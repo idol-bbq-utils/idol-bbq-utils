@@ -29,6 +29,7 @@
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
+        "@idol-bbq-utils/config": "workspace:^",
         "bullmq": "^5.34.3",
         "cron": "^4.4.0",
         "ioredis": "^5.4.2"

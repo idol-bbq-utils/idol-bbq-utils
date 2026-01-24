@@ -1,4 +1,4 @@
-import { TranslatorProvider } from './types'
+import { TranslatorProvider } from '@idol-bbq-utils/config'
 import { BaseTranslator, TranslatorRegistry, type TranslatorPlugin } from './base'
 import { GoogleLLMTranslator } from './google'
 import { ByteDanceLLMTranslator } from './bytedance'

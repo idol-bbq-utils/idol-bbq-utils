@@ -1,4 +1,4 @@
-import { type TranslatorConfig, TranslatorProvider } from './types'
+import { type TranslatorConfig, TranslatorProvider } from '@idol-bbq-utils/config'
 import { BaseCompatibleModel } from './base-model'
 import { Logger } from '@idol-bbq-utils/log'
 import { noop } from 'lodash'

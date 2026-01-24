@@ -1,6 +1,6 @@
 import { ChatSession, GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai'
 import { BaseTranslator } from './base'
-import { type TranslatorConfig, TranslatorProvider } from './types'
+import { type TranslatorConfig, TranslatorProvider } from '@idol-bbq-utils/config'
 import { Logger } from '@idol-bbq-utils/log'
 
 class GoogleLLMTranslator extends BaseTranslator {

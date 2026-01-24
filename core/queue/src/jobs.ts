@@ -1,47 +1,16 @@
-import type { Platform, TaskType, CrawlEngine, GenericArticle, GenericFollows } from '@idol-bbq-utils/spider/types'
-import type { ForwardTargetPlatformEnum } from '@idol-bbq-utils/forwarder'
+import type { Platform, TaskType, GenericArticle, GenericFollows } from '@idol-bbq-utils/spider/types'
+import type { CrawlerConfig, SenderConfig, SenderTaskConfig, SendTarget, Translator } from '@idol-bbq-utils/config'
 
-export interface ForwarderTarget {
-    id: string
-    platform: ForwardTargetPlatformEnum
-    cfg_platform: Record<string, any>
-    runtime_config?: Record<string, any>
+interface JobMetadata {
+    task_id: string
+    task_type: TaskType
+    name: string
 }
 
-export interface ForwarderConfig {
-    targets: ForwarderTarget[]
-    renderType?: 'text' | 'img' | 'img-with-meta'
-    media?: {
-        type: string
-        use?: {
-            tool: string
-            path?: string
-            cookieFile?: string
-        }
-    }
-}
-
-export interface CrawlerJobData {
+export interface CrawlerJobData extends JobMetadata {
     type: 'crawler'
-    taskId: string
-    crawlerName: string
     websites: string[]
-    taskType: TaskType
-    config: {
-        engine?: CrawlEngine
-        cookieFile?: string
-        translator?: {
-            provider: string
-            apiKey: string
-            config?: Record<string, unknown>
-        }
-        intervalTime?: {
-            min: number
-            max: number
-        }
-        userAgent?: string
-        subTaskType?: string[]
-    }
+    config: Omit<CrawlerConfig, 'cron'>
 }
 
 export type SpiderArticleResult = GenericArticle<Platform>
@@ -50,34 +19,24 @@ export type SpiderFollowsResult = GenericFollows
 
 export type SpiderResult = SpiderArticleResult | SpiderFollowsResult
 
-export interface StorageJobData {
+export interface StorageJobData extends JobMetadata {
     type: 'storage'
-    taskId: string
-    crawlerTaskId: string
-    taskType: TaskType
+    crawler_task_id: string
     data: SpiderResult[]
-    translatorConfig?: {
-        provider: string
-        apiKey: string
-        config?: Record<string, unknown>
+    translator_config?: Translator
+}
+
+export interface SenderJobData extends JobMetadata {
+    type: 'sender'
+    websites: string[]
+    targets?: Array<SendTarget>
+    config: {
+        cfg_task?: SenderTaskConfig<TaskType>,
+        cfg_sender?: SenderConfig,
     }
 }
 
-export interface ForwarderJobData {
-    type: 'forwarder'
-    taskId: string
-    storageTaskId: string
-    taskType: 'article' | 'follows'
-    articleIds?: number[]
-    urls: string[]
-    forwarderConfig: ForwarderConfig
-    followsConfig?: {
-        taskTitle?: string
-        comparisonWindow?: string
-    }
-}
-
-export type JobData = CrawlerJobData | StorageJobData | ForwarderJobData
+export type JobData = CrawlerJobData | StorageJobData | SenderJobData
 
 export interface JobResult {
     success: boolean

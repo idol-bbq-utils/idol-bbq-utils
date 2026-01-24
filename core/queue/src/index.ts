@@ -13,8 +13,7 @@ export interface QueueConfig {
 export enum QueueName {
     CRAWLER = 'crawler',
     STORAGE = 'storage',
-    FORWARDER = 'forwarder',
-    TRANSLATION = 'translation',
+    SENDER = 'sender',
 }
 
 const DEFAULT_JOB_OPTIONS: JobsOptions = {

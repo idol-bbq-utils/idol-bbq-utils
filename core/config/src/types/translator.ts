@@ -1,10 +1,4 @@
-interface CommonCfgConfig {
-    /**
-     * Default the deeper level of configuration will override the upper level
-     * But you can disable this behavior by setting `disable_overwrite` to `true`
-     */
-    disable_overwrite?: boolean
-}
+import type { CommonCfgConfig } from './common'
 
 type ByteDance_LLM = 'doubao-pro-128k'
 type BigModel_LLM = 'glm-4-flash'
@@ -64,8 +58,8 @@ interface TranslatorConfig extends CommonCfgConfig {
 interface Translator {
     provider: TranslatorProvider
     api_key: string
-    cfg_translator?: TranslatorConfig
+    config?: TranslatorConfig
 }
 
 export { TranslatorProvider }
-export type { Translator, TranslatorConfig, CommonCfgConfig }
+export type { Translator, TranslatorConfig }

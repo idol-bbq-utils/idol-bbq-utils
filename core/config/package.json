@@ -1,0 +1,27 @@
+{
+    "name": "@idol-bbq-utils/config",
+    "version": "0.0.1",
+    "description": "Centralized configuration management with hierarchical config resolution",
+    "type": "module",
+    "exports": {
+        ".": {
+            "default": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/spider": "workspace:*",
+        "@idol-bbq-utils/translator": "workspace:*",
+        "@idol-bbq-utils/utils": "workspace:*",
+        "yaml": "^2.3.4",
+        "lodash.merge": "^4.6.2"
+    },
+    "devDependencies": {
+        "@types/lodash.merge": "^4.6.9",
+        "@types/node": "^20.11.5",
+        "typescript": "^5.3.3"
+    }
+}

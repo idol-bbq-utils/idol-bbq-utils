@@ -1,6 +1,6 @@
 import { BaseTranslator } from './base'
 import axios from 'axios'
-import { type TranslatorConfig, TranslatorProvider } from './types'
+import { type TranslatorConfig, TranslatorProvider } from '@idol-bbq-utils/config'
 import { Logger } from '@idol-bbq-utils/log'
 
 abstract class BaseQwen extends BaseTranslator {
