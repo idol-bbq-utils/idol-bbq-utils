@@ -21,10 +21,11 @@ import { cloneDeep, orderBy } from 'lodash'
 import dayjs from 'dayjs'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import { Redis } from 'ioredis'
 
 const log = createLogger({ defaultMeta: { service: 'ForwarderService' } })
-const CACHE_DIR = process.env.CACHE_DIR_ROOT || '/tmp'
+const CACHE_DIR_ROOT = process.env.CACHE_DIR_ROOT || path.join(os.tmpdir(), 'forwarder-service')
 const articleConverter = new ImgConverter()
 
 interface ForwarderServiceConfig {
@@ -106,23 +107,7 @@ async function handleMedia(
                     }
 
                     let filePath: string | undefined
-
-                    if (forwarderConfig.media?.use?.tool === 'gallery-dl' && forwarderConfig.media.use.path) {
-                        const paths = galleryDownloadMediaFile(
-                            url,
-                            CACHE_DIR,
-                            {
-                                path: forwarderConfig.media.use.path,
-                                cookie_file: forwarderConfig.media.use.cookieFile,
-                            },
-                            taskId,
-                        )
-                        if (paths.length > 0) {
-                            filePath = paths[0]
-                        }
-                    } else {
-                        filePath = await plainDownloadMediaFile(url, CACHE_DIR, taskId, headers)
-                    }
+                    filePath = await plainDownloadMediaFile(url, CACHE_DIR_ROOT, taskId, headers)
 
                     if (filePath) {
                         return {
@@ -140,7 +125,7 @@ async function handleMedia(
                 jobLog.debug(`Downloading media with gallery-dl for article URL: ${currentArticle.url}`)
                 const paths = galleryDownloadMediaFile(
                     currentArticle.url,
-                    CACHE_DIR,
+                    CACHE_DIR_ROOT,
                     {
                         path: forwarderConfig.media.use.path,
                         cookie_file: forwarderConfig.media.use.cookieFile,
@@ -364,7 +349,7 @@ async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResul
 
                             const imgPath = writeImgToFile(
                                 imgBuffer,
-                                CACHE_DIR,
+                                CACHE_DIR_ROOT,
                                 `${taskId}-${article.a_id}-rendered.png`,
                             )
 
@@ -475,7 +460,7 @@ async function main() {
     log.info(`Redis: ${config.redis.host}:${config.redis.port}`)
     log.info(`Concurrency: ${config.concurrency}`)
 
-    const cacheDirs = [path.join(CACHE_DIR, 'media', 'plain'), path.join(CACHE_DIR, 'media', 'gallery-dl')]
+    const cacheDirs = [path.join(CACHE_DIR_ROOT, 'media', 'plain'), path.join(CACHE_DIR_ROOT, 'media', 'gallery-dl')]
     cacheDirs.forEach((dir) => {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true })

@@ -24,6 +24,7 @@ async function main() {
     const { crawlers, cfg_crawler, forward_targets, cfg_forward_target, forwarders, cfg_forwarder } = config
 
     const queueMode = process.env.QUEUE_MODE === 'true'
+    const disableScheduler = process.env.DISABLE_SCHEDULER === 'true'
     const queueConfig = queueMode
         ? {
               enabled: true,
@@ -41,6 +42,11 @@ async function main() {
         log.info(`Redis: ${queueConfig?.redis.host}:${queueConfig?.redis.port}`)
     } else {
         log.info('EventEmitter mode (standalone)')
+    }
+
+    if (disableScheduler) {
+        log.warn('Scheduler disabled via DISABLE_SCHEDULER environment variable')
+        log.warn('Only worker components (SpiderPools/ForwarderPools) will be initialized')
     }
 
     if (crawlers && crawlers.length > 0) {
@@ -66,16 +72,18 @@ async function main() {
             compatibleModels.push(spiderPools)
         }
 
-        const spiderTaskScheduler = new SpiderTaskScheduler(
-            {
-                crawlers,
-                cfg_crawler,
-            },
-            emitter,
-            log,
-            queueConfig,
-        )
-        taskSchedulers.push(spiderTaskScheduler)
+        if (!disableScheduler) {
+            const spiderTaskScheduler = new SpiderTaskScheduler(
+                {
+                    crawlers,
+                    cfg_crawler,
+                },
+                emitter,
+                log,
+                queueConfig,
+            )
+            taskSchedulers.push(spiderTaskScheduler)
+        }
     }
 
     if (forward_targets && forward_targets.length > 0 && !queueMode) {
@@ -90,7 +98,7 @@ async function main() {
         compatibleModels.push(forwarderPools)
     }
 
-    if (forwarders && forwarders.length > 0) {
+    if (forwarders && forwarders.length > 0 && !disableScheduler) {
         const forwarderTaskScheduler = new ForwarderTaskScheduler(
             {
                 forwarders,

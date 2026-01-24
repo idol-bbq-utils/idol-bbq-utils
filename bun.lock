@@ -42,6 +42,23 @@
         "@types/node": "^22.15.3",
       },
     },
+    "app/scheduler-service": {
+      "name": "@idol-bbq-utils/scheduler-service",
+      "version": "0.1.0",
+      "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "cron": "^4.1.4",
+        "lodash": "^4.17.21",
+        "yaml": "^2.4.5",
+      },
+      "devDependencies": {
+        "@types/lodash": "^4.17.6",
+        "@types/node": "^22.15.3",
+      },
+    },
     "app/storage-service": {
       "name": "@idol-bbq-utils/storage-service",
       "version": "0.1.0",
@@ -96,8 +113,6 @@
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
         "@prisma/client": "^6.2.0",
-      },
-      "devDependencies": {
         "prisma": "^6.2.0",
       },
     },
@@ -263,6 +278,8 @@
     "@idol-bbq-utils/queue": ["@idol-bbq-utils/queue@workspace:core/queue"],
 
     "@idol-bbq-utils/render": ["@idol-bbq-utils/render@workspace:core/render"],
+
+    "@idol-bbq-utils/scheduler-service": ["@idol-bbq-utils/scheduler-service@workspace:app/scheduler-service"],
 
     "@idol-bbq-utils/spider": ["@idol-bbq-utils/spider@workspace:core/spider"],
 
