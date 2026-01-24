@@ -12,7 +12,7 @@ interface QueueModeConfig {
     }
 }
 
-interface AppConfig {
+interface AppConfigType {
     /**
      * Task Crawler
      */
@@ -33,7 +33,7 @@ interface AppConfig {
     }
 }
 
-export type { AppConfig, QueueModeConfig }
+export type { AppConfigType, QueueModeConfig }
 export * from './common'
 export * from './crawler'
 export * from './sender'

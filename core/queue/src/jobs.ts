@@ -32,7 +32,7 @@ export interface SenderJobData extends JobMetadata {
     targets?: Array<SendTarget>
     config: {
         cfg_task?: SenderTaskConfig<TaskType>,
-        cfg_sender?: SenderConfig,
+        cfg_sender?: Omit<SenderConfig, 'cron'>,
     }
 }
 

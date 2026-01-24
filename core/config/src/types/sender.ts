@@ -48,7 +48,9 @@ type TaskConfigMap = {
     }
 }
 
-type TaskConfig<T extends TaskType> = TaskConfigMap[T]
+type TaskConfig<T extends TaskType> = TaskConfigMap[T] & {
+    task_title?: string
+}
 
 interface SendTargetCommonConfig extends CommonCfgConfig {
     replace_regex?: string | [string, string] | Array<[string, string]>
@@ -145,10 +147,6 @@ interface Sender<T extends TaskType> {
      * Task type defined in `@idol-bbq-utils/spider`
      */
     task_type?: T
-    /**
-     * Task type like follows need this
-     */
-    task_title?: string
     /**
      * Array of send target's id or id with runtime config, if empty will use all targets
      */

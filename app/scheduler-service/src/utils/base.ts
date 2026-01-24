@@ -42,18 +42,16 @@ namespace TaskScheduler {
         FINISHED = 'task:finished',
     }
     export abstract class TaskScheduler extends BaseCompatibleModel {
-        protected emitter: EventEmitter
         protected tasks: Map<string, Task> = new Map()
         protected cronJobs: Array<CronJob> = []
         protected taskHandlers: Record<Exclude<TaskEvent, TaskEvent.DISPATCH>, (...args: any[]) => void>
 
-        constructor(emitter: EventEmitter) {
+        constructor() {
             super()
             this.taskHandlers = {
                 [TaskEvent.UPDATE_STATUS]: this.updateTaskStatus.bind(this),
                 [TaskEvent.FINISHED]: this.finishTask.bind(this),
             }
-            this.emitter = emitter
         }
         abstract start(...args: any[]): Promise<void>
         abstract stop(...args: any[]): Promise<void>
