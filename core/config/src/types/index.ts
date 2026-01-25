@@ -2,8 +2,7 @@ import type { TaskType } from '@idol-bbq-utils/spider/types'
 import type { Crawler, CrawlerConfig } from './crawler'
 import type { Sender, SenderConfig, SendTarget, SendTargetCommonConfig } from './sender'
 
-interface QueueModeConfig {
-    enabled: boolean
+interface QueueConfig {
     redis: {
         host: string
         port: number
@@ -29,11 +28,11 @@ interface AppConfigType {
         cfg_crawler?: CrawlerConfig
         cfg_sender?: SenderConfig
         cfg_send_target?: SendTargetCommonConfig
-        queue?: QueueModeConfig
+        queue?: QueueConfig
     }
 }
 
-export type { AppConfigType, QueueModeConfig }
+export type { AppConfigType, QueueConfig }
 export * from './common'
 export * from './crawler'
 export * from './sender'

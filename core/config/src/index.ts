@@ -8,84 +8,235 @@ import type {
     SendTargetCommonConfig,
     Crawler,
     Sender,
+    SendTarget,
+    SenderTaskConfig,
 } from './types'
+import { sanitizeWebsites } from '@idol-bbq-utils/utils'
 import type { TaskType } from '@idol-bbq-utils/spider/types'
+import { UserAgent } from '@idol-bbq-utils/spider'
+
+type TaskCrawlers = {
+    name: string
+    websites: Array<string>
+    task_type: TaskType
+    config?: CrawlerConfig
+}
+
+type TaskSenders = {
+    name: string
+    websites: Array<string>
+    task_title: string
+    targets: Array<SendTarget>
+    config?: {
+        cfg_task?: SenderTaskConfig<TaskType>
+        cfg_sender?: SenderConfig
+    }
+}
 
 export class AppConfig {
-    constructor(private readonly app_config: AppConfigType) {}
+    static DEFAULT_CRAWLER_CONFIG: CrawlerConfig = {
+        cron: '*/30 * * * *',
+        interval_time: {
+            min: 1000,
+            max: 15000,
+        },
+        user_agent: UserAgent.CHROME,
+    }
 
-    resolveCrawlerConfig(crawler: Crawler): CrawlerConfig {
-        const global = this.app_config.config?.cfg_crawler || {}
-        const task = crawler.config?.cfg_crawler || {}
+    static DEFAULT_SEND_TARGET_CONFIG: SendTargetCommonConfig = {
+        block_until: '2h',
+    }
 
+    static DEFAULT_SENDER_CONFIG: TaskSenders['config'] = {
+        cfg_task: {
+            follows: {
+                comparison_window: '1d',
+            },
+        } as SenderTaskConfig<'follows'>,
+        cfg_sender: {
+            cron: '*/15 * * * *',
+            render_type: 'img-with-meta',
+        },
+    }
+
+    private task_crawlers: Array<TaskCrawlers> = []
+    private task_senders: Array<TaskSenders> = []
+    /**
+     * key is id, should be unique
+     */
+    private send_targets: Map<string, SendTarget> = new Map()
+    constructor(private readonly raw_config: AppConfigType) {}
+
+    // Merge global and task level config
+    public resolveConfig(): void {
+        this.task_crawlers = []
+        this.task_senders = []
+        this.send_targets.clear()
+        this.task_crawlers = this.resolveTaskCrawlers()
+        this.send_targets = this.resolveSendTargets()
+        this.task_senders = this.resolveTaskSenders(this.send_targets)
+    }
+
+    private resolveCrawlerConfig(crawler: Crawler): CrawlerConfig {
+        const global = this.raw_config.config?.cfg_crawler || {}
+        let resolved_cfg = merge({}, AppConfig.DEFAULT_CRAWLER_CONFIG, global)
         if (global.disable_overwrite) {
-            return global
+            return resolved_cfg
         }
-        if (task.disable_overwrite) {
-            return task
+        resolved_cfg = merge({}, resolved_cfg, crawler.config?.cfg_crawler || {})
+        if (crawler.config?.cfg_crawler?.disable_overwrite) {
+            return resolved_cfg
+        }
+        return resolved_cfg
+    }
+
+    private resolveTaskCrawlers(): Array<TaskCrawlers> {
+        const crawlers = this.raw_config.crawlers || []
+        const resolved_crawlers: Array<TaskCrawlers> = []
+        for (const crawler of crawlers) {
+            const resolved_cfg = this.resolveCrawlerConfig(crawler)
+            const websites = sanitizeWebsites({
+                websites: crawler.websites || [],
+                origin: crawler.origin,
+                paths: crawler.paths,
+            })
+            resolved_crawlers.push({
+                name: crawler.name || '',
+                websites: websites,
+                task_type: crawler.task_type || 'article',
+                config: resolved_cfg,
+            })
+        }
+        return resolved_crawlers
+    }
+
+    /**
+     * order: global -> target -> sender unified cfg -> sender target runtime cfg
+     */
+    private resolveSendTargetConfig(
+        target: SendTarget,
+        sender_unified_cfg?: SendTargetCommonConfig,
+        target_runtime_cfg?: SendTargetCommonConfig,
+    ): SendTarget['config'] {
+        const global = this.raw_config.config?.cfg_send_target || {}
+        let resolved_cfg = merge({}, AppConfig.DEFAULT_SEND_TARGET_CONFIG, global)
+        if (global.disable_overwrite) {
+            return resolved_cfg
+        }
+        resolved_cfg = merge({}, resolved_cfg, target.config || {})
+        if (target.config?.disable_overwrite) {
+            return resolved_cfg
+        }
+        resolved_cfg = merge({}, resolved_cfg, sender_unified_cfg || {})
+        if (sender_unified_cfg?.disable_overwrite) {
+            return resolved_cfg
+        }
+        resolved_cfg = merge({}, resolved_cfg, target_runtime_cfg || {})
+        if (target_runtime_cfg?.disable_overwrite) {
+            return resolved_cfg
+        }
+        return resolved_cfg
+    }
+
+    private resolveSendTargets(): Map<string, SendTarget> {
+        const targets = this.raw_config.send_targets || []
+        const resolved_targets: Map<string, SendTarget> = new Map()
+        for (const target of targets) {
+            const resolved_cfg = this.resolveSendTargetConfig(target)
+            const resolved_target: SendTarget = {
+                platform: target.platform,
+                id: target.id,
+                config: resolved_cfg,
+            }
+            const key = target.id
+            if (resolved_targets.has(key)) {
+                throw new Error(`Duplicate send target key: ${key}`)
+            }
+            resolved_targets.set(key, resolved_target)
         }
 
-        return merge({}, global, task)
+        return resolved_targets
     }
 
     /**
      * order: global -> task
      */
-    resolveSenderConfig(sender: Sender<TaskType>): SenderConfig {
-        const global = this.app_config.config?.cfg_sender || {}
-        const task = sender.config?.cfg_sender || {}
-
-        if (global.disable_overwrite) {
-            return global
+    private resolveSenderConfig(sender: Sender<TaskType>): TaskSenders['config'] {
+        const global = {
+            cfg_sender: this.raw_config.config?.cfg_sender || {},
+        } as Exclude<TaskSenders['config'], undefined>
+        let resolved_cfg = merge({}, AppConfig.DEFAULT_SENDER_CONFIG, global)
+        if (global.cfg_sender?.disable_overwrite) {
+            return resolved_cfg
         }
-        if (task.disable_overwrite) {
-            return task
+        resolved_cfg = merge({}, resolved_cfg, sender.config || {})
+        if (sender.config?.cfg_sender?.disable_overwrite) {
+            return resolved_cfg
         }
-
-        return merge({}, global, task)
+        return resolved_cfg
     }
 
-    /**
-     * order: global -> target -> 
-     */
-    resolveSendTargetConfig(
-        sender: Sender<TaskType>,
-        targetId?: string | { id: string; cfg_send_target?: SendTargetCommonConfig },
-    ): SendTargetCommonConfig {
-        const global = this.app_config.config?.cfg_send_target || {}
-        const task = sender.config?.cfg_send_target || {}
-        const target = typeof targetId === 'string' ? {} : targetId?.cfg_send_target || {}
-        if (global.disable_overwrite) {
-            return global
+    // especially handle targets here
+    private resolveTaskSenders(targets: Map<string, SendTarget>): Array<TaskSenders> {
+        const senders = this.raw_config.senders || []
+        const resolved_senders: Array<TaskSenders> = []
+        for (const sender of senders) {
+            const resolved_sender_cfg = this.resolveSenderConfig(sender)
+            const resolved_targets: Array<SendTarget> = []
+            if (sender.targets && sender.targets.length > 0) {
+                const sender_unified_cfg = sender.config?.cfg_send_target
+                for (const target_ref of sender.targets) {
+                    let target_id: string
+                    let runtime_cfg: SendTargetCommonConfig | undefined
+                    if (typeof target_ref === 'string') {
+                        target_id = target_ref
+                    } else {
+                        target_id = target_ref.id
+                        runtime_cfg = target_ref.cfg_send_target
+                    }
+                    const target_key = target_id
+                    const target = targets.get(target_key)
+                    if (!target) {
+                        throw new Error(`Send target not found: ${target_key}`)
+                    }
+                    const merged_cfg = this.resolveSendTargetConfig(target, sender_unified_cfg, runtime_cfg)
+                    const merged_c: SendTarget = {
+                        platform: target.platform,
+                        id: target.id,
+                        config: merged_cfg,
+                    }
+                    resolved_targets.push(merged_c)
+                }
+            }
+            const websites = sanitizeWebsites({
+                websites: sender.websites || [],
+                origin: sender.origin,
+                paths: sender.paths,
+            })
+            resolved_senders.push({
+                name: sender.name || '',
+                websites: websites,
+                task_title: sender.task_type || 'article',
+                targets: resolved_targets,
+                config: resolved_sender_cfg,
+            })
         }
-        if (task.disable_overwrite) {
-            return task
-        }
-
-        return merge({}, global, task, target)
+        return resolved_senders
     }
 
-    getSendTargets() {
-        return this.app_config.send_targets || []
+    public getTaskCrawlers(): Array<TaskCrawlers> {
+        return this.task_crawlers
     }
 
-    getSendTargetById(id: string) {
-        return this.getSendTargets().find((target) => target.id === id)
+    public getTaskSenders(): Array<TaskSenders> {
+        return this.task_senders
     }
 
-    getCrawlers() {
-        return this.app_config.crawlers || []
+    public getSendTargets(): Array<SendTarget> {
+        return Array.from(this.send_targets.values())
     }
 
-    getSenders() {
-        return this.app_config.senders || []
-    }
-
-    getQueueConfig() {
-        return this.app_config.config?.queue
-    }
-
-    getRawConfig() {
-        return this.app_config
+    public getRawConfig(): AppConfigType {
+        return this.raw_config
     }
 }

@@ -119,10 +119,9 @@ interface SenderConfig extends CommonCfgConfig {
 interface SendTarget<T extends SendTargetPlatformEnum = SendTargetPlatformEnum> {
     platform: T
     /**
-     * unique id for the target
-     * default is md5 hash of the platform and config
+     * unique id for the target of the platform
      */
-    id?: string
+    id: string
     config: SendTargetConfig<T> & SendTargetCommonConfig
 }
 
