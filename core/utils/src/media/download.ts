@@ -110,16 +110,16 @@ export function galleryDownloadMediaFile(
 }
 
 export async function tryGetCookie(url: string): Promise<string | undefined> {
-    let cookieString: string | null = null
+    let cookie_string: string | null = null
     try {
         const res = await fetch(url)
-        cookieString = res.headers.get('set-cookie')
+        cookie_string = res.headers.get('set-cookie')
     } catch (e) {}
-    if (!cookieString) {
+    if (!cookie_string) {
         return
     }
 
-    const cookies = cookieString.split(/,\s*(?=[a-zA-Z0-9_-]+=)/)
+    const cookies = cookie_string.split(/,\s*(?=[a-zA-Z0-9_-]+=)/)
     const cookieArr = [] as Array<string>
 
     cookies.forEach((cookie) => {

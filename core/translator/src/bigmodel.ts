@@ -1,7 +1,7 @@
 import { BaseTranslator } from './base'
 import axios from 'axios'
 import { Logger } from '@idol-bbq-utils/log'
-import { type TranslatorConfig, TranslatorProvider } from '@idol-bbq-utils/config'
+import { type TranslatorConfig, TranslatorProvider } from './types'
 
 enum EnumBigModel {
     GLM4Flash = 'glm-4-flash',

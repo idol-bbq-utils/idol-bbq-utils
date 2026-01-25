@@ -1,11 +1,16 @@
 {
-    "name": "@idol-bbq-utils/forwarder",
+    "name": "@idol-bbq-utils/sender",
     "version": "0.3.0",
-    "description": "Multi-platform forwarder service (QQ, Telegram, Bilibili)",
+    "description": "Multi-platform sender service (QQ, Telegram, Bilibili)",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
     "license": "MIT",
     "main": "src/index.ts",
+    "exports": {
+        ".": {
+            "default": "./src/index.ts"
+        }
+    },
     "directories": {
         "lib": "lib"
     },

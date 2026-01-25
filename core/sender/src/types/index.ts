@@ -2,7 +2,7 @@ import type { Platform, TaskType } from '@idol-bbq-utils/spider/types'
 import type { CommonCfgConfig } from '@idol-bbq-utils/utils'
 import type { Media } from './media'
 
-enum ForwardTargetPlatformEnum {
+enum SendTargetPlatformEnum {
     None = 'none',
     Telegram = 'telegram',
     Bilibili = 'bilibili',
@@ -10,12 +10,12 @@ enum ForwardTargetPlatformEnum {
 }
 
 type PlatformConfigMap = {
-    [ForwardTargetPlatformEnum.None]: {}
-    [ForwardTargetPlatformEnum.Telegram]: {
+    [SendTargetPlatformEnum.None]: {}
+    [SendTargetPlatformEnum.Telegram]: {
         token: string
         chat_id: string
     }
-    [ForwardTargetPlatformEnum.Bilibili]: {
+    [SendTargetPlatformEnum.Bilibili]: {
         bili_jct: string
         sessdata: string
         media_check_level?: 'strict' | 'loose' | 'none'
@@ -23,7 +23,7 @@ type PlatformConfigMap = {
     /**
      * one11 bot protocol
      */
-    [ForwardTargetPlatformEnum.QQ]: {
+    [SendTargetPlatformEnum.QQ]: {
         url: string
         group_id: string
         token: string
@@ -48,13 +48,15 @@ type TaskConfigMap = {
     }
 }
 
-type TaskConfig<T extends TaskType> = TaskConfigMap[T]
+type TaskConfig<T extends TaskType> = TaskConfigMap[T] & {
+    task_title?: string
+}
 
-interface ForwardTargetPlatformCommonConfig {
+interface SendTargetCommonConfig extends CommonCfgConfig {
     replace_regex?: string | [string, string] | Array<[string, string]>
     /**
      *
-     * if 1d, the forwarder will only forward the article that created within 1 day
+     * if 1d, the sender will only forward the article that created within 1 day
      * "7d", "1w", "30d", "2h"...
      *
      * default is `30m`
@@ -106,75 +108,24 @@ interface ForwardTargetPlatformCommonConfig {
     }>
 }
 
-type ForwardTargetPlatformConfig<T extends ForwardTargetPlatformEnum = ForwardTargetPlatformEnum> = PlatformConfigMap[T]
+type SendTargetConfig<T extends SendTargetPlatformEnum = SendTargetPlatformEnum> = PlatformConfigMap[T]
 
-interface ForwarderConfig extends CommonCfgConfig {
-    cron?: string
-    media?: Media
-    render_type?: 'text' | 'img' | 'img-with-meta'
-}
-
-interface ForwardTarget<T extends ForwardTargetPlatformEnum = ForwardTargetPlatformEnum> {
+interface SendTarget<T extends SendTargetPlatformEnum = SendTargetPlatformEnum> {
     platform: T
     /**
-     * unique id for the target
-     * default is md5 hash of the platform and config
+     * unique id for the target of the platform
      */
-    id?: string
-    cfg_platform: ForwardTargetPlatformConfig<T> & ForwardTargetPlatformCommonConfig
+    id: string
+    config: SendTargetConfig<T> & SendTargetCommonConfig
 }
 
-interface Forwarder<T extends TaskType> {
-    /**
-     * Display only
-     */
-    name?: string
-    /**
-     * will override the origin and paths
-     */
-    websites?: Array<string>
-    /**
-     * should work with paths
-     */
-    origin?: string
-    /**
-     * should work with origin
-     */
-    paths?: Array<string>
-    /**
-     * Task type defined in `@idol-bbq-utils/spider`
-     */
-    task_type?: T
-    /**
-     * Task type like follows need this
-     */
-    task_title?: string
-    /**
-     *
-     */
-    cfg_task?: TaskConfig<T>
-    /**
-     * Array of forwarder target's id or id with runtime config, if empty will use all targets
-     */
-    subscribers?: Array<
-        | string
-        | {
-              id: string
-              cfg_forward_target?: ForwardTargetPlatformCommonConfig
-          }
-    >
-
-    cfg_forwarder?: ForwarderConfig
-
-    cfg_forward_target?: ForwardTargetPlatformCommonConfig
-}
-
-export { ForwardTargetPlatformEnum }
+export { SendTargetPlatformEnum }
 
 export type {
-    ForwardTarget,
-    Forwarder,
-    ForwarderConfig,
-    ForwardTargetPlatformConfig,
-    ForwardTargetPlatformCommonConfig,
+    SendTarget,
+    SendTargetConfig,
+    SendTargetCommonConfig,
+    TaskConfig as SenderTaskConfig,
 }
+
+export * from './media'

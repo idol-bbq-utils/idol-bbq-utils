@@ -1,6 +1,6 @@
 import { BaseTranslator } from './base'
 import axios from 'axios'
-import { TranslatorProvider, type TranslatorConfig } from '@idol-bbq-utils/config'
+import { type TranslatorConfig, TranslatorProvider } from './types'
 import { Logger } from '@idol-bbq-utils/log'
 
 class ByteDanceLLMTranslator extends BaseTranslator {

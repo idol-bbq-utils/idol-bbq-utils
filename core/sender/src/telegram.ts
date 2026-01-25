@@ -1,10 +1,10 @@
 import { Input, Telegraf } from 'telegraf'
 import { Forwarder, type SendProps } from './base'
 import type { InputMediaPhoto, InputMediaVideo } from 'telegraf/types'
-import { type ForwardTargetPlatformConfig, ForwardTargetPlatformEnum } from './types'
+import { type SendTargetConfig, SendTargetPlatformEnum } from './types'
 
 class TgForwarder extends Forwarder {
-    static _PLATFORM = ForwardTargetPlatformEnum.Telegram
+    static _PLATFORM = SendTargetPlatformEnum.Telegram
     protected override BASIC_TEXT_LIMIT = 1024
     NAME = 'telegram'
     private chat_id: string
@@ -12,7 +12,7 @@ class TgForwarder extends Forwarder {
 
     constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
         super(config, ...rest)
-        const { chat_id, token } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Telegram>
+        const { chat_id, token } = config as SendTargetConfig<SendTargetPlatformEnum.Telegram>
         if (!chat_id || !token) {
             throw new Error(`forwarder ${this.NAME} chat_id and bot token is required`)
         }

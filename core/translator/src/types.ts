@@ -1,4 +1,4 @@
-import type { CommonCfgConfig } from './common'
+import type { CommonCfgConfig } from '@idol-bbq-utils/utils'
 
 type ByteDance_LLM = 'doubao-pro-128k'
 type BigModel_LLM = 'glm-4-flash'

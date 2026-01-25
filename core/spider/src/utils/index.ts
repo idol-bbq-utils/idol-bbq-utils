@@ -1,13 +1,27 @@
 import type { CookieData } from 'puppeteer-core'
 import fs from 'fs'
 
+// cookie_string is high priority than cookie_file
+function resolveCookieString(cookie_string?: string, cookie_file?: string): string {
+    if (cookie_string) {
+        return cookie_string
+    } else if (cookie_file) {
+        try {
+            return fs.readFileSync(cookie_file, 'utf-8')
+        } catch (err) {
+            throw new Error(`Failed to read cookie file: ${err}`)
+        }
+    } else {
+        return ''
+    }
+}
 /**
  * @description convert netscape cookie file to puppeteer cookie like https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en
- * @param cookie_file path to cookie file
+ * @param cookie_string cookie string in netscape format
  * @returns CookieParam[]
  */
-function parseNetscapeCookieToPuppeteerCookie(cookie_file: string): Array<CookieData> {
-    let lines = fs.readFileSync(cookie_file, 'utf8').split('\n')
+function parseNetscapeCookieToPuppeteerCookie(cookie_string?: string, cookie_file?: string): Array<CookieData> {
+    let lines = resolveCookieString(cookie_string, cookie_file).split('\n')
     const cookies = []
     for (let line of lines) {
         //  ref: https://github.com/Moustachauve/cookie-editor

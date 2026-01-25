@@ -1,5 +1,5 @@
 {
-    "name": "@idol-bbq-utils/forwarder-service",
+    "name": "@idol-bbq-utils/sender-service",
     "version": "0.1.0",
     "description": "Standalone forwarder worker service for distributed deployment",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
@@ -13,12 +13,13 @@
     },
     "dependencies": {
         "@idol-bbq-utils/db": "workspace:^",
-        "@idol-bbq-utils/forwarder": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/render": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
-        "@idol-bbq-utils/utils": "workspace:^"
+        "@idol-bbq-utils/utils": "workspace:^",
+        "@idol-bbq-utils/config": "workspace:^"
     },
     "devDependencies": {
         "@types/node": "^22.15.3"

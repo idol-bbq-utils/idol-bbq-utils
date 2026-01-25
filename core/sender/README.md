@@ -1,6 +1,6 @@
-# `@idol-bbq-utils/forwarder`
+# `@idol-bbq-utils/sender`
 
-Multi-platform forwarder service supporting:
+Multi-platform sender service supporting:
 - QQ (OneBot 11 protocol)
 - Telegram (via Telegraf)
 - Bilibili
@@ -15,17 +15,17 @@ Multi-platform forwarder service supporting:
 ## Usage
 
 ```typescript
-import { getForwarder, ForwardTargetPlatformEnum } from '@idol-bbq-utils/forwarder'
+import { getSender, ForwardTargetPlatformEnum } from '@idol-bbq-utils/sender'
 
-const QQForwarder = getForwarder(ForwardTargetPlatformEnum.QQ)
-const forwarder = new QQForwarder(
+const QQSender = getSender(ForwardTargetPlatformEnum.QQ)
+const sender = new QQSender(
     { url: 'http://localhost:5700', group_id: '123456', token: 'your-token' },
     'bot-id',
     logger
 )
 
-await forwarder.init()
-await forwarder.send('Hello, world!', {
+await sender.init()
+await sender.send('Hello, world!', {
     media: [{ media_type: 'photo', path: '/path/to/image.jpg' }]
 })
 ```

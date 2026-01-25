@@ -312,13 +312,13 @@ class SpiderPools extends BaseCompatibleModel {
             }
         }
 
-        let cookieString: string | undefined
+        let cookie_string: string | undefined
         let page: Page | undefined
 
         const cookie_file = cfg_crawler?.cookie_file
         if (cookie_file) {
             const cookies = parseNetscapeCookieToPuppeteerCookie(cookie_file)
-            cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+            cookie_string = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
         }
 
         const user_agent = cfg_crawler?.user_agent
@@ -377,7 +377,7 @@ class SpiderPools extends BaseCompatibleModel {
                             url,
                             page,
                             translator,
-                            cookieString,
+                            cookie_string,
                         )
 
                         result.push({
@@ -395,7 +395,7 @@ class SpiderPools extends BaseCompatibleModel {
                                     task_type: 'follows',
                                     crawl_engine,
                                     sub_task_type,
-                                    cookieString,
+                                    cookie_string,
                                 }),
                             {
                                 retries: RETRY_LIMIT,
@@ -458,7 +458,7 @@ class SpiderPools extends BaseCompatibleModel {
         url: URL,
         page?: Page,
         translator?: BaseTranslator,
-        cookieString?: string,
+        cookie_string?: string,
     ): Promise<Array<number>> {
         const { cfg_crawler } = ctx.task.data as Crawler
         const { engine, sub_task_type } = cfg_crawler || {}
@@ -468,7 +468,7 @@ class SpiderPools extends BaseCompatibleModel {
                     task_type: 'article',
                     crawl_engine: engine,
                     sub_task_type,
-                    cookieString,
+                    cookie_string,
                 }),
             {
                 retries: RETRY_LIMIT,

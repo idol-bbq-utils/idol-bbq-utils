@@ -3,7 +3,7 @@ import { Forwarder, type SendProps } from './base'
 import { pRetry } from '@idol-bbq-utils/utils'
 import FormData from 'form-data'
 import fs from 'fs'
-import { type ForwardTargetPlatformConfig, ForwardTargetPlatformEnum } from './types'
+import { type SendTargetConfig, SendTargetPlatformEnum } from './types'
 
 interface BiliImageUploaded {
     img_src: string
@@ -13,11 +13,11 @@ interface BiliImageUploaded {
 }
 
 class BiliForwarder extends Forwarder {
-    static _PLATFORM = ForwardTargetPlatformEnum.Bilibili
+    static _PLATFORM = SendTargetPlatformEnum.Bilibili
     NAME = 'bilibili'
     private bili_jct: string
     private sessdata: string
-    private media_check_level: ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>['media_check_level']
+    private media_check_level: SendTargetConfig<SendTargetPlatformEnum.Bilibili>['media_check_level']
     protected override BASIC_TEXT_LIMIT = 1000
 
     constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
@@ -26,7 +26,7 @@ class BiliForwarder extends Forwarder {
             bili_jct,
             sessdata,
             media_check_level = 'none',
-        } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.Bilibili>
+        } = config as SendTargetConfig<SendTargetPlatformEnum.Bilibili>
         if (!bili_jct || !sessdata) {
             throw new Error(`forwarder ${this.NAME} bili_jct and sessdata are required`)
         }

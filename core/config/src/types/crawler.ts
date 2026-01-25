@@ -1,6 +1,6 @@
 import type { CrawlEngine, TaskType } from '@idol-bbq-utils/spider/types'
-import type { CommonCfgConfig } from './common'
-import type { Translator } from './translator'
+import type { CommonCfgConfig } from '@idol-bbq-utils/utils'
+import type { Translator } from '@idol-bbq-utils/translator'
 
 interface CrawlerConfig extends CommonCfgConfig {
     /**
@@ -13,9 +13,13 @@ interface CrawlerConfig extends CommonCfgConfig {
      */
     cron?: string
     /**
-     * Cookie header string
+     * Cookie string in netscape format
      */
     cookie_string?: string
+    /**
+     * Cookie file path in netscape format
+     */
+    cookie_file?: string
     /**
      * Random waiting time for per crawling
      */

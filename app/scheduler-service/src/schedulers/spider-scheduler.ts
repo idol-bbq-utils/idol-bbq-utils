@@ -4,7 +4,7 @@ import { TaskScheduler } from '../utils/base'
 import { QueueManager, QueueName, generateJobId, getLockKey, acquireLock, releaseLock } from '@idol-bbq-utils/queue'
 import type { CrawlerJobData } from '@idol-bbq-utils/queue/jobs'
 import type { Ctx } from '@/types'
-import type { AppConfig, QueueConfig, TaskCrawlers } from '@idol-bbq-utils/config'
+import type { AppConfig, QueueConfig, TaskCrawler } from '@idol-bbq-utils/config'
 
 class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
     NAME: string = 'SpiderTaskScheduler'
@@ -46,7 +46,7 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
         }
     }
 
-    private async dispatchToQueue(taskId: string, crawler: TaskCrawlers): Promise<void> {
+    private async dispatchToQueue(taskId: string, crawler: TaskCrawler): Promise<void> {
         if (!this.queueManager) return
 
         const lockKey = getLockKey('crawler', crawler.name || 'unnamed')

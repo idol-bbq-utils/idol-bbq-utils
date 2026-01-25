@@ -7,13 +7,13 @@ import type { AppConfig, QueueModeConfig } from '@/types'
 import { Platform, type MediaType, type TaskType } from '@idol-bbq-utils/spider/types'
 import DB from '@idol-bbq-utils/db'
 import type { Article, ArticleWithId, DBFollows } from '@idol-bbq-utils/db'
-import { BaseForwarder, getForwarder } from '@idol-bbq-utils/forwarder'
+import { BaseForwarder, getForwarder } from '@idol-bbq-utils/sender'
 import { type Media, type MediaTool, MediaToolEnum } from '@/types/media'
 import type {
     ForwardTarget,
     ForwardTargetPlatformCommonConfig,
     Forwarder as RealForwarder,
-} from '@idol-bbq-utils/forwarder'
+} from '@idol-bbq-utils/sender'
 import crypto from 'crypto'
 import {
     galleryDownloadMediaFile,

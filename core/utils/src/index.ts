@@ -3,6 +3,7 @@ export * from './is-network-error'
 export * from './media'
 export * from './time'
 export * from './directories'
+export * from './types'
 
 import { Logger } from '@idol-bbq-utils/log'
 import { uniq } from 'lodash'

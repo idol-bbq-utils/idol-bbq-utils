@@ -30,6 +30,7 @@
     },
     "dependencies": {
         "@idol-bbq-utils/config": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
         "bullmq": "^5.34.3",
         "cron": "^4.4.0",
         "ioredis": "^5.4.2"

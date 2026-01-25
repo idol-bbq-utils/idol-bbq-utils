@@ -80,8 +80,8 @@ async function processCrawlerJob(
     browserPool: BrowserPool,
     queueManager: QueueManager,
 ): Promise<JobResult> {
-    const { taskId, crawlerName, websites, taskType, config } = job.data
-    const jobLog = log.child({ taskId, crawlerName })
+    const { task_id, task_type, name, websites, config } = job.data
+    const jobLog = log.child({ task_id, name })
 
     jobLog.info(`Processing crawler job: ${websites.length} websites`)
 
@@ -90,21 +90,18 @@ async function processCrawlerJob(
 
     try {
         const needsBrowser = !config.engine?.startsWith('api')
-
+        const cookies = parseNetscapeCookieToPuppeteerCookie(config.cookie_string, config.cookie_file)
         if (needsBrowser) {
             page = await browserPool.getPage()
-            await page.setUserAgent(config.userAgent || UserAgent.CHROME)
-
-            if (config.cookieFile) {
-                const cookies = parseNetscapeCookieToPuppeteerCookie(config.cookieFile)
+            await page.setUserAgent({ userAgent: config.user_agent })
+            if (cookies.length > 0) {
                 await page.browserContext().setCookie(...cookies)
             }
         }
 
-        let cookieString: string | undefined
-        if (config.cookieFile) {
-            const cookies = parseNetscapeCookieToPuppeteerCookie(config.cookieFile)
-            cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+        let cookie_string: string | undefined
+        if (cookies.length > 0) {
+            cookie_string = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
         }
 
         for (const website of websites) {
@@ -117,9 +114,9 @@ async function processCrawlerJob(
 
                 const spider = plugin.create(jobLog)
 
-                if (config.intervalTime) {
+                if (config.interval_time) {
                     const delay = Math.floor(
-                        Math.random() * (config.intervalTime.max - config.intervalTime.min) + config.intervalTime.min,
+                        Math.random() * (config.interval_time.max - config.interval_time.min) + config.interval_time.min,
                     )
                     jobLog.debug(`Waiting ${delay}ms before crawling...`)
                     await new Promise((r) => setTimeout(r, delay))
@@ -127,11 +124,11 @@ async function processCrawlerJob(
 
                 const cur_results = await pRetry(
                     () =>
-                        spider.crawl(website, page, taskId, {
-                            task_type: taskType,
+                        spider.crawl(website, page, task_id, {
+                            task_type: task_type,
                             crawl_engine: config.engine,
-                            sub_task_type: config.subTaskType,
-                            cookieString,
+                            sub_task_type: config.sub_task_type,
+                            cookie_string,
                         }),
                     {
                         retries: 3,
@@ -155,15 +152,15 @@ async function processCrawlerJob(
         if (results.length > 0) {
             const storageQueue = queueManager.getQueue(QueueName.STORAGE)
             const storageJobData: StorageJobData = {
+                name: '',
                 type: 'storage',
-                taskId: `${taskId}-storage`,
-                crawlerTaskId: taskId,
+                task_id: `${task_id}-storage`,
+                task_type,
                 data: results,
-                taskType: taskType,
-                translatorConfig: config.translator,
+                translator_config: config.translator,
             }
             await storageQueue.add('store', storageJobData, {
-                jobId: `${taskId}-storage`,
+                jobId: `${task_id}-storage`,
             })
             jobLog.info(`Dispatched ${results.length} items to storage queue`)
         }

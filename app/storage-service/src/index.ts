@@ -183,23 +183,23 @@ async function processFollowsStorage(
 }
 
 async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
-    const { taskId, crawlerTaskId, taskType, data, translatorConfig } = job.data
-    const jobLog = log.child({ taskId, crawlerTaskId, taskType })
+    const { task_id, task_type, data, translator_config } = job.data
+    const jobLog = log.child({ task_id, task_type })
 
-    jobLog.info(`Processing storage job: ${data.length} items (type: ${taskType})`)
+    jobLog.info(`Processing storage job: ${data.length} items (type: ${task_type})`)
 
     let translator: BaseTranslator | undefined = undefined
 
-    if (translatorConfig && taskType === 'article') {
+    if (translator_config && task_type === 'article') {
         try {
             const { translatorRegistry } = await import('@idol-bbq-utils/translator')
             translator = await translatorRegistry.create(
-                translatorConfig.provider,
-                translatorConfig.apiKey,
+                translator_config.provider,
+                translator_config.api_key,
                 jobLog,
-                translatorConfig.config,
+                translator_config.config,
             )
-            jobLog.info(`Translator initialized: ${translatorConfig.provider}`)
+            jobLog.info(`Translator initialized: ${translator_config.provider}`)
         } catch (error) {
             jobLog.error(`Failed to initialize translator: ${error}`)
         }
@@ -207,18 +207,18 @@ async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
 
     let result: { savedIds: number[]; errorCount: number }
 
-    if (taskType === 'article') {
+    if (task_type === 'article') {
         result = await processArticleStorage(data as SpiderArticleResult[], translator, jobLog)
         await job.updateProgress(100)
-    } else if (taskType === 'follows') {
+    } else if (task_type === 'follows') {
         result = await processFollowsStorage(data as SpiderFollowsResult[], jobLog)
         await job.updateProgress(100)
     } else {
-        jobLog.error(`Unknown task type: ${taskType}`)
+        jobLog.error(`Unknown task type: ${task_type}`)
         return {
             success: false,
             count: 0,
-            error: `Unknown task type: ${taskType}`,
+            error: `Unknown task type: ${task_type}`,
         }
     }
 

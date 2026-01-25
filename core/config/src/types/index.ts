@@ -1,6 +1,7 @@
 import type { TaskType } from '@idol-bbq-utils/spider/types'
 import type { Crawler, CrawlerConfig } from './crawler'
-import type { Sender, SenderConfig, SendTarget, SendTargetCommonConfig } from './sender'
+import type { Sender, SenderConfig } from './sender'
+import type { SendTarget, SendTargetCommonConfig } from '@idol-bbq-utils/sender'
 
 interface QueueConfig {
     redis: {
@@ -33,8 +34,5 @@ interface AppConfigType {
 }
 
 export type { AppConfigType, QueueConfig }
-export * from './common'
 export * from './crawler'
 export * from './sender'
-export * from './translator'
-export * from './media'

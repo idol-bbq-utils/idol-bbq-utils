@@ -1,9 +1,10 @@
 import { test, expect, describe } from 'bun:test'
 import { AppConfig } from '../src/index'
 import type { AppConfigType } from '../src/types'
-import { SendTargetPlatformEnum } from '../src/types'
+import { SendTargetPlatformEnum } from '@idol-bbq-utils/sender'
 import { Platform } from '@idol-bbq-utils/spider/types'
 import { UserAgent } from '@idol-bbq-utils/spider'
+import { TranslatorProvider } from '@idol-bbq-utils/translator'
 
 describe('AppConfig - Configuration Merging', () => {
     describe('Crawler Configuration Merging', () => {
@@ -183,6 +184,257 @@ describe('AppConfig - Configuration Merging', () => {
             const crawler = crawlers[0]!
             expect(crawler.websites).toContain('https://x.com/user1')
             expect(crawler.websites).toContain('https://x.com/user2')
+        })
+    })
+
+    describe('Translator Configuration Merging', () => {
+        test('should merge global and task-level translator config', () => {
+            const config: AppConfigType = {
+                config: {
+                    cfg_crawler: {
+                        translator: {
+                            provider: TranslatorProvider.Google,
+                            api_key: 'global-api-key',
+                            config: {
+                                prompt: 'Translate the following text to Chinese',
+                                model_id: 'gemini-2.0-flash',
+                            },
+                        },
+                    },
+                },
+                crawlers: [
+                    {
+                        websites: ['https://x.com/user1'],
+                        config: {
+                            cfg_crawler: {
+                                translator: {
+                                    provider: TranslatorProvider.Google,
+                                    api_key: 'global-api-key',
+                                    config: {
+                                        model_id: 'gemini-1.5-pro',
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+
+            const appConfig = new AppConfig(config)
+            appConfig.resolveConfig()
+            const crawlers = appConfig.getTaskCrawlers()
+
+            const crawler = crawlers[0]!
+            expect(crawler.config).toBeDefined()
+            expect(crawler.config!.translator).toBeDefined()
+            expect(crawler.config!.translator!.provider).toBe(TranslatorProvider.Google)
+            expect(crawler.config!.translator!.api_key).toBe('global-api-key')
+            expect(crawler.config!.translator!.config?.prompt).toBe('Translate the following text to Chinese')
+            expect(crawler.config!.translator!.config?.model_id).toBe('gemini-1.5-pro')
+        })
+
+        test('should deeply merge translator config fields', () => {
+            const config: AppConfigType = {
+                config: {
+                    cfg_crawler: {
+                        translator: {
+                            provider: TranslatorProvider.BigModel,
+                            api_key: 'global-key',
+                            config: {
+                                prompt: 'global-prompt',
+                                base_url: 'https://api.global.com',
+                                name: 'global-translator',
+                            },
+                        },
+                    },
+                },
+                crawlers: [
+                    {
+                        websites: ['https://x.com/user1'],
+                        config: {
+                            cfg_crawler: {
+                                translator: {
+                                    provider: TranslatorProvider.BigModel,
+                                    api_key: 'global-key',
+                                    config: {
+                                        prompt: 'task-prompt',
+                                        model_id: 'glm-4-plus',
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+
+            const appConfig = new AppConfig(config)
+            appConfig.resolveConfig()
+            const crawlers = appConfig.getTaskCrawlers()
+
+            const crawler = crawlers[0]!
+            expect(crawler.config).toBeDefined()
+            expect(crawler.config!.translator).toBeDefined()
+            expect(crawler.config!.translator!.config?.prompt).toBe('task-prompt')
+            expect(crawler.config!.translator!.config?.base_url).toBe('https://api.global.com')
+            expect(crawler.config!.translator!.config?.name).toBe('global-translator')
+            expect(crawler.config!.translator!.config?.model_id).toBe('glm-4-plus')
+        })
+
+        test('should replace translator when using different provider', () => {
+            const config: AppConfigType = {
+                config: {
+                    cfg_crawler: {
+                        translator: {
+                            provider: TranslatorProvider.Google,
+                            api_key: 'google-key',
+                            config: {
+                                model_id: 'gemini-2.0-flash',
+                            },
+                        },
+                    },
+                },
+                crawlers: [
+                    {
+                        websites: ['https://x.com/user1'],
+                        config: {
+                            cfg_crawler: {
+                                translator: {
+                                    provider: TranslatorProvider.BigModel,
+                                    api_key: 'bigmodel-key',
+                                    config: {
+                                        model_id: 'glm-4-flash',
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+
+            const appConfig = new AppConfig(config)
+            appConfig.resolveConfig()
+            const crawlers = appConfig.getTaskCrawlers()
+
+            const crawler = crawlers[0]!
+            expect(crawler.config).toBeDefined()
+            expect(crawler.config!.translator).toBeDefined()
+            expect(crawler.config!.translator!.provider).toBe(TranslatorProvider.BigModel)
+            expect(crawler.config!.translator!.api_key).toBe('bigmodel-key')
+            expect(crawler.config!.translator!.config?.model_id).toBe('glm-4-flash')
+        })
+
+        test('should handle translator with extended_payload', () => {
+            const config: AppConfigType = {
+                config: {
+                    cfg_crawler: {
+                        translator: {
+                            provider: TranslatorProvider.OpenAI,
+                            api_key: 'openai-key',
+                            config: {
+                                extended_payload: {
+                                    temperature: 0.7,
+                                    max_tokens: 1000,
+                                },
+                            },
+                        },
+                    },
+                },
+                crawlers: [
+                    {
+                        websites: ['https://x.com/user1'],
+                        config: {
+                            cfg_crawler: {
+                                translator: {
+                                    provider: TranslatorProvider.OpenAI,
+                                    api_key: 'openai-key',
+                                    config: {
+                                        extended_payload: {
+                                            max_tokens: 2000,
+                                            top_p: 0.9,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+
+            const appConfig = new AppConfig(config)
+            appConfig.resolveConfig()
+            const crawlers = appConfig.getTaskCrawlers()
+
+            const crawler = crawlers[0]!
+            expect(crawler.config).toBeDefined()
+            expect(crawler.config!.translator).toBeDefined()
+            expect(crawler.config!.translator!.config?.extended_payload).toBeDefined()
+            expect(crawler.config!.translator!.config!.extended_payload!.temperature).toBe(0.7)
+            expect(crawler.config!.translator!.config!.extended_payload!.max_tokens).toBe(2000)
+            expect(crawler.config!.translator!.config!.extended_payload!.top_p).toBe(0.9)
+        })
+
+        test('should handle missing translator in task config', () => {
+            const config: AppConfigType = {
+                config: {
+                    cfg_crawler: {
+                        translator: {
+                            provider: TranslatorProvider.QwenMT,
+                            api_key: 'qwen-key',
+                            config: {
+                                prompt: 'global-prompt',
+                            },
+                        },
+                    },
+                },
+                crawlers: [
+                    {
+                        websites: ['https://x.com/user1'],
+                    },
+                ],
+            }
+
+            const appConfig = new AppConfig(config)
+            appConfig.resolveConfig()
+            const crawlers = appConfig.getTaskCrawlers()
+
+            const crawler = crawlers[0]!
+            expect(crawler.config).toBeDefined()
+            expect(crawler.config!.translator).toBeDefined()
+            expect(crawler.config!.translator!.provider).toBe(TranslatorProvider.QwenMT)
+            expect(crawler.config!.translator!.api_key).toBe('qwen-key')
+            expect(crawler.config!.translator!.config?.prompt).toBe('global-prompt')
+        })
+
+        test('should handle task-only translator config', () => {
+            const config: AppConfigType = {
+                crawlers: [
+                    {
+                        websites: ['https://x.com/user1'],
+                        config: {
+                            cfg_crawler: {
+                                translator: {
+                                    provider: TranslatorProvider.ByteDance,
+                                    api_key: 'bytedance-key',
+                                    config: {
+                                        model_id: 'doubao-pro-128k',
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+
+            const appConfig = new AppConfig(config)
+            appConfig.resolveConfig()
+            const crawlers = appConfig.getTaskCrawlers()
+
+            const crawler = crawlers[0]!
+            expect(crawler.config).toBeDefined()
+            expect(crawler.config!.translator).toBeDefined()
+            expect(crawler.config!.translator!.provider).toBe(TranslatorProvider.ByteDance)
+            expect(crawler.config!.translator!.api_key).toBe('bytedance-key')
+            expect(crawler.config!.translator!.config?.model_id).toBe('doubao-pro-128k')
         })
     })
 
@@ -537,10 +789,7 @@ describe('AppConfig - Configuration Merging', () => {
     describe('Getter Methods', () => {
         test('should return task crawlers', () => {
             const config: AppConfigType = {
-                crawlers: [
-                    { websites: ['https://x.com/user1'] },
-                    { websites: ['https://x.com/user2'] },
-                ],
+                crawlers: [{ websites: ['https://x.com/user1'] }, { websites: ['https://x.com/user2'] }],
             }
 
             const appConfig = new AppConfig(config)

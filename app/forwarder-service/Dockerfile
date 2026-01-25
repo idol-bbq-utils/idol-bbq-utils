@@ -14,7 +14,7 @@ COPY ./assets/fonts ./assets/fonts
 ENV DATABASE_URL="file:/app/data.db"
 
 RUN bun install --filter "./app/forwarder-service" --filter "./core/*" --frozen-lockfile --production
-RUN bun --filter "@idol-bbq-utils/forwarder-service" build
+RUN bun --filter "@idol-bbq-utils/sender-service" build
 
 FROM base AS runner
 

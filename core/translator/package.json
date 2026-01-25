@@ -23,7 +23,6 @@
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
-        "@idol-bbq-utils/config": "workspace:^",
         "@google/generative-ai": "^0.14.1",
         "@idol-bbq-utils/log": "workspace:^",
         "axios": "^1.7.2",

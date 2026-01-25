@@ -33,7 +33,7 @@ class YoutubeSpider extends BaseSpider {
             task_type: T
             crawl_engine: CrawlEngine
             sub_task_type?: Array<string>
-            cookieString?: string
+            cookie_string?: string
         },
     ): Promise<TaskTypeResult<T, Platform.YouTube>> {
         const result = super._match_valid_url(url, YoutubeSpider)?.groups

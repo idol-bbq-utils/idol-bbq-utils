@@ -1,11 +1,11 @@
 import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
-import type { ForwarderJobData, JobResult } from '@idol-bbq-utils/queue/jobs'
+import type { JobResult, SenderJobData } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
 import DB from '@idol-bbq-utils/db'
 import type { Article, ArticleWithId, DBFollows } from '@idol-bbq-utils/db'
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
-import { getForwarder } from '@idol-bbq-utils/forwarder'
+import { getForwarder } from '@idol-bbq-utils/sender'
 import {
     plainDownloadMediaFile,
     galleryDownloadMediaFile,
@@ -23,6 +23,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { Redis } from 'ioredis'
+import type { MediaTool, MediaToolEnum, SenderTaskConfig } from '@idol-bbq-utils/sender'
 
 const log = createLogger({ defaultMeta: { service: 'ForwarderService' } })
 const CACHE_DIR_ROOT = process.env.CACHE_DIR_ROOT || path.join(os.tmpdir(), 'forwarder-service')
@@ -78,13 +79,13 @@ async function deleteErrorCount(platform: Platform, articleId: string, targetId:
 
 async function handleMedia(
     article: Article,
-    forwarderConfig: ForwarderJobData['forwarderConfig'],
+    config: SenderJobData['config'],
     taskId: string,
     jobLog: ReturnType<typeof log.child>,
 ): Promise<Array<{ path: string; media_type: MediaType }>> {
     const maybe_media_files: Array<{ path: string; media_type: MediaType }> = []
 
-    if (!forwarderConfig.media) {
+    if (!config.cfg_sender.media) {
         return maybe_media_files
     }
 
@@ -121,15 +122,14 @@ async function handleMedia(
                 return undefined
             }
 
-            if (forwarderConfig.media.use?.tool === 'gallery-dl' && forwarderConfig.media.use.path) {
+            // TODO
+            if (config.cfg_sender.media.use?.tool === 'gallery-dl' && (config.cfg_sender.media.use as MediaTool<MediaToolEnum.GALLERY_DL>).path) {
                 jobLog.debug(`Downloading media with gallery-dl for article URL: ${currentArticle.url}`)
+                const tool = config.cfg_sender.media.use as MediaTool<MediaToolEnum.GALLERY_DL>
                 const paths = galleryDownloadMediaFile(
                     currentArticle.url,
                     CACHE_DIR_ROOT,
-                    {
-                        path: forwarderConfig.media.use.path,
-                        cookie_file: forwarderConfig.media.use.cookieFile,
-                    },
+                    tool,
                     taskId,
                 )
                 maybe_media_files.push(
@@ -182,17 +182,18 @@ async function handleMedia(
 }
 
 async function processFollowsTask(
-    job: Job<ForwarderJobData>,
+    job: Job<SenderJobData>,
+    follows_task_config: SenderTaskConfig<'follows'>,
     jobLog: ReturnType<typeof log.child>,
 ): Promise<JobResult> {
-    const { taskId, urls, forwarderConfig, followsConfig } = job.data
-    const { taskTitle, comparisonWindow = '1d' } = followsConfig || {}
+    const { task_id, websites, config, targets, task_type, task_title } = job.data
+    const { comparison_window = '2h' } = follows_task_config
 
-    jobLog.info(`Processing follows forwarding for ${urls.length} websites`)
+    jobLog.info(`Processing follows forwarding for ${websites.length} websites`)
 
     const results = new Map<Platform, Array<[DBFollows, DBFollows | null]>>()
 
-    for (const website of urls) {
+    for (const website of websites) {
         try {
             const url = new URL(website)
             const { platform, u_id } = spiderRegistry.extractBasicInfo(url.href) ?? {}
@@ -202,7 +203,7 @@ async function processFollowsTask(
                 continue
             }
 
-            const follows = await DB.Follow.getLatestAndComparisonFollowsByName(u_id, platform, comparisonWindow)
+            const follows = await DB.Follow.getLatestAndComparisonFollowsByName(u_id, platform, comparison_window)
             if (!follows) {
                 jobLog.warn(`No follows found for ${url.href}`)
                 continue
@@ -225,14 +226,14 @@ async function processFollowsTask(
     }
 
     let texts_to_send = followsToText(orderBy(Array.from(results.entries()), (i) => i[0], 'asc'))
-    if (taskTitle) {
-        texts_to_send = `${taskTitle}\n${texts_to_send}`
+    if (task_title) {
+        texts_to_send = `${task_title}\n${texts_to_send}`
     }
 
     let successCount = 0
     let errorCount = 0
 
-    for (const target of forwarderConfig.targets) {
+    for (const target of targets) {
         try {
             const ForwarderClass = getForwarder(target.platform)
             if (!ForwarderClass) {
@@ -266,11 +267,12 @@ async function processFollowsTask(
     }
 }
 
-async function processForwarderJob(job: Job<ForwarderJobData>): Promise<JobResult> {
-    const { taskId, storageTaskId, taskType, articleIds, forwarderConfig } = job.data
-    const jobLog = log.child({ taskId, storageTaskId, taskType })
+async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> {
+    const { task_id, task_type, websites, config } = job.data
+    const jobLog = log.child({ task_id, task_type })
 
-    if (taskType === 'follows') {
+    if (task_type === 'follows') {
+
         return await processFollowsTask(job, jobLog)
     }
 

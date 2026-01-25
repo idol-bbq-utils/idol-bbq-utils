@@ -1,9 +1,9 @@
 import axios from 'axios'
 import { Forwarder, type SendProps } from './base'
-import { type ForwardTargetPlatformConfig, ForwardTargetPlatformEnum } from './types'
+import { type SendTargetConfig, SendTargetPlatformEnum } from './types'
 
 class QQForwarder extends Forwarder {
-    static _PLATFORM = ForwardTargetPlatformEnum.QQ
+    static _PLATFORM = SendTargetPlatformEnum.QQ
     private group_id: string
     private url: string
     private token: string
@@ -12,7 +12,7 @@ class QQForwarder extends Forwarder {
 
     constructor(...[config, ...rest]: [...ConstructorParameters<typeof Forwarder>]) {
         super(config, ...rest)
-        const { group_id, url, token } = config as ForwardTargetPlatformConfig<ForwardTargetPlatformEnum.QQ>
+        const { group_id, url, token } = config as SendTargetConfig<SendTargetPlatformEnum.QQ>
         if (!group_id || !url) {
             throw new Error(`forwarder ${this.NAME} group_id and url is required`)
         }

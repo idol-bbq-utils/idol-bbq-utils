@@ -5,15 +5,13 @@ import type {
     AppConfigType,
     CrawlerConfig,
     SenderConfig,
-    SendTargetCommonConfig,
     Crawler,
-    Sender,
-    SendTarget,
-    SenderTaskConfig,
+    Sender, 
 } from './types'
 import { sanitizeWebsites } from '@idol-bbq-utils/utils'
 import type { TaskType } from '@idol-bbq-utils/spider/types'
 import { UserAgent } from '@idol-bbq-utils/spider'
+import type { SendTargetCommonConfig, SendTarget, SenderTaskConfig} from '@idol-bbq-utils/sender'
 
 type SpecifiedCrawlerConfig = Required<Pick<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>> & Omit<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>
 type SpecifiedSenderConfig = Required<Pick<SenderConfig, 'cron' | 'render_type'>> & Omit<SenderConfig, 'cron' | 'render_type'>
@@ -246,4 +244,4 @@ export class AppConfig {
     }
 }
 
-export type { TaskCrawler, TaskSender }
+export type { TaskCrawler, TaskSender, SpecifiedCrawlerConfig, SpecifiedSenderConfig }

@@ -1,5 +1,5 @@
 import type { ArticleLike } from './article'
-import { type ForwardTarget, type ForwardTargetPlatformCommonConfig, ForwardTargetPlatformEnum } from './types'
+import { type SendTarget, type SendTargetCommonConfig, SendTargetPlatformEnum } from './types'
 import { BaseCompatibleModel } from './base-model'
 import { Logger } from '@idol-bbq-utils/log'
 import type { MediaType } from '@idol-bbq-utils/utils'
@@ -24,18 +24,18 @@ export interface SendProps {
         path: string
     }>
     timestamp?: number
-    runtime_config?: ForwardTargetPlatformCommonConfig
+    runtime_config?: SendTargetCommonConfig
     article?: ArticleLike
 }
 
 abstract class BaseForwarder extends BaseCompatibleModel {
-    static _PLATFORM = ForwardTargetPlatformEnum.None
+    static _PLATFORM = SendTargetPlatformEnum.None
     log?: Logger
     id: string
-    protected config: ForwardTarget['cfg_platform']
+    protected config: SendTarget['config']
     protected pipeline: MiddlewarePipeline
 
-    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
+    constructor(config: SendTarget['config'], id: string, log?: Logger) {
         super()
         this.log = log
         this.config = config
@@ -67,7 +67,7 @@ abstract class BaseForwarder extends BaseCompatibleModel {
 
     public check_blocked(text: string, props: SendProps): boolean {
         const { timestamp, runtime_config, article } = props || {}
-        const mergedConfig: ForwardTargetPlatformCommonConfig = {
+        const mergedConfig: SendTargetCommonConfig = {
             ...this.config,
             ...runtime_config,
         }
@@ -102,7 +102,7 @@ abstract class BaseForwarder extends BaseCompatibleModel {
 
     public async send(text: string, props?: SendProps): Promise<any> {
         const { runtime_config } = props || {}
-        const mergedConfig: ForwardTargetPlatformCommonConfig = {
+        const mergedConfig: SendTargetCommonConfig = {
             ...this.config,
             ...runtime_config,
         }
@@ -143,7 +143,7 @@ abstract class BaseForwarder extends BaseCompatibleModel {
 abstract class Forwarder extends BaseForwarder {
     protected BASIC_TEXT_LIMIT = 1000
 
-    constructor(config: ForwardTarget['cfg_platform'], id: string, log?: Logger) {
+    constructor(config: SendTarget['config'], id: string, log?: Logger) {
         super(config, id, log)
         if (this.config?.replace_regex) {
             try {
@@ -169,7 +169,7 @@ abstract class Forwarder extends BaseForwarder {
         return this.BASIC_TEXT_LIMIT
     }
 
-    private validateReplaceRegex(regexps: ForwardTarget['cfg_platform']['replace_regex']): void {
+    private validateReplaceRegex(regexps: SendTarget['config']['replace_regex']): void {
         if (!regexps) return
 
         if (typeof regexps === 'string') {

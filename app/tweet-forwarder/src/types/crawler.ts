@@ -1,5 +1,5 @@
 import type { CrawlEngine, TaskType } from '@idol-bbq-utils/spider/types'
-import type { CommonCfgConfig } from './common'
+import type { CommonCfgConfig } from '@idol-bbq-utils/utils'
 import type { Translator } from './translator'
 
 interface CrawlerConfig extends CommonCfgConfig {
