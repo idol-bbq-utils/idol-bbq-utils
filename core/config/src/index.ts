@@ -15,21 +15,25 @@ import { sanitizeWebsites } from '@idol-bbq-utils/utils'
 import type { TaskType } from '@idol-bbq-utils/spider/types'
 import { UserAgent } from '@idol-bbq-utils/spider'
 
-type TaskCrawlers = {
+type SpecifiedCrawlerConfig = Required<Pick<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>> & Omit<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>
+type SpecifiedSenderConfig = Required<Pick<SenderConfig, 'cron' | 'render_type'>> & Omit<SenderConfig, 'cron' | 'render_type'>
+
+type TaskCrawler = {
     name: string
     websites: Array<string>
     task_type: TaskType
-    config?: CrawlerConfig
+    config: SpecifiedCrawlerConfig
 }
 
-type TaskSenders = {
+type TaskSender = {
     name: string
     websites: Array<string>
     task_title: string
+    task_type: TaskType
     targets: Array<SendTarget>
-    config?: {
+    config: {
         cfg_task?: SenderTaskConfig<TaskType>
-        cfg_sender?: SenderConfig
+        cfg_sender: SpecifiedSenderConfig
     }
 }
 
@@ -47,7 +51,7 @@ export class AppConfig {
         block_until: '2h',
     }
 
-    static DEFAULT_SENDER_CONFIG: TaskSenders['config'] = {
+    static DEFAULT_SENDER_CONFIG: TaskSender['config'] = {
         cfg_task: {
             follows: {
                 comparison_window: '1d',
@@ -59,8 +63,8 @@ export class AppConfig {
         },
     }
 
-    private task_crawlers: Array<TaskCrawlers> = []
-    private task_senders: Array<TaskSenders> = []
+    private task_crawlers: Array<TaskCrawler> = []
+    private task_senders: Array<TaskSender> = []
     /**
      * key is id, should be unique
      */
@@ -77,9 +81,9 @@ export class AppConfig {
         this.task_senders = this.resolveTaskSenders(this.send_targets)
     }
 
-    private resolveCrawlerConfig(crawler: Crawler): CrawlerConfig {
+    private resolveCrawlerConfig(crawler: Crawler): SpecifiedCrawlerConfig {
         const global = this.raw_config.config?.cfg_crawler || {}
-        let resolved_cfg = merge({}, AppConfig.DEFAULT_CRAWLER_CONFIG, global)
+        let resolved_cfg = merge({}, AppConfig.DEFAULT_CRAWLER_CONFIG, global) as SpecifiedCrawlerConfig
         if (global.disable_overwrite) {
             return resolved_cfg
         }
@@ -90,9 +94,9 @@ export class AppConfig {
         return resolved_cfg
     }
 
-    private resolveTaskCrawlers(): Array<TaskCrawlers> {
+    private resolveTaskCrawlers(): Array<TaskCrawler> {
         const crawlers = this.raw_config.crawlers || []
-        const resolved_crawlers: Array<TaskCrawlers> = []
+        const resolved_crawlers: Array<TaskCrawler> = []
         for (const crawler of crawlers) {
             const resolved_cfg = this.resolveCrawlerConfig(crawler)
             const websites = sanitizeWebsites({
@@ -161,10 +165,10 @@ export class AppConfig {
     /**
      * order: global -> task
      */
-    private resolveSenderConfig(sender: Sender<TaskType>): TaskSenders['config'] {
+    private resolveSenderConfig(sender: Sender<TaskType>): TaskSender['config'] {
         const global = {
             cfg_sender: this.raw_config.config?.cfg_sender || {},
-        } as Exclude<TaskSenders['config'], undefined>
+        } as Exclude<TaskSender['config'], undefined>
         let resolved_cfg = merge({}, AppConfig.DEFAULT_SENDER_CONFIG, global)
         if (global.cfg_sender?.disable_overwrite) {
             return resolved_cfg
@@ -177,9 +181,9 @@ export class AppConfig {
     }
 
     // especially handle targets here
-    private resolveTaskSenders(targets: Map<string, SendTarget>): Array<TaskSenders> {
+    private resolveTaskSenders(targets: Map<string, SendTarget>): Array<TaskSender> {
         const senders = this.raw_config.senders || []
-        const resolved_senders: Array<TaskSenders> = []
+        const resolved_senders: Array<TaskSender> = []
         for (const sender of senders) {
             const resolved_sender_cfg = this.resolveSenderConfig(sender)
             const resolved_targets: Array<SendTarget> = []
@@ -216,7 +220,8 @@ export class AppConfig {
             resolved_senders.push({
                 name: sender.name || '',
                 websites: websites,
-                task_title: sender.task_type || 'article',
+                task_type: sender.task_type || 'article',
+                task_title: resolved_sender_cfg.cfg_task?.task_title || '',
                 targets: resolved_targets,
                 config: resolved_sender_cfg,
             })
@@ -224,11 +229,11 @@ export class AppConfig {
         return resolved_senders
     }
 
-    public getTaskCrawlers(): Array<TaskCrawlers> {
+    public getTaskCrawlers(): Array<TaskCrawler> {
         return this.task_crawlers
     }
 
-    public getTaskSenders(): Array<TaskSenders> {
+    public getTaskSenders(): Array<TaskSender> {
         return this.task_senders
     }
 
@@ -240,3 +245,5 @@ export class AppConfig {
         return this.raw_config
     }
 }
+
+export type { TaskCrawler, TaskSender }

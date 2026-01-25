@@ -1,5 +1,5 @@
 import type { Platform, TaskType, GenericArticle, GenericFollows } from '@idol-bbq-utils/spider/types'
-import type { CrawlerConfig, SenderConfig, SenderTaskConfig, SendTarget, Translator } from '@idol-bbq-utils/config'
+import type { CrawlerConfig, SenderConfig, SenderTaskConfig, SendTarget, TaskSenders, Translator } from '@idol-bbq-utils/config'
 
 interface JobMetadata {
     task_id: string
@@ -29,11 +29,9 @@ export interface StorageJobData extends JobMetadata {
 export interface SenderJobData extends JobMetadata {
     type: 'sender'
     websites: string[]
-    targets?: Array<SendTarget>
-    config: {
-        cfg_task?: SenderTaskConfig<TaskType>,
-        cfg_sender?: Omit<SenderConfig, 'cron'>,
-    }
+    task_title: string
+    targets: Array<SendTarget>
+    config: TaskSenders['config']
 }
 
 export type JobData = CrawlerJobData | StorageJobData | SenderJobData

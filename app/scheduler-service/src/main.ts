@@ -1,25 +1,20 @@
-import { configParser, log } from './config'
+import { log } from './config'
+import { AppConfig, parseConfigFromFile } from '@idol-bbq-utils/config'
 import { SpiderTaskScheduler } from './schedulers/spider-scheduler'
-import { ForwarderTaskScheduler } from './schedulers/forwarder-scheduler'
-import EventEmitter from 'events'
+import { ForwarderTaskScheduler } from './schedulers/sender-scheduler'
+import type { Ctx } from './types'
 
 async function main() {
-    const config = configParser('./config.yaml')
+    // TODO: args
+    const config = parseConfigFromFile('./config.yaml')
     if (!config) {
         log.error('Config file is empty or invalid, exiting...')
         return
     }
 
-    const { crawlers, cfg_crawler, forwarders, cfg_forwarder, forward_targets, cfg_forward_target } = config
-    forward_targets?.forEach((target) => {
-        target.cfg_platform = {
-            ...cfg_forward_target,
-            ...target.cfg_platform,
-        }
-    })
+    const app_config = new AppConfig(config)
 
-
-    const queueConfig = {
+    const queue_config = {
         enabled: true,
         redis: {
             host: process.env.REDIS_HOST || 'localhost',
@@ -30,26 +25,26 @@ async function main() {
     }
 
     log.info('Scheduler service initializing...')
-    log.info(`Redis: ${queueConfig.redis.host}:${queueConfig.redis.port}`)
+    log.debug(`Redis: ${queue_config.redis.host}:${queue_config.redis.port}`)
 
-    const emitter = new EventEmitter()
     const taskSchedulers: Array<SpiderTaskScheduler | ForwarderTaskScheduler> = []
+    const ctx: Ctx = {
+        app_config,
+        logger: log,
+    }
 
+    const crawlers = app_config.getTaskCrawlers()
     if (crawlers && crawlers.length > 0) {
-        const spiderScheduler = new SpiderTaskScheduler({ crawlers, cfg_crawler }, emitter, log, queueConfig)
+        const spiderScheduler = new SpiderTaskScheduler(ctx, queue_config)
         taskSchedulers.push(spiderScheduler)
         log.info(`Initialized spider scheduler with ${crawlers.length} crawler(s)`)
     }
 
-    if (forwarders && forwarders.length > 0) {
-        const forwarderScheduler = new ForwarderTaskScheduler(
-            { forwarders, cfg_forwarder, forward_targets },
-            emitter,
-            log,
-            queueConfig,
-        )
+    const senders = app_config.getTaskSenders()
+    if (senders && senders.length > 0) {
+        const forwarderScheduler = new ForwarderTaskScheduler(ctx, queue_config)
         taskSchedulers.push(forwarderScheduler)
-        log.info(`Initialized forwarder scheduler with ${forwarders.length} forwarder(s)`)
+        log.info(`Initialized sender scheduler with ${senders.length} sender(s)`)
     }
 
     for (const scheduler of taskSchedulers) {

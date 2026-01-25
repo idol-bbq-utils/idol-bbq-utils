@@ -1,84 +1,53 @@
 import { Logger } from '@idol-bbq-utils/log'
 import { CronJob } from 'cron'
-import EventEmitter from 'events'
-import { sanitizeWebsites, TaskScheduler } from '../utils/base'
-import type { Crawler } from '../types/crawler'
-import type { AppConfig, QueueModeConfig } from '../types'
+import { TaskScheduler } from '../utils/base'
 import { QueueManager, QueueName, generateJobId, getLockKey, acquireLock, releaseLock } from '@idol-bbq-utils/queue'
 import type { CrawlerJobData } from '@idol-bbq-utils/queue/jobs'
+import type { Ctx } from '@/types'
+import type { AppConfig, QueueConfig, TaskCrawlers } from '@idol-bbq-utils/config'
 
-/**
- * 根据cronjob dispatch爬虫任务到队列
- * 仅负责调度，不执行实际爬取
- */
 class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
     NAME: string = 'SpiderTaskScheduler'
     protected log?: Logger
-    private props: Pick<AppConfig, 'crawlers' | 'cfg_crawler'>
-    private queueManager?: QueueManager
-    private useQueueMode: boolean = false
+    private app_config: AppConfig
+    private queueManager: QueueManager
 
-    constructor(
-        props: Pick<AppConfig, 'crawlers' | 'cfg_crawler'>,
-        emitter: EventEmitter,
-        log?: Logger,
-        queueConfig?: QueueModeConfig,
-    ) {
-        super(emitter)
-        this.props = props
-        this.log = log?.child({ subservice: this.NAME })
+    constructor(ctx: Ctx, queueConfig: QueueConfig) {
+        super()
+        this.app_config = ctx.app_config
+        this.log = ctx.logger?.child({ subservice: this.NAME })
 
-        if (queueConfig?.enabled) {
-            this.useQueueMode = true
-            this.queueManager = new QueueManager({
-                redis: queueConfig.redis,
-            })
-            this.log?.info('Queue mode enabled')
-        }
+        this.queueManager = new QueueManager({
+            redis: queueConfig.redis,
+        })
+        this.log?.info('Queue mode enabled')
     }
 
     async init() {
         this.log?.info('Manager initializing...')
 
-        if (!this.props.crawlers) {
+        const crawlers = this.app_config.getTaskCrawlers()
+        if (!crawlers || crawlers.length === 0) {
             this.log?.warn('Crawler not found, skipping...')
             return
         }
 
-        // scheduler-service 只支持队列模式，不需要EventEmitter handlers
-        if (!this.useQueueMode) {
-            this.log?.error('SpiderTaskScheduler requires queue mode to be enabled')
-            throw new Error('Queue mode must be enabled for scheduler-service')
-        }
+        for (const crawler of crawlers) {
+            const cron = crawler.config.cron
 
-        for (const crawler of this.props.crawlers) {
-            crawler.cfg_crawler = {
-                cron: '*/30 * * * *',
-                ...this.props.cfg_crawler,
-                ...crawler.cfg_crawler,
-            }
-            let { cron } = crawler.cfg_crawler
-            const job = new CronJob(cron as string, async () => {
+            const job = new CronJob(cron, async () => {
                 const taskId = `${Math.random().toString(36).substring(2, 9)}`
                 this.log?.info(`[${taskId}] Starting to dispatch task: ${crawler.name}`)
 
-                if (this.useQueueMode && this.queueManager) {
-                    await this.dispatchToQueue(taskId, crawler)
-                }
+                await this.dispatchToQueue(taskId, crawler)
             })
             this.log?.debug(`Task dispatcher created with detail: ${JSON.stringify(crawler)}`)
             this.cronJobs.push(job)
         }
     }
 
-    private async dispatchToQueue(taskId: string, crawler: Crawler): Promise<void> {
+    private async dispatchToQueue(taskId: string, crawler: TaskCrawlers): Promise<void> {
         if (!this.queueManager) return
-
-        const websites = sanitizeWebsites({
-            websites: crawler.websites,
-            origin: crawler.origin,
-            paths: crawler.paths,
-        })
 
         const lockKey = getLockKey('crawler', crawler.name || 'unnamed')
         const redis = this.queueManager.getConnection()
@@ -90,28 +59,15 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
         }
 
         try {
-            const jobId = generateJobId('crawler', `${crawler.name}:${websites.join(',')}`, crawler.cfg_crawler?.cron)
+            const jobId = generateJobId('crawler', `${crawler.name}:${crawler.websites.join(',')}`, crawler.config.cron)
 
             const jobData: CrawlerJobData = {
                 type: 'crawler',
-                taskId,
-                crawlerName: crawler.name || 'unnamed',
-                websites,
-                taskType: crawler.task_type || 'article',
-                config: {
-                    engine: crawler.cfg_crawler?.engine,
-                    cookieFile: crawler.cfg_crawler?.cookie_file,
-                    translator: crawler.cfg_crawler?.translator
-                        ? {
-                              provider: crawler.cfg_crawler.translator.provider,
-                              apiKey: crawler.cfg_crawler.translator.api_key || '',
-                              config: crawler.cfg_crawler.translator.cfg_translator as Record<string, unknown> | undefined,
-                          }
-                        : undefined,
-                    intervalTime: crawler.cfg_crawler?.interval_time,
-                    userAgent: crawler.cfg_crawler?.user_agent,
-                    subTaskType: crawler.cfg_crawler?.sub_task_type,
-                },
+                task_id: taskId,
+                task_type: crawler.task_type,
+                name: crawler.name || '',
+                websites: crawler.websites,
+                config: crawler.config,
             }
 
             const crawlerQueue = this.queueManager.getQueue(QueueName.CRAWLER)
@@ -125,9 +81,6 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
         }
     }
 
-    /**
-     * 启动爬虫调度器
-     */
     async start() {
         this.log?.info('Manager starting...')
         this.cronJobs.forEach((job) => {
@@ -135,9 +88,6 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
         })
     }
 
-    /**
-     * 停止爬虫调度器
-     */
     async stop() {
         this.cronJobs.forEach((job) => {
             job.stop()
@@ -152,15 +102,14 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
             await this.queueManager.close()
             this.log?.info('Queue manager closed')
         }
-        this.log?.info('Spider Manager dropped')
     }
 
     updateTaskStatus(_params: { taskId: string; status: TaskScheduler.TaskStatus }) {
-        // scheduler-service 不需要此方法，仅用于EventEmitter模式
+        // scheduler-service does not need this method
     }
 
     finishTask(_params: { taskId: string; result: any; immediate_notify?: boolean }) {
-        // scheduler-service 不需要此方法，仅用于EventEmitter模式
+        // scheduler-service does not need this method
     }
 }
 
