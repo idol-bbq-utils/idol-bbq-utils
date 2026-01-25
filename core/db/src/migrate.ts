@@ -11,23 +11,26 @@ import path from 'path'
  * @throws {Error} 当 schema 文件不存在或迁移失败时抛出错误
  */
 export async function ensureMigrations(): Promise<void> {
-    const schemaPath = path.join(__dirname, '../prisma/schema.prisma')
-
-    if (!existsSync(schemaPath)) {
-        console.error(`[DB Migration] ❌ Schema file not found at ${schemaPath}`)
+    let schemaPath: string
+    if (existsSync(path.join(__dirname, '../prisma/schema.prisma'))) {
+        schemaPath = path.join(__dirname, '../prisma/schema.prisma')
+    } else if (existsSync('/app/prisma/schema.prisma')) {
+        schemaPath = '/app/prisma/schema.prisma'
+    } else {
+        console.error('[DB Migration] ❌ Schema file not found')
+        console.error(`[DB Migration] Searched paths:`)
+        console.error(`  - ${path.join(__dirname, '../prisma/schema.prisma')}`)
+        console.error(`  - /app/prisma/schema.prisma`)
         throw new Error('Prisma schema file not found')
     }
-
     try {
         console.log('[DB Migration] 🔄 Starting database migration...')
         console.log(`[DB Migration] Schema path: ${schemaPath}`)
         console.log(`[DB Migration] DATABASE_URL: ${process.env.DATABASE_URL}`)
-
         execSync(`prisma migrate deploy --schema=${schemaPath}`, {
             stdio: 'inherit',
             env: process.env,
         })
-
         console.log('[DB Migration] ✅ Database migration completed successfully')
     } catch (error) {
         console.error('[DB Migration] ❌ Migration failed:', error)

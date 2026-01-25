@@ -6,15 +6,16 @@ import type { Article } from '@idol-bbq-utils/render/types'
 import { spiderRegistry } from '@idol-bbq-utils/spider'
 
 export { ensureMigrations } from './migrate'
+// export { setupPrismaClient } from './setup-client'
 
 type ArticleWithId = Article & { id: number }
 
-type DBArticle = Prisma.crawler_articleGetPayload<{}>
-type DBFollows = Prisma.crawler_followsGetPayload<{}>
+type DBArticle = Prisma.articleGetPayload<{}>
+type DBFollows = Prisma.followGetPayload<{}>
 namespace DB {
     export namespace Article {
         export async function checkExist(article: Article) {
-            return await prisma.crawler_article.findUnique({
+            return await prisma.article.findUnique({
                 where: {
                     a_id_platform: {
                         a_id: article.a_id,
@@ -47,7 +48,7 @@ namespace DB {
                     ref = (await getByArticleCode(article.ref, article.platform))?.id
                 }
             }
-            const res = await prisma.crawler_article.create({
+            const res = await prisma.article.create({
                 data: {
                     ...article,
                     ref: ref,
@@ -59,7 +60,7 @@ namespace DB {
         }
 
         export async function get(id: number) {
-            return await prisma.crawler_article.findUnique({
+            return await prisma.article.findUnique({
                 where: {
                     id: id,
                 },
@@ -67,7 +68,7 @@ namespace DB {
         }
 
         export async function getByArticleCode(a_id: string, platform: Platform) {
-            return await prisma.crawler_article.findUnique({
+            return await prisma.article.findUnique({
                 where: {
                     a_id_platform: {
                         a_id,
@@ -78,7 +79,7 @@ namespace DB {
         }
 
         export async function getSingleArticle(id: number) {
-            const article = await prisma.crawler_article.findUnique({
+            const article = await prisma.article.findUnique({
                 where: {
                     id: id,
                 },
@@ -90,7 +91,7 @@ namespace DB {
         }
 
         export async function getSingleArticleByArticleCode(a_id: string, platform: Platform) {
-            const article = await prisma.crawler_article.findUnique({
+            const article = await prisma.article.findUnique({
                 where: {
                     a_id_platform: {
                         a_id,
@@ -108,7 +109,7 @@ namespace DB {
             let currentRefId = article.ref
             let currentArticle = article as unknown as ArticleWithId
             while (currentRefId) {
-                const foundArticle = await prisma.crawler_article.findUnique({
+                const foundArticle = await prisma.article.findUnique({
                     where: {
                         id: currentRefId,
                     },
@@ -121,7 +122,7 @@ namespace DB {
         }
 
         export async function getArticlesByName(u_id: string, platform: Platform, count = 10) {
-            const res = await prisma.crawler_article.findMany({
+            const res = await prisma.article.findMany({
                 where: {
                     platform: platform,
                     u_id: u_id,
@@ -138,7 +139,7 @@ namespace DB {
 
     export namespace Follow {
         export async function save(follows: GenericFollows) {
-            return await prisma.crawler_follows.create({
+            return await prisma.follow.create({
                 data: {
                     ...follows,
                     created_at: Math.floor(Date.now() / 1000),
@@ -151,7 +152,7 @@ namespace DB {
             platform: Platform,
             window: string,
         ): Promise<[DBFollows, DBFollows | null] | null> {
-            const latest = await prisma.crawler_follows.findFirst({
+            const latest = await prisma.follow.findFirst({
                 where: {
                     platform: platform,
                     u_id: u_id,
@@ -165,7 +166,7 @@ namespace DB {
             }
             const latestTime = latest.created_at
             const subtractTime = getSubtractTime(latestTime, window)
-            const comparison = await prisma.crawler_follows.findFirst({
+            const comparison = await prisma.follow.findFirst({
                 where: {
                     platform: platform,
                     u_id: u_id,
@@ -182,12 +183,12 @@ namespace DB {
     }
 
     export namespace SendBy {
-        export async function checkExist(ref_id: number, bot_id: string, task_type: string) {
-            return await prisma.forward_by.findUnique({
+        export async function checkExist(ref_id: number, sender_id: string, task_type: string) {
+            return await prisma.send_by.findUnique({
                 where: {
-                    ref_id_bot_id_task_type: {
+                    ref_id_sender_id_task_type: {
                         ref_id,
-                        bot_id,
+                        sender_id,
                         task_type,
                     },
                 },
@@ -195,40 +196,40 @@ namespace DB {
         }
 
         export async function batchCheckExist(articleIds: number[], targetIds: string[], taskType: string) {
-            return await prisma.forward_by.findMany({
+            return await prisma.send_by.findMany({
                 where: {
                     ref_id: { in: articleIds },
-                    bot_id: { in: targetIds },
+                    sender_id: { in: targetIds },
                     task_type: taskType,
                 },
-                select: { ref_id: true, bot_id: true },
+                select: { ref_id: true, sender_id: true },
             })
         }
 
-        export async function save(ref_id: number, bot_id: string, task_type: string) {
-            let exist_one = await checkExist(ref_id, bot_id, task_type)
+        export async function save(ref_id: number, sender_id: string, task_type: string) {
+            let exist_one = await checkExist(ref_id, sender_id, task_type)
             if (exist_one) {
                 return exist_one
             }
-            return await prisma.forward_by.create({
+            return await prisma.send_by.create({
                 data: {
                     ref_id,
-                    bot_id,
+                    sender_id,
                     task_type,
                 },
             })
         }
 
-        export async function deleteRecord(ref_id: number, bot_id: string, task_type: string) {
-            let exist_one = await checkExist(ref_id, bot_id, task_type)
+        export async function deleteRecord(ref_id: number, sender_id: string, task_type: string) {
+            let exist_one = await checkExist(ref_id, sender_id, task_type)
             if (!exist_one) {
                 return
             }
-            return await prisma.forward_by.delete({
+            return await prisma.send_by.delete({
                 where: {
-                    ref_id_bot_id_task_type: {
+                    ref_id_sender_id_task_type: {
                         ref_id,
-                        bot_id,
+                        sender_id,
                         task_type,
                     },
                 },
@@ -255,7 +256,7 @@ namespace DB {
                     if (!forwardedMap.has(record.ref_id)) {
                         forwardedMap.set(record.ref_id, new Set())
                     }
-                    forwardedMap.get(record.ref_id)!.add(record.bot_id)
+                    forwardedMap.get(record.ref_id)!.add(record.sender_id)
                 }
 
                 for (const article of articles) {
