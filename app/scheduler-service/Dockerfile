@@ -22,8 +22,16 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
 COPY --from=builder /app/app/scheduler-service/build/main.js /app/bin.js
+
+COPY --from=builder /app/core/db/prisma/schema.prisma /app/prisma/schema.prisma
+COPY --from=builder /app/core/db/prisma/migrations /app/prisma/migrations
 COPY --from=builder /app/core/db/prisma/client /app/prisma/client
+
+COPY --from=builder /app/node_modules/.bin/prisma /usr/local/bin/prisma
+COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
 
 RUN chown -R bun:bun /app/
 

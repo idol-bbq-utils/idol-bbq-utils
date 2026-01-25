@@ -2,7 +2,7 @@ import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { JobResult, SenderJobData } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
-import DB from '@idol-bbq-utils/db'
+import DB, { ensureMigrations } from '@idol-bbq-utils/db'
 import type { Article, ArticleWithId, DBFollows } from '@idol-bbq-utils/db'
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { getForwarder } from '@idol-bbq-utils/sender'
@@ -123,15 +123,13 @@ async function handleMedia(
             }
 
             // TODO
-            if (config.cfg_sender.media.use?.tool === 'gallery-dl' && (config.cfg_sender.media.use as MediaTool<MediaToolEnum.GALLERY_DL>).path) {
+            if (
+                config.cfg_sender.media.use?.tool === 'gallery-dl' &&
+                (config.cfg_sender.media.use as MediaTool<MediaToolEnum.GALLERY_DL>).path
+            ) {
                 jobLog.debug(`Downloading media with gallery-dl for article URL: ${currentArticle.url}`)
                 const tool = config.cfg_sender.media.use as MediaTool<MediaToolEnum.GALLERY_DL>
-                const paths = galleryDownloadMediaFile(
-                    currentArticle.url,
-                    CACHE_DIR_ROOT,
-                    tool,
-                    taskId,
-                )
+                const paths = galleryDownloadMediaFile(currentArticle.url, CACHE_DIR_ROOT, tool, taskId)
                 maybe_media_files.push(
                     ...paths.map((path) => ({
                         path,
@@ -242,12 +240,12 @@ async function processFollowsTask(
                 continue
             }
 
-            const forwarder = new ForwarderClass(target.cfg_platform, target.id, jobLog)
+            const forwarder = new ForwarderClass(target.config, target.id, jobLog)
             await forwarder.init()
 
             await forwarder.send(texts_to_send, {
                 timestamp: dayjs().unix(),
-                runtime_config: target.runtime_config,
+                runtime_config: target.config,
             })
 
             successCount++
@@ -268,24 +266,22 @@ async function processFollowsTask(
 }
 
 async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> {
-    const { task_id, task_type, websites, config } = job.data
+    const { task_id, task_type, websites, config, targets } = job.data
     const jobLog = log.child({ task_id, task_type })
 
     if (task_type === 'follows') {
-
-        return await processFollowsTask(job, jobLog)
+        return await processFollowsTask(job, config.cfg_task ?? {}, jobLog)
     }
 
-    if (!articleIds || articleIds.length === 0) {
-        jobLog.warn('No article IDs provided')
-        return { success: true, count: 0 }
-    }
+    jobLog.info(`Processing forwarder job: ${websites.length} articles to ${targets.length} targets`)
 
-    jobLog.info(`Processing forwarder job: ${articleIds.length} articles to ${forwarderConfig.targets.length} targets`)
-
+    const pendingIds = await DB.SendBy.queryPendingArticleIds(
+        websites,
+        targets.map((t) => t.id),
+    )
     const allArticles: ArticleWithId[] = []
 
-    for (const id of articleIds) {
+    for (const id of pendingIds) {
         const article = await DB.Article.getSingleArticle(id)
         if (article) {
             allArticles.push(article)
@@ -300,7 +296,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
     let successCount = 0
     let errorCount = 0
 
-    for (const target of forwarderConfig.targets) {
+    for (const target of targets) {
         jobLog.info(`Processing target: ${target.id} (${target.platform})`)
 
         try {
@@ -311,14 +307,14 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
                 continue
             }
 
-            const forwarder = new ForwarderClass(target.cfg_platform, target.id, jobLog)
+            const forwarder = new ForwarderClass(target.config, target.id, jobLog)
             await forwarder.init()
 
             for (const article of allArticles) {
                 let mediaFiles: Array<{ path: string; media_type: MediaType }> = []
 
                 try {
-                    const exists = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
+                    const exists = await DB.SendBy.checkExist(article.id, target.id, 'article')
 
                     if (exists) {
                         jobLog.debug(`Article ${article.a_id} already forwarded to ${target.id}`)
@@ -327,7 +323,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
 
                     const article_is_blocked = forwarder.check_blocked('', {
                         timestamp: article.created_at,
-                        runtime_config: target.runtime_config,
+                        runtime_config: target.config,
                         article: cloneDeep(article),
                     })
 
@@ -335,7 +331,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
                         jobLog.warn(`Article ${article.a_id} is blocked by ${target.id}, marking as forwarded`)
                         let currentArticle: ArticleWithId | null = article
                         while (currentArticle && typeof currentArticle === 'object') {
-                            await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                            await DB.SendBy.save(currentArticle.id, target.id, 'article')
                             currentArticle = currentArticle.ref as ArticleWithId | null
                         }
                         continue
@@ -343,16 +339,16 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
 
                     let articleToImgSuccess = false
 
-                    mediaFiles = await handleMedia(article, forwarderConfig, taskId, jobLog)
+                    mediaFiles = await handleMedia(article, config, task_id, jobLog)
 
-                    if (forwarderConfig.renderType?.startsWith('img')) {
+                    if (config.cfg_sender.render_type?.startsWith('img')) {
                         try {
                             const imgBuffer = await articleConverter.articleToImg(cloneDeep(article))
 
                             const imgPath = writeImgToFile(
                                 imgBuffer,
                                 CACHE_DIR_ROOT,
-                                `${taskId}-${article.a_id}-rendered.png`,
+                                `${task_id}-${article.a_id}-rendered.png`,
                             )
 
                             mediaFiles.unshift({
@@ -370,11 +366,11 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
 
                     let text = articleToImgSuccess ? formatMetaline(article) : fullText
 
-                    text = forwarderConfig.renderType === 'img' ? '' : text
+                    text = config.cfg_sender.render_type === 'img' ? '' : text
 
                     let currentArticle: ArticleWithId | null = article
                     while (currentArticle && typeof currentArticle === 'object') {
-                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                        await DB.SendBy.save(currentArticle.id, target.id, 'article')
                         currentArticle = currentArticle.ref as ArticleWithId | null
                     }
 
@@ -384,7 +380,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
                             media: mediaFiles,
                             article: cloneDeep(article),
                             timestamp: article.created_at,
-                            runtime_config: target.runtime_config,
+                            runtime_config: target.config,
                         })
                         sendSuccess = true
                         successCount++
@@ -396,7 +392,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
 
                         let currentArticle: ArticleWithId | null = article
                         while (currentArticle && typeof currentArticle === 'object') {
-                            await DB.ForwardBy.deleteRecord(currentArticle.id, target.id, 'article')
+                            await DB.SendBy.deleteRecord(currentArticle.id, target.id, 'article')
                             currentArticle = currentArticle.ref as ArticleWithId | null
                         }
 
@@ -408,7 +404,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
                             )
                             let currentArticle: ArticleWithId | null = article
                             while (currentArticle && typeof currentArticle === 'object') {
-                                await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                                await DB.SendBy.save(currentArticle.id, target.id, 'article')
                                 currentArticle = currentArticle.ref as ArticleWithId | null
                             }
                             await deleteErrorCount(article.platform, article.a_id, target.id)
@@ -435,7 +431,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
             errorCount++
         }
 
-        await job.updateProgress(((forwarderConfig.targets.indexOf(target) + 1) / forwarderConfig.targets.length) * 100)
+        await job.updateProgress(((targets.indexOf(target) + 1) / targets.length) * 100)
     }
 
     jobLog.info(`Forwarder job completed: ${successCount} forwarded, ${errorCount} errors`)
@@ -448,6 +444,8 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
 }
 
 async function main() {
+    await ensureMigrations()
+
     const config: ForwarderServiceConfig = {
         redis: {
             host: process.env.REDIS_HOST || 'localhost',
@@ -470,7 +468,7 @@ async function main() {
         }
     })
 
-    const worker = new Worker<ForwarderJobData, JobResult>(QueueName.FORWARDER, processForwarderJob, {
+    const worker = new Worker<SenderJobData, JobResult>(QueueName.SENDER, processForwarderJob, {
         connection: config.redis,
         concurrency: config.concurrency,
         limiter: {

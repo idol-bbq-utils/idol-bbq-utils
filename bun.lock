@@ -26,23 +26,6 @@
         "@types/node": "^22.15.3",
       },
     },
-    "app/forwarder-service": {
-      "name": "@idol-bbq-utils/sender-service",
-      "version": "0.1.0",
-      "dependencies": {
-        "@idol-bbq-utils/config": "workspace:^",
-        "@idol-bbq-utils/db": "workspace:^",
-        "@idol-bbq-utils/log": "workspace:^",
-        "@idol-bbq-utils/queue": "workspace:^",
-        "@idol-bbq-utils/render": "workspace:^",
-        "@idol-bbq-utils/sender": "workspace:^",
-        "@idol-bbq-utils/spider": "workspace:^",
-        "@idol-bbq-utils/utils": "workspace:^",
-      },
-      "devDependencies": {
-        "@types/node": "^22.15.3",
-      },
-    },
     "app/scheduler-service": {
       "name": "@idol-bbq-utils/scheduler-service",
       "version": "0.1.0",
@@ -59,6 +42,23 @@
       },
       "devDependencies": {
         "@types/lodash": "^4.17.6",
+        "@types/node": "^22.15.3",
+      },
+    },
+    "app/sender-service": {
+      "name": "@idol-bbq-utils/sender-service",
+      "version": "0.1.0",
+      "dependencies": {
+        "@idol-bbq-utils/config": "workspace:^",
+        "@idol-bbq-utils/db": "workspace:^",
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+      },
+      "devDependencies": {
         "@types/node": "^22.15.3",
       },
     },
@@ -150,6 +150,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@idol-bbq-utils/config": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
         "bullmq": "^5.34.3",
         "cron": "^4.4.0",
         "ioredis": "^5.4.2",
@@ -302,7 +303,7 @@
 
     "@idol-bbq-utils/sender": ["@idol-bbq-utils/sender@workspace:core/sender"],
 
-    "@idol-bbq-utils/sender-service": ["@idol-bbq-utils/sender-service@workspace:app/forwarder-service"],
+    "@idol-bbq-utils/sender-service": ["@idol-bbq-utils/sender-service@workspace:app/sender-service"],
 
     "@idol-bbq-utils/spider": ["@idol-bbq-utils/spider@workspace:core/spider"],
 

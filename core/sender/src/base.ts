@@ -24,6 +24,7 @@ export interface SendProps {
         path: string
     }>
     timestamp?: number
+    // TODO: remove this
     runtime_config?: SendTargetCommonConfig
     article?: ArticleLike
 }

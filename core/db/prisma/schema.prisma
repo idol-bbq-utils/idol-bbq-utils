@@ -8,8 +8,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model crawler_article {
-  id                    Int               @id @unique(map: "sqlite_autoindex_crawler_article_1") @default(autoincrement())
+model article {
+  id                    Int               @id @unique(map: "sqlite_autoindex_article_1") @default(autoincrement())
   platform              Int
   a_id                  String
   u_id                  String
@@ -25,16 +25,17 @@ model crawler_article {
   media                 Json?
   extra                 Json?
   u_avatar              String?
-  crawler_article       crawler_article?  @relation("crawler_articleTocrawler_article", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_crawler_article crawler_article[] @relation("crawler_articleTocrawler_article")
+  article               article?  @relation("articleToarticle", fields: [ref], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_article         article[] @relation("articleToarticle")
 
-  @@unique([a_id, platform], map: "sqlite_autoindex_crawler_article_2")
+  @@unique([a_id, platform], map: "sqlite_autoindex_article_2")
   @@index([platform], map: "platform_index")
   @@index([platform, created_at(sort: Desc)], map: "platform_by_timestamp")
+  @@map("article")
 }
 
-model crawler_follows {
-  id         Int    @id @unique(map: "sqlite_autoindex_crawler_follows_1") @default(autoincrement())
+model follow {
+  id         Int    @id @unique(map: "sqlite_autoindex_follow_1") @default(autoincrement())
   username   String
   u_id       String
   platform   Int
@@ -42,13 +43,15 @@ model crawler_follows {
   created_at Int
 
   @@index([u_id], map: "user_id_index")
+  @@map("follow")
 }
 
-model forward_by {
+model send_by {
   ref_id    Int
-  bot_id    String
+  sender_id String
   task_type String
 
-  @@id([ref_id, bot_id, task_type])
-  @@index([bot_id], map: "bot_id_index")
+  @@id([ref_id, sender_id, task_type])
+  @@index([sender_id], map: "sender_id_index")
+  @@map("send_by")
 }

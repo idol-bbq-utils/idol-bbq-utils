@@ -1,8 +1,11 @@
 import { Platform } from '@idol-bbq-utils/spider/types'
-import type { ArticleExtractType, GenericArticle, GenericFollows, GenericMediaInfo } from '@idol-bbq-utils/spider/types'
+import type { GenericFollows } from '@idol-bbq-utils/spider/types'
 import { prisma, Prisma } from './client'
 import { getSubtractTime } from '@idol-bbq-utils/utils'
 import type { Article } from '@idol-bbq-utils/render/types'
+import { spiderRegistry } from '@idol-bbq-utils/spider'
+
+export { ensureMigrations } from './migrate'
 
 type ArticleWithId = Article & { id: number }
 
@@ -178,7 +181,7 @@ namespace DB {
         }
     }
 
-    export namespace ForwardBy {
+    export namespace SendBy {
         export async function checkExist(ref_id: number, bot_id: string, task_type: string) {
             return await prisma.forward_by.findUnique({
                 where: {
@@ -230,6 +233,41 @@ namespace DB {
                     },
                 },
             })
+        }
+
+        export async function queryPendingArticleIds(websites: string[], sender_ids: string[]): Promise<number[]> {
+            const articleIdsSet: Set<number> = new Set()
+            const targets = sender_ids
+
+            for (const website of websites) {
+                const { u_id, platform } = spiderRegistry.extractBasicInfo(website) ?? {}
+                if (!u_id || !platform) continue
+
+                const articles = await DB.Article.getArticlesByName(u_id, platform)
+                if (articles.length === 0) continue
+
+                const articleIdList = articles.map((a) => a.id)
+
+                const forwardedRecords = await DB.SendBy.batchCheckExist(articleIdList, targets, 'article')
+
+                const forwardedMap = new Map<number, Set<string>>()
+                for (const record of forwardedRecords) {
+                    if (!forwardedMap.has(record.ref_id)) {
+                        forwardedMap.set(record.ref_id, new Set())
+                    }
+                    forwardedMap.get(record.ref_id)!.add(record.bot_id)
+                }
+
+                for (const article of articles) {
+                    const forwardedTargets = forwardedMap.get(article.id) || new Set()
+                    const needsForwarding = targets.some((t) => !forwardedTargets.has(t))
+                    if (needsForwarding) {
+                        articleIdsSet.add(article.id)
+                    }
+                }
+            }
+
+            return Array.from(articleIdsSet)
         }
     }
 }

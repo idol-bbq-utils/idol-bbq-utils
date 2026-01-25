@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { MediaType } from '@idol-bbq-utils/utils'
+import type { MediaType } from './types'
 
 export function getMediaType(filePath: string): MediaType {
     const ext = filePath.split('.').pop() || ''

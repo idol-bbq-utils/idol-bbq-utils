@@ -9,7 +9,7 @@
     "scripts": {
         "dev": "bun src/index.ts",
         "start": "bun src/index.ts",
-        "build": "tsc --noEmit && bun build src/index.ts --outdir=./build --target=bun --minify"
+        "build": "bun build src/index.ts --outdir=./build --target=bun --minify"
     },
     "dependencies": {
         "@idol-bbq-utils/log": "workspace:^",

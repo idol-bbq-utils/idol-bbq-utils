@@ -3,7 +3,7 @@ import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { StorageJobData, JobResult, SpiderArticleResult, SpiderFollowsResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
 import { prisma } from '@idol-bbq-utils/db/client'
-import DB from '@idol-bbq-utils/db'
+import DB, { ensureMigrations } from '@idol-bbq-utils/db'
 import type { Article } from '@idol-bbq-utils/db'
 import { pRetry } from '@idol-bbq-utils/utils'
 import { BaseTranslator, TRANSLATION_ERROR_FALLBACK } from '@idol-bbq-utils/translator'
@@ -232,6 +232,8 @@ async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
 }
 
 async function main() {
+    await ensureMigrations()
+
     const config: StorageServiceConfig = {
         redis: {
             host: process.env.REDIS_HOST || 'localhost',

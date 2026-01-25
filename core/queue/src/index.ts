@@ -10,12 +10,6 @@ export interface QueueConfig {
     }
 }
 
-export enum QueueName {
-    CRAWLER = 'crawler',
-    STORAGE = 'storage',
-    SENDER = 'sender',
-}
-
 const DEFAULT_JOB_OPTIONS: JobsOptions = {
     removeOnComplete: 100,
     removeOnFail: 500,

@@ -237,7 +237,7 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
 
             const articleIdList = articles.map((a) => a.id)
 
-            const forwardedRecords = await DB.ForwardBy.batchCheckExist(articleIdList, targets, 'article')
+            const forwardedRecords = await DB.SendBy.batchCheckExist(articleIdList, targets, 'article')
 
             const forwardedMap = new Map<number, Set<string>>()
             for (const record of forwardedRecords) {
@@ -570,7 +570,7 @@ class ForwarderPools extends BaseCompatibleModel {
                 /**
                  * 同一个宏任务循环中，此时可能会有同一个网站运行了两次及以上的定时任务，此时checkExist都是false
                  */
-                const exist = await DB.ForwardBy.checkExist(article.id, id, 'article')
+                const exist = await DB.SendBy.checkExist(article.id, id, 'article')
                 if (!exist) {
                     to.push(forwarder)
                 }
@@ -604,7 +604,7 @@ class ForwarderPools extends BaseCompatibleModel {
                 for (const { forwarder: target } of to) {
                     let currentArticle: ArticleWithId | null = article
                     while (currentArticle && typeof currentArticle === 'object') {
-                        await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                        await DB.SendBy.save(currentArticle.id, target.id, 'article')
                         currentArticle = currentArticle.ref as ArticleWithId | null
                     }
                 }
@@ -652,14 +652,14 @@ class ForwarderPools extends BaseCompatibleModel {
                 to.map(async ({ forwarder: target, runtime_config }) => {
                     ctx.log?.info(`Sending article ${article.a_id} from ${article.u_id} to ${target.NAME}`)
                     try {
-                        const exist = await DB.ForwardBy.checkExist(article.id, target.id, 'article')
+                        const exist = await DB.SendBy.checkExist(article.id, target.id, 'article')
                         // 运行前再检查下，因为cron的设定，可能同时会有两个同样的任务在执行
                         // 如果不存在则尝试发送
                         if (!exist) {
                             // 先占用发送
                             let currentArticle: ArticleWithId | null = article
                             while (currentArticle && typeof currentArticle === 'object') {
-                                await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                                await DB.SendBy.save(currentArticle.id, target.id, 'article')
                                 currentArticle = currentArticle.ref as ArticleWithId | null
                             }
                             try {
@@ -674,7 +674,7 @@ class ForwarderPools extends BaseCompatibleModel {
                                 ctx.log?.error(`Error while sending to ${target.id}: ${e}`)
                                 let currentArticle: ArticleWithId | null = article
                                 while (currentArticle && typeof currentArticle === 'object') {
-                                    await DB.ForwardBy.deleteRecord(currentArticle.id, target.id, 'article')
+                                    await DB.SendBy.deleteRecord(currentArticle.id, target.id, 'article')
                                     currentArticle = currentArticle.ref as ArticleWithId | null
                                 }
                             }
@@ -703,7 +703,7 @@ class ForwarderPools extends BaseCompatibleModel {
                     for (const { forwarder: target } of to) {
                         let currentArticle: ArticleWithId | null = cloned_article
                         while (currentArticle && typeof currentArticle === 'object') {
-                            await DB.ForwardBy.save(currentArticle.id, target.id, 'article')
+                            await DB.SendBy.save(currentArticle.id, target.id, 'article')
                             currentArticle = currentArticle.ref as ArticleWithId | null
                         }
                     }

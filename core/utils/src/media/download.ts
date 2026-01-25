@@ -2,7 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
 import { UserAgent } from '@idol-bbq-utils/spider'
-import type { MediaType } from '@idol-bbq-utils/utils'
 import type { GalleryDLConfig } from './types'
 import { mimeToExt } from './mime'
 

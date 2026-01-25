@@ -62,7 +62,7 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
             const task_type = sender.task_type
             // check pending articles for 'article' task type
             if (task_type == 'article') {
-                const article_ids = await this.queryPendingArticleIds(websites, sender)
+                const article_ids = await DB.SendBy.queryPendingArticleIds(websites, sender.targets.map((t) => t.id))
 
                 if (article_ids.length === 0) {
                     this.log?.debug(`[${task_id}] No pending articles for ${sender.name || 'unnamed'}`)
@@ -94,41 +94,6 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
         } finally {
             await releaseLock(redis, lockKey, task_id)
         }
-    }
-
-    private async queryPendingArticleIds(websites: string[], sender: TaskSender): Promise<number[]> {
-        const articleIdsSet: Set<number> = new Set()
-        const targets = sender.targets?.map((s) => s.id) ?? []
-
-        for (const website of websites) {
-            const { u_id, platform } = spiderRegistry.extractBasicInfo(website) ?? {}
-            if (!u_id || !platform) continue
-
-            const articles = await DB.Article.getArticlesByName(u_id, platform)
-            if (articles.length === 0) continue
-
-            const articleIdList = articles.map((a) => a.id)
-
-            const forwardedRecords = await DB.ForwardBy.batchCheckExist(articleIdList, targets, 'article')
-
-            const forwardedMap = new Map<number, Set<string>>()
-            for (const record of forwardedRecords) {
-                if (!forwardedMap.has(record.ref_id)) {
-                    forwardedMap.set(record.ref_id, new Set())
-                }
-                forwardedMap.get(record.ref_id)!.add(record.bot_id)
-            }
-
-            for (const article of articles) {
-                const forwardedTargets = forwardedMap.get(article.id) || new Set()
-                const needsForwarding = targets.some((t) => !forwardedTargets.has(t))
-                if (needsForwarding) {
-                    articleIdsSet.add(article.id)
-                }
-            }
-        }
-
-        return Array.from(articleIdsSet)
     }
 
     async start() {

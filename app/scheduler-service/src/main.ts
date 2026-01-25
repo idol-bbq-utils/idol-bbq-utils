@@ -2,10 +2,12 @@ import { log } from './config'
 import { AppConfig, parseConfigFromFile } from '@idol-bbq-utils/config'
 import { SpiderTaskScheduler } from './schedulers/spider-scheduler'
 import { ForwarderTaskScheduler } from './schedulers/sender-scheduler'
+import { ensureMigrations } from '@idol-bbq-utils/db'
 import type { Ctx } from './types'
 
 async function main() {
-    // TODO: args
+    await ensureMigrations()
+
     const config = parseConfigFromFile('./config.yaml')
     if (!config) {
         log.error('Config file is empty or invalid, exiting...')

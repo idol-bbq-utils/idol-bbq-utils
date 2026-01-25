@@ -1,7 +1,12 @@
 import { Worker, type Job } from 'bullmq'
 import type { ConnectionOptions } from 'bullmq'
 import type { CrawlerJobData, JobResult } from './jobs'
-import { QueueName } from './index'
+
+export enum QueueName {
+    CRAWLER = 'crawler',
+    STORAGE = 'storage',
+    SENDER = 'sender',
+}
 
 export interface CrawlerWorkerOptions {
     connection: ConnectionOptions

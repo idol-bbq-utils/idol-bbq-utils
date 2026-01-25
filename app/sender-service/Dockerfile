@@ -13,7 +13,7 @@ COPY ./assets/fonts ./assets/fonts
 
 ENV DATABASE_URL="file:/app/data.db"
 
-RUN bun install --filter "./app/forwarder-service" --filter "./core/*" --frozen-lockfile --production
+RUN bun install --filter "./app/sender-service" --filter "./core/*" --frozen-lockfile --production
 RUN bun --filter "@idol-bbq-utils/sender-service" build
 
 FROM base AS runner
@@ -23,9 +23,18 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /app/app/forwarder-service/build/index.js /app/bin.js
-COPY --from=builder /app/app/forwarder-service/build/resvgjs* /app/
+
+COPY --from=builder /app/app/sender-service/build/index.js /app/bin.js
+COPY --from=builder /app/app/sender-service/build/resvgjs* /app/
+
+COPY --from=builder /app/core/db/prisma/schema.prisma /app/prisma/schema.prisma
+COPY --from=builder /app/core/db/prisma/migrations /app/prisma/migrations
 COPY --from=builder /app/core/db/prisma/client /app/prisma/client
+
+COPY --from=builder /app/node_modules/.bin/prisma /usr/local/bin/prisma
+COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
+
 COPY --from=builder /app/assets/fonts /app/assets/fonts
 
 RUN chown -R bun:bun /app/
