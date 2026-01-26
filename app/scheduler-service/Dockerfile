@@ -29,9 +29,13 @@ COPY --from=builder /app/core/db/prisma/schema.prisma /app/prisma/schema.prisma
 COPY --from=builder /app/core/db/prisma/migrations /app/prisma/migrations
 COPY --from=builder /app/core/db/prisma/client /app/prisma/client
 
-COPY --from=builder /app/node_modules/.bin/prisma /usr/local/bin/prisma
+# Copy Prisma CLI and dependencies (needed for migrations)
+COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
+
+# Create symlink for prisma CLI
+RUN ln -s /app/node_modules/prisma/build/index.js /usr/local/bin/prisma && chmod +x /usr/local/bin/prisma
 
 RUN chown -R bun:bun /app/
 

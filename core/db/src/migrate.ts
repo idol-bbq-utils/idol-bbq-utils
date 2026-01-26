@@ -27,7 +27,13 @@ export async function ensureMigrations(): Promise<void> {
         console.log('[DB Migration] 🔄 Starting database migration...')
         console.log(`[DB Migration] Schema path: ${schemaPath}`)
         console.log(`[DB Migration] DATABASE_URL: ${process.env.DATABASE_URL}`)
-        execSync(`prisma migrate deploy --schema=${schemaPath}`, {
+
+        // 在 Docker 环境中使用完整路径，在开发环境中使用 npx
+        const prismaCmd = existsSync('/usr/local/bin/prisma') ? '/usr/local/bin/prisma' : 'npx prisma'
+
+        console.log(`[DB Migration] Using Prisma command: ${prismaCmd}`)
+
+        execSync(`${prismaCmd} migrate deploy --schema=${schemaPath}`, {
             stdio: 'inherit',
             env: process.env,
         })
