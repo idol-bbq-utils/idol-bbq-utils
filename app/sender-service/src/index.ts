@@ -2,7 +2,7 @@ import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { JobResult, SenderJobData } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
-import DB, { ensureMigrations } from '@idol-bbq-utils/db'
+import DB from '@idol-bbq-utils/db'
 import type { Article, ArticleWithId, DBFollows } from '@idol-bbq-utils/db'
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
 import { getForwarder } from '@idol-bbq-utils/sender'
@@ -444,8 +444,6 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
 }
 
 async function main() {
-    await ensureMigrations()
-
     const config: ForwarderServiceConfig = {
         redis: {
             host: process.env.REDIS_HOST || 'localhost',

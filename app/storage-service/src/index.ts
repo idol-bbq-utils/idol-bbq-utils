@@ -170,8 +170,10 @@ async function processFollowsStorage(
     for (const follows of followsList) {
         try {
             const saved = await DB.Follow.save(follows)
-            savedIds.push(saved.id)
-            jobLog.debug(`Saved follows for ${follows.username} with id ${saved.id}`)
+            if (saved) {
+                savedIds.push(saved.id)
+            }
+            jobLog.debug(`Saved follows for ${follows.username} with id ${saved?.id}`)
         } catch (error) {
             jobLog.error(`Error saving follows for ${follows.username}: ${error}`)
             errorCount++
@@ -231,8 +233,6 @@ async function processStorageJob(job: Job<StorageJobData>): Promise<JobResult> {
 }
 
 async function main() {
-    await ensureMigrations()
-
     const config: StorageServiceConfig = {
         redis: {
             host: process.env.REDIS_HOST || 'localhost',
@@ -246,9 +246,6 @@ async function main() {
     log.info('Starting Storage Service...')
     log.info(`Redis: ${config.redis.host}:${config.redis.port}`)
     log.info(`Concurrency: ${config.concurrency}`)
-
-    await ensureMigrations()
-    log.info('Database migrations completed')
 
     const worker = new Worker<StorageJobData, JobResult>(QueueName.STORAGE, processStorageJob, {
         connection: config.redis,
