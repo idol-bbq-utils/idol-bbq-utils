@@ -1,5 +1,6 @@
 import { Queue, Worker, QueueEvents, type ConnectionOptions, type JobsOptions } from 'bullmq'
 import { Redis } from 'ioredis'
+import { QueueName } from './worker'
 
 export interface QueueConfig {
     redis: {

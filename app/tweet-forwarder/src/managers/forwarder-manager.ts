@@ -211,7 +211,7 @@ class ForwarderTaskScheduler extends TaskScheduler.TaskScheduler {
                         : undefined,
             }
 
-            const forwarderQueue = this.queueManager.getQueue(QueueName.FORWARDER)
+            const forwarderQueue = this.queueManager.getQueue(QueueName.SENDER)
             await forwarderQueue.add('forward', jobData, {
                 jobId,
             })

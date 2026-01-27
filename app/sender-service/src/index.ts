@@ -467,7 +467,13 @@ async function main() {
     })
 
     const worker = new Worker<SenderJobData, JobResult>(QueueName.SENDER, processForwarderJob, {
-        connection: config.redis,
+        connection: {
+            host: config.redis.host,
+            port: config.redis.port,
+            password: config.redis.password,
+            db: config.redis.db,
+            maxRetriesPerRequest: null,
+        },
         concurrency: config.concurrency,
         limiter: {
             max: 20,
