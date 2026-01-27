@@ -1,5 +1,5 @@
 import { createLogger } from '@idol-bbq-utils/log'
-import { Worker, QueueName } from '@idol-bbq-utils/queue'
+import { createSenderWorker, QueueManager, QueueName } from '@idol-bbq-utils/queue'
 import type { JobResult, SenderJobData } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
 import DB from '@idol-bbq-utils/db'
@@ -466,14 +466,10 @@ async function main() {
         }
     })
 
-    const worker = new Worker<SenderJobData, JobResult>(QueueName.SENDER, processForwarderJob, {
-        connection: {
-            host: config.redis.host,
-            port: config.redis.port,
-            password: config.redis.password,
-            db: config.redis.db,
-            maxRetriesPerRequest: null,
-        },
+    const queueManager = new QueueManager({ redis: config.redis })
+
+    const worker = createSenderWorker((job) => processForwarderJob(job), {
+        connection: config.redis,
         concurrency: config.concurrency,
         limiter: {
             max: 20,
@@ -498,6 +494,7 @@ async function main() {
     async function shutdown() {
         log.info('Shutting down...')
         await worker.close()
+        await queueManager.close()
         if (redisConnection) {
             await redisConnection.quit()
             log.info('Redis connection closed')
