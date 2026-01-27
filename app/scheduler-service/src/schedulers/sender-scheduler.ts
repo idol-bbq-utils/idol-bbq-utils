@@ -127,4 +127,4 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
     }
 }
 
-export { SenderTaskScheduler as ForwarderTaskScheduler }
+export { SenderTaskScheduler }

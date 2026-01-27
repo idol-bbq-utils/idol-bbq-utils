@@ -11,7 +11,7 @@ interface ForwarderConstructor {
 
 const forwarders: Array<ForwarderConstructor> = [BiliForwarder, QQForwarder, TgForwarder]
 
-function getForwarder(platform: SendTargetPlatformEnum): ForwarderConstructor | null {
+function getSender(platform: SendTargetPlatformEnum): ForwarderConstructor | null {
     for (const forwarder of forwarders) {
         if (forwarder._PLATFORM.toLowerCase() === platform.toLowerCase()) {
             return forwarder
@@ -20,5 +20,5 @@ function getForwarder(platform: SendTargetPlatformEnum): ForwarderConstructor | 
     return null
 }
 
-export { getForwarder }
+export { getSender }
 export type { ForwarderConstructor }

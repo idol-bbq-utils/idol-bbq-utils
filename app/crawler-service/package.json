@@ -12,11 +12,14 @@
         "build": "bun build src/index.ts --outdir=./build --target=bun --minify"
     },
     "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/translator": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
         "@types/tmp": "^0.2.6",
+        "p-queue": "^8.0.1",
         "puppeteer-core": "^24.6.0",
         "tmp": "^0.2.5"
     },

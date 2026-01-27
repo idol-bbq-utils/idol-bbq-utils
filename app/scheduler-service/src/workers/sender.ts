@@ -1,11 +1,12 @@
 import { createLogger } from '@idol-bbq-utils/log'
-import { createSenderWorker, QueueManager, QueueName } from '@idol-bbq-utils/queue'
+import { createSenderWorker, QueueManager } from '@idol-bbq-utils/queue'
 import type { JobResult, SenderJobData } from '@idol-bbq-utils/queue/jobs'
+import type { SenderTaskConfig } from '@idol-bbq-utils/sender'
 import type { Job } from 'bullmq'
 import DB from '@idol-bbq-utils/db'
 import type { Article, ArticleWithId, DBFollows } from '@idol-bbq-utils/db'
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
-import { getForwarder } from '@idol-bbq-utils/sender'
+import { getSender } from '@idol-bbq-utils/sender'
 import {
     plainDownloadMediaFile,
     galleryDownloadMediaFile,
@@ -22,22 +23,11 @@ import dayjs from 'dayjs'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { Redis } from 'ioredis'
-import type { MediaTool, MediaToolEnum, SenderTaskConfig } from '@idol-bbq-utils/sender'
+import type { MediaTool, MediaToolEnum } from '@idol-bbq-utils/sender'
 
-const log = createLogger({ defaultMeta: { service: 'ForwarderService' } })
+const log = createLogger({ defaultMeta: { service: 'SenderWorker' } })
 const CACHE_DIR_ROOT = process.env.CACHE_DIR_ROOT || path.join(os.tmpdir(), 'forwarder-service')
 const articleConverter = new ImgConverter()
-
-interface ForwarderServiceConfig {
-    redis: {
-        host: string
-        port: number
-        password?: string
-        db?: number
-    }
-    concurrency?: number
-}
 
 const MAX_ERROR_COUNT = 3
 const ERROR_COUNTER_TTL = 86400
@@ -123,7 +113,6 @@ async function handleMedia(
                 return undefined
             }
 
-            // TODO
             if (
                 config.cfg_sender.media.use?.tool === 'gallery-dl' &&
                 (config.cfg_sender.media.use as MediaTool<MediaToolEnum.GALLERY_DL>).path
@@ -234,14 +223,14 @@ async function processFollowsTask(
 
     for (const target of targets) {
         try {
-            const ForwarderClass = getForwarder(target.platform)
-            if (!ForwarderClass) {
+            const SenderClass = getSender(target.platform)
+            if (!SenderClass) {
                 jobLog.error(`Unknown platform: ${target.platform}`)
                 errorCount++
                 continue
             }
 
-            const forwarder = new ForwarderClass(target.config, target.id, jobLog)
+            const forwarder = new SenderClass(target.config, target.id, jobLog)
             await forwarder.init()
 
             await forwarder.send(texts_to_send, {
@@ -266,7 +255,7 @@ async function processFollowsTask(
     }
 }
 
-async function processForwarderJob(job: Job<SenderJobData>, queueManager: QueueManager): Promise<JobResult> {
+export async function processSenderJob(job: Job<SenderJobData>, queueManager: QueueManager): Promise<JobResult> {
     const { task_id, task_type, websites, config, targets } = job.data
     const jobLog = log.child({ task_id, task_type })
 
@@ -301,14 +290,14 @@ async function processForwarderJob(job: Job<SenderJobData>, queueManager: QueueM
         jobLog.info(`Processing target: ${target.id} (${target.platform})`)
 
         try {
-            const ForwarderClass = getForwarder(target.platform)
-            if (!ForwarderClass) {
+            const SenderClass = getSender(target.platform)
+            if (!SenderClass) {
                 jobLog.error(`Unknown platform: ${target.platform}`)
                 errorCount++
                 continue
             }
 
-            const forwarder = new ForwarderClass(target.config, target.id, jobLog)
+            const forwarder = new SenderClass(target.config, target.id, jobLog)
             await forwarder.init()
 
             for (const article of allArticles) {
@@ -440,7 +429,7 @@ async function processForwarderJob(job: Job<SenderJobData>, queueManager: QueueM
         await job.updateProgress(((targets.indexOf(target) + 1) / targets.length) * 100)
     }
 
-    jobLog.info(`Forwarder job completed: ${successCount} forwarded, ${errorCount} errors`)
+    jobLog.info(`Sender job completed: ${successCount} forwarded, ${errorCount} errors`)
 
     return {
         success: errorCount === 0,
@@ -449,20 +438,9 @@ async function processForwarderJob(job: Job<SenderJobData>, queueManager: QueueM
     }
 }
 
-async function main() {
-    const config: ForwarderServiceConfig = {
-        redis: {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379'),
-            password: process.env.REDIS_PASSWORD,
-            db: parseInt(process.env.REDIS_DB || '0'),
-        },
-        concurrency: parseInt(process.env.WORKER_CONCURRENCY || '3'),
-    }
-
-    log.info('Starting Forwarder Service...')
-    log.info(`Redis: ${config.redis.host}:${config.redis.port}`)
-    log.info(`Concurrency: ${config.concurrency}`)
+export function startSenderWorker(queueManager: QueueManager, concurrency: number = 3) {
+    log.info('Starting Sender Worker...')
+    log.info(`Concurrency: ${concurrency}`)
 
     const cacheDirs = [path.join(CACHE_DIR_ROOT, 'media', 'plain'), path.join(CACHE_DIR_ROOT, 'media', 'gallery-dl')]
     cacheDirs.forEach((dir) => {
@@ -472,11 +450,9 @@ async function main() {
         }
     })
 
-    const queueManager = new QueueManager({ redis: config.redis })
-
-    const worker = createSenderWorker((job) => processForwarderJob(job, queueManager), {
-        connection: config.redis,
-        concurrency: config.concurrency,
+    const worker = createSenderWorker((job) => processSenderJob(job, queueManager), {
+        connection: queueManager.getConnectionOptions(),
+        concurrency,
         limiter: {
             max: 20,
             duration: 60000,
@@ -495,21 +471,7 @@ async function main() {
         log.error(`Worker error: ${err.message}`)
     })
 
-    log.info('Forwarder Service started, waiting for jobs...')
+    log.info('Sender Worker started, waiting for jobs...')
 
-    async function shutdown() {
-        log.info('Shutting down...')
-        await worker.close()
-        await queueManager.close()
-        log.info('Shutdown complete')
-        process.exit(0)
-    }
-
-    process.on('SIGINT', shutdown)
-    process.on('SIGTERM', shutdown)
+    return worker
 }
-
-main().catch((err) => {
-    log.error(`Failed to start Forwarder Service: ${err}`)
-    process.exit(1)
-})

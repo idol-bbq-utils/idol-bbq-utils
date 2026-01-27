@@ -1,10 +1,20 @@
 import { createLogger } from '@idol-bbq-utils/log'
-import { createCrawlerWorker, QueueManager, QueueName, type Job } from '@idol-bbq-utils/queue'
-import type { CrawlerJobData, JobResult, SpiderResult, StorageJobData } from '@idol-bbq-utils/queue/jobs'
-import { spiderRegistry, parseNetscapeCookieToPuppeteerCookie, UserAgent } from '@idol-bbq-utils/spider'
+import { createCrawlerWorker, type Job } from '@idol-bbq-utils/queue'
+import type {
+    CrawlerJobData,
+    JobResult,
+    SpiderResult,
+    SpiderArticleResult,
+    SpiderFollowsResult,
+} from '@idol-bbq-utils/queue/jobs'
+import { spiderRegistry, parseNetscapeCookieToPuppeteerCookie } from '@idol-bbq-utils/spider'
 import puppeteer, { type Browser, type Page } from 'puppeteer-core'
 import { pRetry } from '@idol-bbq-utils/utils'
 import tmp from 'tmp'
+import DB from '@idol-bbq-utils/db'
+import type { Article } from '@idol-bbq-utils/db'
+import { BaseTranslator, TRANSLATION_ERROR_FALLBACK } from '@idol-bbq-utils/translator'
+import PQueue from 'p-queue'
 
 tmp.setGracefulCleanup()
 
@@ -19,6 +29,7 @@ interface CrawlerServiceConfig {
     }
     concurrency?: number
     browserPoolSize?: number
+    storageQueueConcurrency?: number
 }
 
 class BrowserPool {
@@ -75,10 +86,175 @@ class BrowserPool {
     }
 }
 
+// Storage processing functions (from storage-service)
+async function doTranslate(
+    article: Article,
+    translator: BaseTranslator,
+    jobLog: ReturnType<typeof log.child>,
+): Promise<Article> {
+    const { username, a_id } = article
+    jobLog.info(`[${username}] [${a_id}] Translating article...`)
+
+    let currentArticle: Article | null = article
+    let articleNeedTobeTranslated: Array<Article> = []
+
+    while (currentArticle && typeof currentArticle === 'object') {
+        articleNeedTobeTranslated.push(currentArticle)
+        if (typeof currentArticle.ref !== 'string') {
+            currentArticle = currentArticle.ref as Article
+        } else {
+            currentArticle = null
+        }
+    }
+
+    jobLog.info(`[${username}] [${a_id}] Starting batch translating ${articleNeedTobeTranslated.length} articles...`)
+
+    await Promise.all(
+        articleNeedTobeTranslated.map(async (currentArticle) => {
+            const { a_id, username, platform } = currentArticle
+
+            const article_maybe_translated = await DB.Article.getByArticleCode(a_id, platform)
+
+            if (currentArticle.content && !BaseTranslator.isValidTranslation(article_maybe_translated?.translation)) {
+                const content = currentArticle.content
+                jobLog.info(`[${username}] [${a_id}] Starting to translate content...`)
+                const content_translation = await pRetry(() => translator.translate(content), {
+                    retries: 3,
+                    onFailedAttempt: (error) => {
+                        jobLog.warn(
+                            `[${username}] [${a_id}] Translation content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                        )
+                    },
+                })
+                    .then((res) => res)
+                    .catch((err) => {
+                        jobLog.error(`[${username}] [${a_id}] Error while translating content: ${err}`)
+                        return TRANSLATION_ERROR_FALLBACK
+                    })
+                jobLog.debug(`[${username}] [${a_id}] Translation content: ${content_translation}`)
+                jobLog.info(`[${username}] [${a_id}] Translation complete.`)
+                currentArticle.translation = content_translation
+                currentArticle.translated_by = translator.NAME
+            }
+
+            if (currentArticle.media) {
+                for (const [idx, media] of currentArticle.media.entries()) {
+                    if (
+                        media.alt &&
+                        !BaseTranslator.isValidTranslation(
+                            (article_maybe_translated?.media as unknown as Article['media'])?.[idx]?.translation,
+                        )
+                    ) {
+                        const alt = media.alt
+                        const caption_translation = await pRetry(() => translator.translate(alt), {
+                            retries: 3,
+                            onFailedAttempt: (error) => {
+                                jobLog.warn(
+                                    `[${username}] [${a_id}] Translation media alt failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                                )
+                            },
+                        })
+                            .then((res) => res)
+                            .catch((err) => {
+                                jobLog.error(`[${username}] [${a_id}] Error while translating media alt: ${err}`)
+                                return TRANSLATION_ERROR_FALLBACK
+                            })
+                        media.translation = caption_translation
+                        media.translated_by = translator.NAME
+                    }
+                }
+            }
+
+            if (currentArticle.extra) {
+                const extra_ref = currentArticle.extra
+                let { content, translation } = extra_ref
+                if (content && !BaseTranslator.isValidTranslation(translation)) {
+                    const content_translation = await pRetry(() => translator.translate(content), {
+                        retries: 3,
+                        onFailedAttempt: (error) => {
+                            jobLog.warn(
+                                `[${username}] [${a_id}] Translation extra content failed, there are ${error.retriesLeft} retries left: ${error.originalError.message}`,
+                            )
+                        },
+                    })
+                        .then((res) => res)
+                        .catch((err) => {
+                            jobLog.error(`[${username}] [${a_id}] Error while translating extra content: ${err}`)
+                            return TRANSLATION_ERROR_FALLBACK
+                        })
+                    extra_ref.translation = content_translation
+                    extra_ref.translated_by = translator.NAME
+                }
+            }
+        }),
+    )
+
+    jobLog.info(`[${username}] [${a_id}] ${articleNeedTobeTranslated.length} Articles are translated.`)
+    return article
+}
+
+async function processArticleStorage(
+    articles: SpiderArticleResult[],
+    translator: BaseTranslator | undefined,
+    jobLog: ReturnType<typeof log.child>,
+): Promise<{ savedIds: number[]; errorCount: number }> {
+    const savedIds: number[] = []
+    let errorCount = 0
+
+    for (const article of articles) {
+        try {
+            const exists = await DB.Article.checkExist(article)
+
+            if (!exists) {
+                let translatedArticle = article
+                if (translator) {
+                    translatedArticle = await doTranslate(article, translator, jobLog)
+                }
+
+                const saved = await DB.Article.trySave(translatedArticle)
+                if (saved) {
+                    savedIds.push(saved.id)
+                    jobLog.debug(`Saved article ${article.a_id} with id ${saved.id}`)
+                }
+            } else {
+                jobLog.debug(`Article ${article.a_id} already exists, skipping`)
+            }
+        } catch (error) {
+            jobLog.error(`Error saving article ${article.a_id}: ${error}`)
+            errorCount++
+        }
+    }
+
+    return { savedIds, errorCount }
+}
+
+async function processFollowsStorage(
+    followsList: SpiderFollowsResult[],
+    jobLog: ReturnType<typeof log.child>,
+): Promise<{ savedIds: number[]; errorCount: number }> {
+    const savedIds: number[] = []
+    let errorCount = 0
+
+    for (const follows of followsList) {
+        try {
+            const saved = await DB.Follow.save(follows)
+            if (saved) {
+                savedIds.push(saved.id)
+            }
+            jobLog.debug(`Saved follows for ${follows.username} with id ${saved?.id}`)
+        } catch (error) {
+            jobLog.error(`Error saving follows for ${follows.username}: ${error}`)
+            errorCount++
+        }
+    }
+
+    return { savedIds, errorCount }
+}
+
 async function processCrawlerJob(
     job: Job<CrawlerJobData>,
     browserPool: BrowserPool,
-    queueManager: QueueManager,
+    storageQueue: PQueue,
 ): Promise<JobResult> {
     const { task_id, task_type, name, websites, config } = job.data
     const jobLog = log.child({ task_id, name })
@@ -116,13 +292,14 @@ async function processCrawlerJob(
 
                 if (config.interval_time) {
                     const delay = Math.floor(
-                        Math.random() * (config.interval_time.max - config.interval_time.min) + config.interval_time.min,
+                        Math.random() * (config.interval_time.max - config.interval_time.min) +
+                            config.interval_time.min,
                     )
                     jobLog.debug(`Waiting ${delay}ms before crawling...`)
                     await new Promise((r) => setTimeout(r, delay))
                 }
 
-                const cur_results = await pRetry(
+                const cur_results = (await pRetry(
                     () =>
                         spider.crawl(website, page, task_id, {
                             task_type: task_type,
@@ -138,7 +315,7 @@ async function processCrawlerJob(
                             )
                         },
                     },
-                ) as Array<SpiderResult>
+                )) as Array<SpiderResult>
 
                 results?.push(...cur_results)
                 jobLog.info(`Crawled ${website}: ${cur_results.length} items`)
@@ -150,19 +327,47 @@ async function processCrawlerJob(
         }
 
         if (results.length > 0) {
-            const storageQueue = queueManager.getQueue(QueueName.STORAGE)
-            const storageJobData: StorageJobData = {
-                name: '',
-                type: 'storage',
-                task_id: `${task_id}-storage`,
-                task_type,
-                data: results,
-                translator_config: config.translator,
+            jobLog.info(`Dispatching ${results.length} items to internal storage queue`)
+
+            let translator: BaseTranslator | undefined = undefined
+            if (config.translator && task_type === 'article') {
+                try {
+                    const { translatorRegistry } = await import('@idol-bbq-utils/translator')
+                    translator = await translatorRegistry.create(
+                        config.translator.provider,
+                        config.translator.api_key,
+                        jobLog,
+                        config.translator.config,
+                    )
+                    jobLog.info(`Translator initialized: ${config.translator.provider}`)
+                } catch (error) {
+                    jobLog.error(`Failed to initialize translator: ${error}`)
+                }
             }
-            await storageQueue.add('store', storageJobData, {
-                jobId: `${task_id}-storage`,
-            })
-            jobLog.info(`Dispatched ${results.length} items to storage queue`)
+
+            storageQueue
+                .add(async () => {
+                    const storageLog = log.child({ task_id: `${task_id}-storage`, task_type })
+                    storageLog.info(`Processing storage: ${results.length} items (type: ${task_type})`)
+
+                    let result: { savedIds: number[]; errorCount: number }
+
+                    if (task_type === 'article') {
+                        result = await processArticleStorage(results as SpiderArticleResult[], translator, storageLog)
+                    } else if (task_type === 'follows') {
+                        result = await processFollowsStorage(results as SpiderFollowsResult[], storageLog)
+                    } else {
+                        storageLog.error(`Unknown task type: ${task_type}`)
+                        return
+                    }
+
+                    storageLog.info(`Storage completed: ${result.savedIds.length} saved, ${result.errorCount} errors`)
+                })
+                .catch((error: unknown) => {
+                    jobLog.error(`Storage processing failed: ${error}`)
+                })
+
+            jobLog.info(`Storage task queued`)
         }
 
         return {
@@ -187,19 +392,21 @@ async function main() {
         },
         concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'),
         browserPoolSize: parseInt(process.env.BROWSER_POOL_SIZE || '2'),
+        storageQueueConcurrency: parseInt(process.env.STORAGE_QUEUE_CONCURRENCY || '3'),
     }
 
-    log.info('Starting Crawler Service...')
+    log.info('Starting Crawler Service (with integrated storage)...')
     log.info(`Redis: ${config.redis.host}:${config.redis.port}`)
     log.info(`Concurrency: ${config.concurrency}`)
     log.info(`Browser Pool Size: ${config.browserPoolSize}`)
+    log.info(`Storage Queue Concurrency: ${config.storageQueueConcurrency}`)
 
     const browserPool = new BrowserPool(config.browserPoolSize)
     await browserPool.init()
 
-    const queueManager = new QueueManager({ redis: config.redis })
+    const storageQueue = new PQueue({ concurrency: config.storageQueueConcurrency })
 
-    const worker = createCrawlerWorker((job) => processCrawlerJob(job, browserPool, queueManager), {
+    const worker = createCrawlerWorker((job) => processCrawlerJob(job, browserPool, storageQueue), {
         connection: config.redis,
         concurrency: config.concurrency,
         limiter: {
@@ -225,7 +432,8 @@ async function main() {
     async function shutdown() {
         log.info('Shutting down...')
         await worker.close()
-        await queueManager.close()
+        storageQueue.clear()
+        await storageQueue.onIdle()
         await browserPool.close()
         log.info('Shutdown complete')
         process.exit(0)

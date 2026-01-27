@@ -16,9 +16,12 @@
         "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
         "cron": "^4.1.4",
+        "dayjs": "^1.11.13",
         "lodash": "^4.17.21",
         "yaml": "^2.4.5"
     },

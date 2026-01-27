@@ -35,6 +35,10 @@ export class QueueManager {
             maxRetriesPerRequest: null,
         })
 
+        this.connection.on('error', (err) => {
+            console.error('[QueueManager] Redis connection error:', err)
+        })
+
         this.connectionOptions = {
             host: config.redis.host,
             port: config.redis.port,
@@ -56,6 +60,10 @@ export class QueueManager {
 
     getConnection(): Redis {
         return this.connection
+    }
+
+    getConnectionOptions(): ConnectionOptions {
+        return this.connectionOptions
     }
 
     createQueueEvents(name: QueueName): QueueEvents {

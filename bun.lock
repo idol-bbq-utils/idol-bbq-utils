@@ -14,11 +14,14 @@
       "name": "@idol-bbq-utils/crawler-service",
       "version": "0.1.0",
       "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/translator": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
         "@types/tmp": "^0.2.6",
+        "p-queue": "^8.0.1",
         "puppeteer-core": "^24.6.0",
         "tmp": "^0.2.5",
       },
@@ -34,45 +37,17 @@
         "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
         "cron": "^4.1.4",
+        "dayjs": "^1.11.13",
         "lodash": "^4.17.21",
         "yaml": "^2.4.5",
       },
       "devDependencies": {
         "@types/lodash": "^4.17.6",
-        "@types/node": "^22.15.3",
-      },
-    },
-    "app/sender-service": {
-      "name": "@idol-bbq-utils/sender-service",
-      "version": "0.1.0",
-      "dependencies": {
-        "@idol-bbq-utils/config": "workspace:^",
-        "@idol-bbq-utils/db": "workspace:^",
-        "@idol-bbq-utils/log": "workspace:^",
-        "@idol-bbq-utils/queue": "workspace:^",
-        "@idol-bbq-utils/render": "workspace:^",
-        "@idol-bbq-utils/sender": "workspace:^",
-        "@idol-bbq-utils/spider": "workspace:^",
-        "@idol-bbq-utils/utils": "workspace:^",
-      },
-      "devDependencies": {
-        "@types/node": "^22.15.3",
-      },
-    },
-    "app/storage-service": {
-      "name": "@idol-bbq-utils/storage-service",
-      "version": "0.1.0",
-      "dependencies": {
-        "@idol-bbq-utils/db": "workspace:^",
-        "@idol-bbq-utils/log": "workspace:^",
-        "@idol-bbq-utils/queue": "workspace:^",
-        "@idol-bbq-utils/translator": "workspace:^",
-        "@idol-bbq-utils/utils": "workspace:^",
-      },
-      "devDependencies": {
         "@types/node": "^22.15.3",
       },
     },
@@ -315,11 +290,7 @@
 
     "@idol-bbq-utils/sender": ["@idol-bbq-utils/sender@workspace:core/sender"],
 
-    "@idol-bbq-utils/sender-service": ["@idol-bbq-utils/sender-service@workspace:app/sender-service"],
-
     "@idol-bbq-utils/spider": ["@idol-bbq-utils/spider@workspace:core/spider"],
-
-    "@idol-bbq-utils/storage-service": ["@idol-bbq-utils/storage-service@workspace:app/storage-service"],
 
     "@idol-bbq-utils/translator": ["@idol-bbq-utils/translator@workspace:core/translator"],
 
@@ -561,6 +532,8 @@
 
     "event-target-shim": ["event-target-shim@5.0.1", "", {}, "sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ=="],
 
+    "eventemitter3": ["eventemitter3@5.0.4", "", {}, "sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw=="],
+
     "extract-zip": ["extract-zip@2.0.1", "", { "dependencies": { "debug": "^4.1.1", "get-stream": "^5.1.0", "yauzl": "^2.10.0" }, "optionalDependencies": { "@types/yauzl": "^2.9.1" }, "bin": { "extract-zip": "cli.js" } }, "sha512-GDhU9ntwuKyGXdZBUgTIe+vXnWj0fppUEtMDL0+idd5Sta8TGpHssn/eusA9mrPr9qNDym6SxAYZjNvCn/9RBg=="],
 
     "fast-fifo": ["fast-fifo@1.3.2", "", {}, "sha512-/d9sfos4yxzpwkDkuN7k2SqFKtYNmCTzgfEpz82x34IM9/zc8KGxQoXg1liNC/izpRM/MBdt44Nmx41ZWqk+FQ=="],
@@ -687,7 +660,9 @@
 
     "one-time": ["one-time@1.0.0", "", { "dependencies": { "fn.name": "1.x.x" } }, "sha512-5DXOiRKwuSEcQ/l0kGCF6Q3jcADFv5tSmRaJck/OqkVFcOzutB134KRSfF0xDrL39MNnqxbHBbUUcjZIhTgb2g=="],
 
-    "p-timeout": ["p-timeout@4.1.0", "", {}, "sha512-+/wmHtzJuWii1sXn3HCuH/FTwGhrp4tmJTxSKJbfS+vkipci6osxXM5mY0jUiRzWKMTgUT8l7HFbeSwZAynqHw=="],
+    "p-queue": ["p-queue@8.1.1", "", { "dependencies": { "eventemitter3": "^5.0.1", "p-timeout": "^6.1.2" } }, "sha512-aNZ+VfjobsWryoiPnEApGGmf5WmNsCo9xu8dfaYamG5qaLP7ClhLN6NgsFe6SwJ2UbLEBK5dv9x8Mn5+RVhMWQ=="],
+
+    "p-timeout": ["p-timeout@6.1.4", "", {}, "sha512-MyIV3ZA/PmyBN/ud8vV9XzwTrNtR4jFrObymZYnZqMmW0zA8Z17vnT0rBgFE/TlohB+YCHqXMgZzb3Csp49vqg=="],
 
     "pac-proxy-agent": ["pac-proxy-agent@7.2.0", "", { "dependencies": { "@tootallnate/quickjs-emscripten": "^0.23.0", "agent-base": "^7.1.2", "debug": "^4.3.4", "get-uri": "^6.0.1", "http-proxy-agent": "^7.0.0", "https-proxy-agent": "^7.0.6", "pac-resolver": "^7.0.1", "socks-proxy-agent": "^8.0.5" } }, "sha512-TEB8ESquiLMc0lV8vcd5Ql/JAKAoyzHFXaStwjkzpOpC5Yv+pIzLfHvjTSdf3vpa2bMiUQrg9i6276yn8666aA=="],
 
@@ -843,10 +818,6 @@
 
     "@idol-bbq-utils/scheduler-service/@types/node": ["@types/node@22.19.7", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw=="],
 
-    "@idol-bbq-utils/sender-service/@types/node": ["@types/node@22.19.7", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw=="],
-
-    "@idol-bbq-utils/storage-service/@types/node": ["@types/node@22.19.7", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw=="],
-
     "@puppeteer/browsers/semver": ["semver@7.7.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA=="],
 
     "@types/yauzl/@types/node": ["@types/node@22.14.0", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-Kmpl+z84ILoG+3T/zQFyAJsU6EPTmOCj8/2+83fSN6djd6I4o7uOuGIH6vq3PrjY5BGitSbFuMN18j3iknubbA=="],
@@ -866,6 +837,8 @@
     "fluent-ffmpeg/async": ["async@0.2.10", "", {}, "sha512-eAkdoKxU6/LkKDBzLpT+t6Ff5EtfSF4wx1WfJiPEEV7WNLnDaRXk0oVysiEPm262roaachGexwUv94WhSgN5TQ=="],
 
     "string-width/emoji-regex": ["emoji-regex@8.0.0", "", {}, "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A=="],
+
+    "telegraf/p-timeout": ["p-timeout@4.1.0", "", {}, "sha512-+/wmHtzJuWii1sXn3HCuH/FTwGhrp4tmJTxSKJbfS+vkipci6osxXM5mY0jUiRzWKMTgUT8l7HFbeSwZAynqHw=="],
 
     "@esbuild-kit/core-utils/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.18.20", "", { "os": "android", "cpu": "arm" }, "sha512-fyi7TDI/ijKKNZTUJAQqiG5T7YjJXgnzkURqmGj13C6dCqckZBLdl4h7bkhHt/t0WP+zO9/zwroDvANaOqO5Sw=="],
 

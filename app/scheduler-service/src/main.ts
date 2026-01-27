@@ -1,12 +1,25 @@
 import { log } from './config'
 import { AppConfig, parseConfigFromFile } from '@idol-bbq-utils/config'
 import { SpiderTaskScheduler } from './schedulers/spider-scheduler'
-import { ForwarderTaskScheduler } from './schedulers/sender-scheduler'
+import { SenderTaskScheduler } from './schedulers/sender-scheduler'
 import { ensureMigrations } from '@idol-bbq-utils/db'
+import { QueueManager } from '@idol-bbq-utils/queue'
+import { startSenderWorker } from './workers/sender'
 import type { Ctx } from './types'
 
 async function main() {
     await ensureMigrations()
+
+    const ENABLE_SCHEDULER = process.env.ENABLE_SCHEDULER !== 'true'
+    const ENABLE_SENDER_WORKER = process.env.ENABLE_SENDER_WORKER !== 'true'
+
+    log.info('Scheduler service initializing...')
+    log.info(`Mode: Scheduler=${ENABLE_SCHEDULER}, ForwarderWorker=${ENABLE_SENDER_WORKER}`)
+
+    if (!ENABLE_SCHEDULER && !ENABLE_SENDER_WORKER) {
+        log.error('Both ENABLE_SCHEDULER and ENABLE_SENDER_WORKER are disabled. At least one must be enabled.')
+        process.exit(1)
+    }
 
     const config = parseConfigFromFile('./config.yaml')
     if (!config) {
@@ -26,32 +39,42 @@ async function main() {
         },
     }
 
-    log.info('Scheduler service initializing...')
     log.debug(`Redis: ${queue_config.redis.host}:${queue_config.redis.port}`)
 
-    const taskSchedulers: Array<SpiderTaskScheduler | ForwarderTaskScheduler> = []
+    const queueManager = new QueueManager({ redis: queue_config.redis })
+    const workers: Array<ReturnType<typeof startSenderWorker>> = []
+    const taskSchedulers: Array<SpiderTaskScheduler | SenderTaskScheduler> = []
     const ctx: Ctx = {
         app_config,
         logger: log,
     }
 
-    const crawlers = app_config.getTaskCrawlers()
-    if (crawlers && crawlers.length > 0) {
-        const spiderScheduler = new SpiderTaskScheduler(ctx, queue_config)
-        taskSchedulers.push(spiderScheduler)
-        log.info(`Initialized spider scheduler with ${crawlers.length} crawler(s)`)
+    if (ENABLE_SENDER_WORKER) {
+        const forwarderConcurrency = parseInt(process.env.SENDER_WORKER_CONCURRENCY || '3')
+        const forwarderWorker = startSenderWorker(queueManager, forwarderConcurrency)
+        workers.push(forwarderWorker)
+        log.info(`Started forwarder worker (concurrency: ${forwarderConcurrency})`)
     }
 
-    const senders = app_config.getTaskSenders()
-    if (senders && senders.length > 0) {
-        const forwarderScheduler = new ForwarderTaskScheduler(ctx, queue_config)
-        taskSchedulers.push(forwarderScheduler)
-        log.info(`Initialized sender scheduler with ${senders.length} sender(s)`)
-    }
+    if (ENABLE_SCHEDULER) {
+        const crawlers = app_config.getTaskCrawlers()
+        if (crawlers && crawlers.length > 0) {
+            const spiderScheduler = new SpiderTaskScheduler(ctx, queue_config)
+            taskSchedulers.push(spiderScheduler)
+            log.info(`Initialized spider scheduler with ${crawlers.length} crawler(s)`)
+        }
 
-    for (const scheduler of taskSchedulers) {
-        await scheduler.init()
-        await scheduler.start()
+        const senders = app_config.getTaskSenders()
+        if (senders && senders.length > 0) {
+            const senderScheduler = new SenderTaskScheduler(ctx, queue_config)
+            taskSchedulers.push(senderScheduler)
+            log.info(`Initialized sender scheduler with ${senders.length} sender(s)`)
+        }
+
+        for (const scheduler of taskSchedulers) {
+            await scheduler.init()
+            await scheduler.start()
+        }
     }
 
     log.info('Scheduler service started successfully')
@@ -62,6 +85,10 @@ async function main() {
             await scheduler.stop()
             await scheduler.drop()
         }
+        for (const worker of workers) {
+            await worker.close()
+        }
+        await queueManager.close()
         log.info('Cleanup completed')
         process.exit(0)
     }
