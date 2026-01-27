@@ -29,7 +29,7 @@ enum ArticleTypeEnum {
 
 class InstagramSpider extends BaseSpider {
     // extends from XBaseSpider regex
-    static _VALID_URL = /(https:\/\/)?(www\.)?instagram\.com\/(?<id>\w+)/
+    static _VALID_URL = /(https:\/\/)?(www\.)?instagram\.com\/(?<id>[\w\.]+)\/?/
     static _PLATFORM = Platform.Instagram
     BASE_URL: string = 'https://www.instagram.com/'
     NAME: string = 'Instagram Generic Spider'
@@ -57,16 +57,17 @@ class InstagramSpider extends BaseSpider {
         }
 
         if (task_type === 'article') {
+            const cookie_string = config.cookie_string || (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
             this.log?.info('Trying to grab posts.')
-            const res = await InsApiJsonParser.grabPosts(page, _url)
+            const res = await (InsApiJsonParser.grabPosts(page, _url).catch(() => InsApiJsonParser.NewApi.grabPosts(page, _url)))
             this.log?.info(`Trying to grab stories.`)
-            const stories = await InsApiJsonParser.grabStories(page, `${this.BASE_URL}stories/${id}/`)
+            const stories = await InsApiJsonParser.grabStories(page, `${this.BASE_URL}stories/${id}/`, { cookie_string })
             return res.concat(stories) as TaskTypeResult<T, Platform.Instagram>
         }
 
         if (task_type === 'follows') {
             this.log?.info('Trying to grab follows.')
-            return [await InsApiJsonParser.grabFollowsNumber(page, _url)] as TaskTypeResult<T, Platform.Instagram>
+            return [await InsApiJsonParser.grabFollowsNumber(page, _url).catch(()=> InsApiJsonParser.NewApi.grabFollowsNumber(page, _url))] as TaskTypeResult<T, Platform.Instagram>
         }
 
         throw new Error('Invalid task type')
@@ -332,23 +333,24 @@ namespace InsApiJsonParser {
             viewport?: {
                 width: number
                 height: number
-            }
+            },
+            cookie_string?: string
         } = {
             viewport: defaultViewport,
         },
     ): Promise<Array<GenericArticle<Platform.Instagram>>> {
+        const html = await fetch(url, {
+            headers: {
+                'Cookie': config.cookie_string || '',
+                'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9'
+            }
+        }).then(res => res.text())
         await page.setViewport(config.viewport ?? defaultViewport)
-        await page.goto(url)
-        try {
-            await checkLogin(page)
-            await checkSomethingWrong(page)
-        } catch (error) {
-            throw error
-        }
+        await page.setContent(html)
         /**
-         * Xpath selector for stories json, but not working in bun with puppeteer version after 22.10+
+         * Xpath selector for stories json, but not working in bun with puppeteer   version after 22.10+
          */
-        // const stores_json = await page.$('::-p-xpath(//script[@type="application/json"])')
+        // const stores_json = await page.$('::-p-xpath(//script[@type="application/    json"])')
         const json_script_tags = await page.$$('script[type="application/json"]')
         for (const json_script_tag of json_script_tags) {
             const text = await json_script_tag.evaluate((el) => el.innerText)
@@ -394,6 +396,161 @@ namespace InsApiJsonParser {
         }
         const follows_json = data.data
         return followsParser(follows_json)
+    }
+
+    export namespace NewApi {
+        function mediaParserSingle(node: any): GenericMediaInfo | undefined {
+            if (!node) {
+                return
+            }
+            if (node?.__typename === 'GraphImage') {
+                return {
+                    type: 'photo',
+                    url: node?.display_url,
+                }
+            } else if (node?.__typename === 'GraphVideo') {
+                return {
+                    type: 'video',
+                    url: node?.video_url,
+                }
+            }
+            return
+        }
+        function mediaParser(node: any): Array<GenericMediaInfo> {
+            if (!node) {
+                return []
+            }
+            let arr = [] as Array<GenericMediaInfo>
+            if (!node.edge_sidecar_to_children) {
+                const singleMedia = mediaParserSingle(node)
+                if (singleMedia) {
+                    arr.push(singleMedia)
+                }
+            } else {
+                const edges = node.edge_sidecar_to_children.edges
+                edges.forEach((edge: any) => {
+                    const media = mediaParserSingle(edge.node)
+                    if (media) {
+                        arr.push(media)
+                    }
+                })
+            }
+            return arr
+
+        }
+        function postParser(edge: any, user: any): GenericArticle<Platform.Instagram> {
+            const node = edge.node
+            return {
+                platform: Platform.Instagram,
+                a_id: node?.shortcode,
+                u_id: user?.username,
+                username: user?.full_name,
+                created_at: node?.taken_at_timestamp,
+                content: node?.edge_media_to_caption?.edges?.[0]?.node?.text,
+                url: `https://www.instagram.com/p/${node?.shortcode}/`,
+                type: ArticleTypeEnum.POST,
+                ref: null,
+                has_media: true,
+                media: mediaParser(node),
+                extra: null,
+                u_avatar: user?.profile_pic_url_hd?.replace('\\u0026', '&'),
+            }
+        }
+
+        export function postsParser(json: any, user: any): Array<GenericArticle<Platform.Instagram>> {
+            let edges = parseEdges(json)
+            return edges.map((edge: any) => postParser(edge, user))
+        }
+
+        export async function grabPosts(
+            page: Page,
+            url: string,
+            config: {
+                viewport?: {
+                    width: number
+                    height: number
+                }
+            } = {
+                viewport: defaultViewport,
+            },
+        ): Promise<Array<GenericArticle<Platform.Instagram>>> {
+            const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
+                const url = response.url()
+                if (url.includes('api/v1/users/web_profile_info') && response.request().method() === 'GET') {
+                    if (response.status() >= 400) {
+                        fail(new Error(`Error: ${response.status()}`))
+                        return
+                    }
+                    response
+                        .json()
+                        .then((json) => {
+                            done(json)
+                        })
+                        .catch((error) => {
+                            fail(error)
+                        })
+                }
+            })
+            try {
+                await page.setViewport(config.viewport ?? defaultViewport)
+                await page.goto(url)
+                await checkLogin(page)
+                await checkSomethingWrong(page)
+            } catch (error) {
+                cleanup()
+                throw error
+            }
+            const data = await waitForTweets
+            if (!data.success) {
+                throw data.error
+            }
+            const ins_json = data.data
+            const user = ins_json?.data?.user
+            const posts = postsParser(user["edge_owner_to_timeline_media"], user)
+            return posts
+        }
+
+        export async function grabFollowsNumber(page: Page, url: string, config: {
+            viewport?: {
+                width: number
+                height: number
+            }
+        } = {
+            viewport: defaultViewport,
+        }): Promise<GenericFollows> {
+            const { cleanup, promise: waitForTweets } = waitForResponse(page, async (response, { done, fail }) => {
+                const url = response.url()
+                if (url.includes('api/v1/users/web_profile_info') && response.request().method() === 'GET') {
+                    if (response.status() >= 400) {
+                        fail(new Error(`Error: ${response.status()}`))
+                        return
+                    }
+                    response
+                        .json()
+                        .then((json) => {
+                            done(json)
+                        })
+                        .catch((error) => {
+                            fail(error)
+                        })
+                }
+            })
+            try {
+                await page.setViewport(config.viewport ?? defaultViewport)
+                await page.goto(url)
+                await checkLogin(page)
+                await checkSomethingWrong(page)
+            } catch (error) {
+                cleanup()
+                throw error
+            }
+            const data = await waitForTweets
+            if (!data.success) {
+                throw data.error
+            }
+            const ins_json = data.data
+            return followsParser(ins_json)
+        }
     }
 }
 
