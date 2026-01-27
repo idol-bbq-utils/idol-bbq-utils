@@ -411,7 +411,7 @@ async function main() {
         concurrency: config.concurrency,
         limiter: {
             max: 10,
-            duration: 60000,
+            duration: 12 * 60 * 1000, // 12 minutes
         },
     })
 
