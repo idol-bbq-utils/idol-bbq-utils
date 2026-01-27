@@ -67,7 +67,9 @@ export class AppConfig {
      * key is id, should be unique
      */
     private send_targets: Map<string, SendTarget> = new Map()
-    constructor(private readonly raw_config: AppConfigType) {}
+    constructor(private readonly raw_config: AppConfigType) {
+        this.resolveConfig()
+    }
 
     // Merge global and task level config
     public resolveConfig(): void {
