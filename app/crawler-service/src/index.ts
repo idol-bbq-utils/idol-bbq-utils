@@ -15,10 +15,25 @@ import DB from '@idol-bbq-utils/db'
 import type { Article } from '@idol-bbq-utils/db'
 import { BaseTranslator, TRANSLATION_ERROR_FALLBACK } from '@idol-bbq-utils/translator'
 import PQueue from 'p-queue'
+import crypto from 'crypto'
 
 tmp.setGracefulCleanup()
 
 const log = createLogger({ defaultMeta: { service: 'CrawlerService' } })
+
+// Task execution pool to prevent duplicate tasks
+const executingTasks = new Set<string>()
+
+/**
+ * Generate a unique task execution ID based on websites, task_type, and engine
+ * Format: ${md5(sorted_websites)}::${task_type}::${engine}
+ */
+function generateTaskExecutionId(websites: string[], taskType: string, engine?: string): string {
+    const sortedWebsites = [...websites].sort()
+    const websitesStr = sortedWebsites.join(',')
+    const hash = crypto.createHash('md5').update(websitesStr).digest('hex')
+    return `${hash}::${taskType}::${engine || 'default'}`
+}
 
 interface CrawlerServiceConfig {
     redis: {
@@ -259,6 +274,19 @@ async function processCrawlerJob(
     const { task_id, task_type, name, websites, config } = job.data
     const jobLog = log.child({ trace_id: task_id, name })
 
+    const executionId = generateTaskExecutionId(websites, task_type, config.engine)
+
+    if (executingTasks.has(executionId)) {
+        jobLog.warn(`Task already executing: ${executionId}, skipping duplicate job`)
+        return {
+            success: false,
+            error: `Duplicate task already executing: ${executionId}`,
+        }
+    }
+
+    executingTasks.add(executionId)
+    jobLog.info(`Task execution started: ${executionId} (pool size: ${executingTasks.size})`)
+
     jobLog.info(`Processing crawler job: ${websites.length} websites`)
 
     let page: Page | undefined
@@ -379,6 +407,8 @@ async function processCrawlerJob(
         if (page) {
             await page.close()
         }
+        executingTasks.delete(executionId)
+        jobLog.info(`Task execution completed: ${executionId} (pool size: ${executingTasks.size})`)
     }
 }
 
