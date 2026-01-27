@@ -71,7 +71,7 @@ async function main() {
     process.on('SIGHUP', exitHandler)
 
     // Keep process running until receiving shutdown signal
-    await new Promise(() => {})
+    // await new Promise(() => {})
 }
 
 main()

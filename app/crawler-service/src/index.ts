@@ -93,7 +93,7 @@ async function processCrawlerJob(
         const cookies = parseNetscapeCookieToPuppeteerCookie(config.cookie_string, config.cookie_file)
         if (needsBrowser) {
             page = await browserPool.getPage()
-            await page.setUserAgent({ userAgent: config.user_agent })
+            await page.setUserAgent(config.user_agent)
             if (cookies.length > 0) {
                 await page.browserContext().setCookie(...cookies)
             }
