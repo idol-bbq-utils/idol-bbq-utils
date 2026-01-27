@@ -24,7 +24,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=builder /app/app/scheduler-service/build/main.js /app/bin.js
-COPY --from=builder /app/app/sender-service/build/resvgjs* /app/
+COPY --from=builder /app/app/scheduler-service/build/resvgjs* /app/
 
 COPY --from=builder /app/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 
