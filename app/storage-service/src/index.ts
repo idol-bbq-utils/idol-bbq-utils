@@ -2,7 +2,6 @@ import { createLogger } from '@idol-bbq-utils/log'
 import { Worker, QueueName } from '@idol-bbq-utils/queue'
 import type { StorageJobData, JobResult, SpiderArticleResult, SpiderFollowsResult } from '@idol-bbq-utils/queue/jobs'
 import type { Job } from 'bullmq'
-import { prisma } from '@idol-bbq-utils/db/client'
 import DB, { ensureMigrations } from '@idol-bbq-utils/db'
 import type { Article } from '@idol-bbq-utils/db'
 import { pRetry } from '@idol-bbq-utils/utils'
@@ -248,8 +247,8 @@ async function main() {
     log.info(`Redis: ${config.redis.host}:${config.redis.port}`)
     log.info(`Concurrency: ${config.concurrency}`)
 
-    await prisma.$connect()
-    log.info('Database connected')
+    await ensureMigrations()
+    log.info('Database migrations completed')
 
     const worker = new Worker<StorageJobData, JobResult>(QueueName.STORAGE, processStorageJob, {
         connection: config.redis,
@@ -273,7 +272,6 @@ async function main() {
     async function shutdown() {
         log.info('Shutting down...')
         await worker.close()
-        await prisma.$disconnect()
         log.info('Shutdown complete')
         process.exit(0)
     }

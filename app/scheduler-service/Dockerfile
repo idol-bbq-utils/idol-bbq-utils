@@ -25,17 +25,10 @@ WORKDIR /app
 
 COPY --from=builder /app/app/scheduler-service/build/main.js /app/bin.js
 
-COPY --from=builder /app/core/db/prisma/schema.prisma /app/prisma/schema.prisma
-COPY --from=builder /app/core/db/prisma/migrations /app/prisma/migrations
-COPY --from=builder /app/core/db/prisma/client /app/prisma/client
+COPY --from=builder /app/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 
-# Copy Prisma CLI and dependencies (needed for migrations)
-COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
-
-# Create symlink for prisma CLI
-RUN ln -s /app/node_modules/prisma/build/index.js /usr/local/bin/prisma && chmod +x /usr/local/bin/prisma
+COPY --from=builder /app/core/db/drizzle /app/drizzle
+COPY --from=builder /app/core/db/src /app/core/db/src
 
 RUN chown -R bun:bun /app/
 

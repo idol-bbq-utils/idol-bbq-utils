@@ -1,7 +1,7 @@
 {
     "name": "@idol-bbq-utils/db",
     "version": "0.1.0",
-    "description": "Database layer with Prisma for idol-bbq-utils",
+    "description": "Database layer with Drizzle ORM for idol-bbq-utils",
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
     "license": "MIT",
@@ -20,7 +20,8 @@
     },
     "files": [
         "lib",
-        "prisma"
+        "drizzle",
+        "src"
     ],
     "publishConfig": {
         "access": "public"
@@ -30,10 +31,8 @@
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
     },
     "scripts": {
-        "generate": "prisma generate --schema=./prisma/schema.prisma",
-        "migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
-        "studio": "prisma studio --schema=./prisma/schema.prisma",
-        "postinstall": "bun run generate"
+        "generate": "drizzle-kit generate:sqlite",
+        "studio": "drizzle-kit studio"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
@@ -42,7 +41,9 @@
         "@idol-bbq-utils/render": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
-        "@prisma/client": "^6.2.0",
-        "prisma": "^6.2.0"
+        "drizzle-orm": "^0.45.1"
+    },
+    "devDependencies": {
+        "drizzle-kit": "^0.31.8"
     }
 }

@@ -27,15 +27,10 @@ WORKDIR /app
 COPY --from=builder /app/app/sender-service/build/index.js /app/bin.js
 COPY --from=builder /app/app/sender-service/build/resvgjs* /app/
 
-COPY --from=builder /app/core/db/prisma/schema.prisma /app/prisma/schema.prisma
-COPY --from=builder /app/core/db/prisma/migrations /app/prisma/migrations
-COPY --from=builder /app/core/db/prisma/client /app/prisma/client
+COPY --from=builder /app/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 
-COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
-
-RUN ln -s /app/node_modules/prisma/build/index.js /usr/local/bin/prisma && chmod +x /usr/local/bin/prisma
+COPY --from=builder /app/core/db/drizzle /app/drizzle
+COPY --from=builder /app/core/db/src /app/core/db/src
 
 COPY --from=builder /app/assets/fonts /app/assets/fonts
 

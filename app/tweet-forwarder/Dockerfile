@@ -5,7 +5,6 @@ FROM oven/bun:1.2.8-slim AS base
 FROM base AS builder
 
 RUN apt-get update \
-    # For prisma client dependencies
     && apt-get install -y openssl
 
 WORKDIR /app
@@ -43,7 +42,11 @@ RUN wget https://github.com/mikf/gallery-dl/releases/download/${GALLERY_DL_VERSI
 WORKDIR /app
 COPY --from=builder /app/app/tweet-forwarder/build/main.js /app/bin.js
 COPY --from=builder /app/app/tweet-forwarder/build/resvgjs* /app/
-COPY --from=builder /app/core/db/prisma/client /app/prisma/client
+
+COPY --from=builder /app/node_modules/drizzle-orm /app/node_modules/drizzle-orm
+
+COPY --from=builder /app/core/db/drizzle /app/drizzle
+COPY --from=builder /app/core/db/src /app/core/db/src
 COPY --from=builder /app/assets/fonts /app/assets/fonts
 
 RUN chown -R bun:bun /app/

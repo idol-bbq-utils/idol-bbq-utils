@@ -1,28 +1,26 @@
 import { Platform } from '@idol-bbq-utils/spider/types'
 import type { GenericFollows } from '@idol-bbq-utils/spider/types'
-import { prisma, Prisma } from './client'
+import { db, schema } from './client'
 import { getSubtractTime } from '@idol-bbq-utils/utils'
 import type { Article } from '@idol-bbq-utils/render/types'
 import { spiderRegistry } from '@idol-bbq-utils/spider'
+import { eq, and, desc, lte, inArray } from 'drizzle-orm'
 
 export { ensureMigrations } from './migrate'
-// export { setupPrismaClient } from './setup-client'
 
 type ArticleWithId = Article & { id: number }
 
-type DBArticle = Prisma.articleGetPayload<{}>
-type DBFollows = Prisma.followGetPayload<{}>
+type DBArticle = typeof schema.article.$inferSelect
+type DBFollows = typeof schema.follow.$inferSelect
+
 namespace DB {
     export namespace Article {
         export async function checkExist(article: Article) {
-            return await prisma.article.findUnique({
-                where: {
-                    a_id_platform: {
-                        a_id: article.a_id,
-                        platform: article.platform,
-                    },
-                },
-            })
+            return await db
+                .select()
+                .from(schema.article)
+                .where(and(eq(schema.article.a_id, article.a_id), eq(schema.article.platform, article.platform)))
+                .get()
         }
 
         export async function trySave(article: Article): Promise<DBArticle | undefined> {
@@ -39,51 +37,41 @@ namespace DB {
                 return exist_one
             }
             let ref: number | undefined = undefined
-            // 递归注意
             if (article.ref) {
                 if (typeof article.ref === 'object') {
                     ref = (await save(article.ref)).id
                 }
                 if (typeof article.ref === 'string') {
-                    ref = (await getByArticleCode(article.ref, article.platform))?.id
+                    const refArticle = await getByArticleCode(article.ref, article.platform)
+                    ref = refArticle?.id
                 }
             }
-            const res = await prisma.article.create({
-                data: {
+            const result = await db
+                .insert(schema.article)
+                .values({
                     ...article,
                     ref: ref,
-                    extra: article.extra ? (article.extra as unknown as Prisma.JsonObject) : Prisma.JsonNull,
-                    media: (article.media as unknown as Prisma.JsonArray) ?? Prisma.JsonNull,
-                },
-            })
-            return res
+                    extra: article.extra ? (article.extra as any) : null,
+                    media: (article.media as any) ?? null,
+                })
+                .returning()
+            return result[0]!
         }
 
         export async function get(id: number) {
-            return await prisma.article.findUnique({
-                where: {
-                    id: id,
-                },
-            })
+            return await db.select().from(schema.article).where(eq(schema.article.id, id)).get()
         }
 
         export async function getByArticleCode(a_id: string, platform: Platform) {
-            return await prisma.article.findUnique({
-                where: {
-                    a_id_platform: {
-                        a_id,
-                        platform,
-                    },
-                },
-            })
+            return await db
+                .select()
+                .from(schema.article)
+                .where(and(eq(schema.article.a_id, a_id), eq(schema.article.platform, platform)))
+                .get()
         }
 
         export async function getSingleArticle(id: number) {
-            const article = await prisma.article.findUnique({
-                where: {
-                    id: id,
-                },
-            })
+            const article = await db.select().from(schema.article).where(eq(schema.article.id, id)).get()
             if (!article) {
                 return
             }
@@ -91,14 +79,11 @@ namespace DB {
         }
 
         export async function getSingleArticleByArticleCode(a_id: string, platform: Platform) {
-            const article = await prisma.article.findUnique({
-                where: {
-                    a_id_platform: {
-                        a_id,
-                        platform,
-                    },
-                },
-            })
+            const article = await db
+                .select()
+                .from(schema.article)
+                .where(and(eq(schema.article.a_id, a_id), eq(schema.article.platform, platform)))
+                .get()
             if (!article) {
                 return
             }
@@ -109,11 +94,11 @@ namespace DB {
             let currentRefId = article.ref
             let currentArticle = article as unknown as ArticleWithId
             while (currentRefId) {
-                const foundArticle = await prisma.article.findUnique({
-                    where: {
-                        id: currentRefId,
-                    },
-                })
+                const foundArticle = await db
+                    .select()
+                    .from(schema.article)
+                    .where(eq(schema.article.id, currentRefId))
+                    .get()
                 currentRefId = foundArticle?.ref || null
                 currentArticle.ref = foundArticle as unknown as ArticleWithId
                 currentArticle = foundArticle as unknown as ArticleWithId
@@ -122,29 +107,28 @@ namespace DB {
         }
 
         export async function getArticlesByName(u_id: string, platform: Platform, count = 10) {
-            const res = await prisma.article.findMany({
-                where: {
-                    platform: platform,
-                    u_id: u_id,
-                },
-                orderBy: {
-                    created_at: 'desc',
-                },
-                take: count,
-            })
-            const articles = await Promise.all(res.map(async ({ id }) => getSingleArticle(id)))
+            const res = await db
+                .select()
+                .from(schema.article)
+                .where(and(eq(schema.article.platform, platform), eq(schema.article.u_id, u_id)))
+                .orderBy(desc(schema.article.created_at))
+                .limit(count)
+                .all()
+            const articles = await Promise.all(res.map(async (item) => getSingleArticle(item.id)))
             return articles.filter((item) => item) as ArticleWithId[]
         }
     }
 
     export namespace Follow {
         export async function save(follows: GenericFollows) {
-            return await prisma.follow.create({
-                data: {
+            const [result] = await db
+                .insert(schema.follow)
+                .values({
                     ...follows,
                     created_at: Math.floor(Date.now() / 1000),
-                },
-            })
+                })
+                .returning()
+            return result
         }
 
         export async function getLatestAndComparisonFollowsByName(
@@ -152,58 +136,62 @@ namespace DB {
             platform: Platform,
             window: string,
         ): Promise<[DBFollows, DBFollows | null] | null> {
-            const latest = await prisma.follow.findFirst({
-                where: {
-                    platform: platform,
-                    u_id: u_id,
-                },
-                orderBy: {
-                    created_at: 'desc',
-                },
-            })
+            const latest = await db
+                .select()
+                .from(schema.follow)
+                .where(and(eq(schema.follow.platform, platform), eq(schema.follow.u_id, u_id)))
+                .orderBy(desc(schema.follow.created_at))
+                .limit(1)
+                .get()
             if (!latest) {
                 return null
             }
             const latestTime = latest.created_at
             const subtractTime = getSubtractTime(latestTime, window)
-            const comparison = await prisma.follow.findFirst({
-                where: {
-                    platform: platform,
-                    u_id: u_id,
-                    created_at: {
-                        lte: subtractTime,
-                    },
-                },
-                orderBy: {
-                    created_at: 'desc',
-                },
-            })
-            return [latest, comparison]
+            const comparison = await db
+                .select()
+                .from(schema.follow)
+                .where(
+                    and(
+                        eq(schema.follow.platform, platform),
+                        eq(schema.follow.u_id, u_id),
+                        lte(schema.follow.created_at, subtractTime),
+                    ),
+                )
+                .orderBy(desc(schema.follow.created_at))
+                .limit(1)
+                .get()
+            return [latest, comparison || null]
         }
     }
 
     export namespace SendBy {
         export async function checkExist(ref_id: number, sender_id: string, task_type: string) {
-            return await prisma.send_by.findUnique({
-                where: {
-                    ref_id_sender_id_task_type: {
-                        ref_id,
-                        sender_id,
-                        task_type,
-                    },
-                },
-            })
+            return await db
+                .select()
+                .from(schema.sendBy)
+                .where(
+                    and(
+                        eq(schema.sendBy.ref_id, ref_id),
+                        eq(schema.sendBy.sender_id, sender_id),
+                        eq(schema.sendBy.task_type, task_type),
+                    ),
+                )
+                .get()
         }
 
         export async function batchCheckExist(articleIds: number[], targetIds: string[], taskType: string) {
-            return await prisma.send_by.findMany({
-                where: {
-                    ref_id: { in: articleIds },
-                    sender_id: { in: targetIds },
-                    task_type: taskType,
-                },
-                select: { ref_id: true, sender_id: true },
-            })
+            return await db
+                .select({ ref_id: schema.sendBy.ref_id, sender_id: schema.sendBy.sender_id })
+                .from(schema.sendBy)
+                .where(
+                    and(
+                        inArray(schema.sendBy.ref_id, articleIds),
+                        inArray(schema.sendBy.sender_id, targetIds),
+                        eq(schema.sendBy.task_type, taskType),
+                    ),
+                )
+                .all()
         }
 
         export async function save(ref_id: number, sender_id: string, task_type: string) {
@@ -211,13 +199,15 @@ namespace DB {
             if (exist_one) {
                 return exist_one
             }
-            return await prisma.send_by.create({
-                data: {
+            const [result] = await db
+                .insert(schema.sendBy)
+                .values({
                     ref_id,
                     sender_id,
                     task_type,
-                },
-            })
+                })
+                .returning()
+            return result
         }
 
         export async function deleteRecord(ref_id: number, sender_id: string, task_type: string) {
@@ -225,15 +215,17 @@ namespace DB {
             if (!exist_one) {
                 return
             }
-            return await prisma.send_by.delete({
-                where: {
-                    ref_id_sender_id_task_type: {
-                        ref_id,
-                        sender_id,
-                        task_type,
-                    },
-                },
-            })
+            return await db
+                .delete(schema.sendBy)
+                .where(
+                    and(
+                        eq(schema.sendBy.ref_id, ref_id),
+                        eq(schema.sendBy.sender_id, sender_id),
+                        eq(schema.sendBy.task_type, task_type),
+                    ),
+                )
+                .returning()
+                .then((rows) => rows[0])
         }
 
         export async function queryPendingArticleIds(websites: string[], sender_ids: string[]): Promise<number[]> {
