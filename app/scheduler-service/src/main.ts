@@ -10,8 +10,8 @@ import type { Ctx } from './types'
 async function main() {
     await ensureMigrations()
 
-    const ENABLE_SCHEDULER = process.env.ENABLE_SCHEDULER !== 'true'
-    const ENABLE_SENDER_WORKER = process.env.ENABLE_SENDER_WORKER !== 'true'
+    const ENABLE_SCHEDULER = process.env.ENABLE_SCHEDULER !== 'false'
+    const ENABLE_SENDER_WORKER = process.env.ENABLE_SENDER_WORKER !== 'false'
 
     log.info('Scheduler service initializing...')
     log.info(`Mode: Scheduler=${ENABLE_SCHEDULER}, ForwarderWorker=${ENABLE_SENDER_WORKER}`)
