@@ -42,37 +42,38 @@ interface ForwarderServiceConfig {
 const MAX_ERROR_COUNT = 3
 const ERROR_COUNTER_TTL = 86400
 
-let redisConnection: Redis | null = null
-
-function getRedisConnection(): Redis {
-    if (!redisConnection) {
-        redisConnection = new Redis({
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379'),
-            password: process.env.REDIS_PASSWORD,
-            db: parseInt(process.env.REDIS_DB || '0'),
-        })
-    }
-    return redisConnection
-}
-
-async function getErrorCount(platform: Platform, articleId: string, targetId: string): Promise<number> {
-    const redis = getRedisConnection()
+async function getErrorCount(
+    queueManager: QueueManager,
+    platform: Platform,
+    articleId: string,
+    targetId: string,
+): Promise<number> {
+    const redis = queueManager.getConnection()
     const key = `error_count:${platform}:${articleId}:${targetId}`
     const count = await redis.get(key)
     return count ? parseInt(count, 10) : 0
 }
 
-async function incrementErrorCount(platform: Platform, articleId: string, targetId: string): Promise<number> {
-    const redis = getRedisConnection()
+async function incrementErrorCount(
+    queueManager: QueueManager,
+    platform: Platform,
+    articleId: string,
+    targetId: string,
+): Promise<number> {
+    const redis = queueManager.getConnection()
     const key = `error_count:${platform}:${articleId}:${targetId}`
     const newCount = await redis.incr(key)
     await redis.expire(key, ERROR_COUNTER_TTL)
     return newCount
 }
 
-async function deleteErrorCount(platform: Platform, articleId: string, targetId: string): Promise<void> {
-    const redis = getRedisConnection()
+async function deleteErrorCount(
+    queueManager: QueueManager,
+    platform: Platform,
+    articleId: string,
+    targetId: string,
+): Promise<void> {
+    const redis = queueManager.getConnection()
     const key = `error_count:${platform}:${articleId}:${targetId}`
     await redis.del(key)
 }
@@ -265,7 +266,7 @@ async function processFollowsTask(
     }
 }
 
-async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> {
+async function processForwarderJob(job: Job<SenderJobData>, queueManager: QueueManager): Promise<JobResult> {
     const { task_id, task_type, websites, config, targets } = job.data
     const jobLog = log.child({ task_id, task_type })
 
@@ -386,7 +387,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
                         successCount++
                         jobLog.info(`Forwarded article ${article.a_id} to ${target.id}`)
 
-                        await deleteErrorCount(article.platform, article.a_id, target.id)
+                        await deleteErrorCount(queueManager, article.platform, article.a_id, target.id)
                     } catch (sendError) {
                         jobLog.error(`Error sending article ${article.a_id} to ${target.id}: ${sendError}`)
 
@@ -396,7 +397,12 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
                             currentArticle = currentArticle.ref as ArticleWithId | null
                         }
 
-                        const currentErrorCount = await incrementErrorCount(article.platform, article.a_id, target.id)
+                        const currentErrorCount = await incrementErrorCount(
+                            queueManager,
+                            article.platform,
+                            article.a_id,
+                            target.id,
+                        )
 
                         if (currentErrorCount > MAX_ERROR_COUNT) {
                             jobLog.error(
@@ -407,7 +413,7 @@ async function processForwarderJob(job: Job<SenderJobData>): Promise<JobResult> 
                                 await DB.SendBy.save(currentArticle.id, target.id, 'article')
                                 currentArticle = currentArticle.ref as ArticleWithId | null
                             }
-                            await deleteErrorCount(article.platform, article.a_id, target.id)
+                            await deleteErrorCount(queueManager, article.platform, article.a_id, target.id)
                         } else {
                             jobLog.warn(
                                 `Error count for ${article.a_id} to ${target.id}: ${currentErrorCount}/${MAX_ERROR_COUNT}`,
@@ -468,7 +474,7 @@ async function main() {
 
     const queueManager = new QueueManager({ redis: config.redis })
 
-    const worker = createSenderWorker((job) => processForwarderJob(job), {
+    const worker = createSenderWorker((job) => processForwarderJob(job, queueManager), {
         connection: config.redis,
         concurrency: config.concurrency,
         limiter: {
@@ -495,10 +501,6 @@ async function main() {
         log.info('Shutting down...')
         await worker.close()
         await queueManager.close()
-        if (redisConnection) {
-            await redisConnection.quit()
-            log.info('Redis connection closed')
-        }
         log.info('Shutdown complete')
         process.exit(0)
     }
