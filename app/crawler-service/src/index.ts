@@ -231,14 +231,13 @@ async function processArticleStorage(
                     savedIds.push(saved.id)
                     jobLog.debug(`Saved article ${article.a_id} with id ${saved.id}`)
                 }
-            } else {
-                jobLog.debug(`Article ${article.a_id} already exists, skipping`)
             }
         } catch (error) {
             jobLog.error(`Error saving article ${article.a_id}: ${error}`)
             errorCount++
         }
     }
+    jobLog.info(`Saved ${savedIds.length} articles.`)
 
     return { savedIds, errorCount }
 }
@@ -263,6 +262,7 @@ async function processFollowsStorage(
         }
     }
 
+    jobLog.info(`Saved ${savedIds.length} follows.`)
     return { savedIds, errorCount }
 }
 
