@@ -14,6 +14,7 @@ import {
     cleanupMediaFiles,
     getMediaType,
     tryGetCookie,
+    getCacheRoot,
 } from '@idol-bbq-utils/utils'
 import { Platform, type MediaType } from '@idol-bbq-utils/spider/types'
 import { platformPresetHeadersMap } from '@idol-bbq-utils/spider/const'
@@ -22,11 +23,10 @@ import { cloneDeep, orderBy } from 'lodash'
 import dayjs from 'dayjs'
 import fs from 'fs'
 import path from 'path'
-import os from 'os'
 import type { MediaTool, MediaToolEnum } from '@idol-bbq-utils/sender'
 
 const log = createLogger({ defaultMeta: { service: 'SenderWorker' } })
-const CACHE_DIR_ROOT = process.env.CACHE_DIR_ROOT || path.join(os.tmpdir(), 'forwarder-service')
+const CACHE_DIR_ROOT = getCacheRoot()
 const articleConverter = new ImgConverter()
 
 const MAX_ERROR_COUNT = 3
@@ -257,7 +257,7 @@ async function processFollowsTask(
 
 export async function processSenderJob(job: Job<SenderJobData>, queueManager: QueueManager): Promise<JobResult> {
     const { task_id, task_type, websites, config, targets } = job.data
-    const jobLog = log.child({ task_id, task_type })
+    const jobLog = log.child({ trace_id: task_id, task_type })
 
     if (task_type === 'follows') {
         return await processFollowsTask(job, config.cfg_task ?? {}, jobLog)

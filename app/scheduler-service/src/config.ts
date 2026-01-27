@@ -12,17 +12,6 @@ ensureDirectoryExists(path.join(CACHE_DIR_ROOT, 'logs'))
 const log: Logger = createLogger({
     defaultMeta: { service: 'scheduler-service' },
     level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
-    format: format.combine(
-        format.colorize(),
-        format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
-        format.printf(({ message, timestamp, level, label, service, subservice, trace_id }) => {
-            const metas = [service, subservice, label, level, trace_id]
-                .filter(Boolean)
-                .map((meta) => `[${meta}]`)
-                .join(' ')
-            return `${timestamp} ${metas}: ${message}`
-        }),
-    ),
     transports: [
         new winston.transports.Console({
             handleExceptions: true,

@@ -36,25 +36,25 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
             const cron = crawler.config.cron
 
             const job = new CronJob(cron, async () => {
-                const taskId = `${Math.random().toString(36).substring(2, 9)}`
-                this.log?.info(`[${taskId}] Starting to dispatch task: ${crawler.name}`)
+                const task_id = `${Math.random().toString(36).substring(2, 9)}`
+                this.log?.info(`Starting to dispatch task: ${crawler.name}`, { trace_id: task_id })
 
-                await this.dispatchToQueue(taskId, crawler)
+                await this.dispatchToQueue(task_id, crawler)
             })
             this.log?.debug(`Task dispatcher created with detail: ${JSON.stringify(crawler)}`)
             this.cronJobs.push(job)
         }
     }
 
-    private async dispatchToQueue(taskId: string, crawler: TaskCrawler): Promise<void> {
+    private async dispatchToQueue(task_id: string, crawler: TaskCrawler): Promise<void> {
         if (!this.queueManager) return
 
         const lockKey = getLockKey('crawler', crawler.name || 'unnamed')
         const redis = this.queueManager.getConnection()
 
-        const acquired = await acquireLock(redis, lockKey, taskId, 60)
+        const acquired = await acquireLock(redis, lockKey, task_id, 60)
         if (!acquired) {
-            this.log?.debug(`[${taskId}] Lock not acquired for ${crawler.name}, another scheduler is processing`)
+            this.log?.debug(`Lock not acquired for ${crawler.name}, another scheduler is processing`, { trace_id: task_id })
             return
         }
 
@@ -63,7 +63,7 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
 
             const jobData: CrawlerJobData = {
                 type: 'crawler',
-                task_id: taskId,
+                task_id: task_id,
                 task_type: crawler.task_type,
                 name: crawler.name || '',
                 websites: crawler.websites,
@@ -75,9 +75,11 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
                 jobId,
             })
 
-            this.log?.info(`[${taskId}] Task dispatched to queue: ${crawler.name} (jobId: ${jobId.substring(0, 8)}...)`)
+            this.log?.info(`Task dispatched to queue: ${crawler.name} (jobId: ${jobId.substring(0, 8)}...)`, {
+                trace_id: task_id,
+            })
         } finally {
-            await releaseLock(redis, lockKey, taskId)
+            await releaseLock(redis, lockKey, task_id)
         }
     }
 

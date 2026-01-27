@@ -39,7 +39,9 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
 
             const job = new CronJob(cron, async () => {
                 const task_id = `${Math.random().toString(36).substring(2, 9)}`
-                this.log?.info(`starting to dispatch task ${[name, task_title].filter(Boolean).join(' ')}...`)
+                this.log?.info(`starting to dispatch task ${[name, task_title].filter(Boolean).join(' ')}...`, {
+                    trace_id: task_id,
+                })
 
                 await this.dispatchToQueue(task_id, sender)
             })
@@ -54,18 +56,20 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
 
         const acquired = await acquireLock(redis, lockKey, task_id, 60)
         if (!acquired) {
-            this.log?.debug(`[${task_id}] Lock not acquired for ${sender.name}, another scheduler is processing`)
+            this.log?.debug(`Lock not acquired for ${sender.name}, another scheduler is processing`, { trace_id: task_id })
             return
         }
         const websites = sender.websites
         try {
             const task_type = sender.task_type
-            // check pending articles for 'article' task type
             if (task_type == 'article') {
-                const article_ids = await DB.SendBy.queryPendingArticleIds(websites, sender.targets.map((t) => t.id))
+                const article_ids = await DB.SendBy.queryPendingArticleIds(
+                    websites,
+                    sender.targets.map((t) => t.id),
+                )
 
                 if (article_ids.length === 0) {
-                    this.log?.debug(`[${task_id}] No pending articles for ${sender.name || 'unnamed'}`)
+                    this.log?.debug(`No pending articles for ${sender.name || 'unnamed'}`, { trace_id: task_id })
                     return
                 }
             }
@@ -74,13 +78,13 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
 
             const jobData: SenderJobData = {
                 type: 'sender',
-                task_id,
+                task_id: task_id,
                 task_type: sender.task_type,
                 task_title: sender.task_title,
                 name: sender.name || '',
                 websites,
                 targets: sender.targets,
-                config: sender.config
+                config: sender.config,
             }
 
             const senderQueue = this.queue_manager.getQueue(QueueName.SENDER)
@@ -89,7 +93,8 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
             })
 
             this.log?.info(
-                `[${task_id}] Dispatched ${task_type == 'article' ? 'article task' : 'follows task'} to sender queue: ${sender.name} (jobId: ${jobId.substring(0, 8)}...)`,
+                `Dispatched ${task_type == 'article' ? 'article task' : 'follows task'} to sender queue: ${sender.name} (jobId: ${jobId.substring(0, 8)}...)`,
+                { trace_id: task_id },
             )
         } finally {
             await releaseLock(redis, lockKey, task_id)

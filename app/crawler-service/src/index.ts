@@ -257,7 +257,7 @@ async function processCrawlerJob(
     storageQueue: PQueue,
 ): Promise<JobResult> {
     const { task_id, task_type, name, websites, config } = job.data
-    const jobLog = log.child({ task_id, name })
+    const jobLog = log.child({ trace_id: task_id, name })
 
     jobLog.info(`Processing crawler job: ${websites.length} websites`)
 
@@ -347,7 +347,7 @@ async function processCrawlerJob(
 
             storageQueue
                 .add(async () => {
-                    const storageLog = log.child({ task_id: `${task_id}-storage`, task_type })
+                    const storageLog = log.child({ trace_id: `${task_id}-storage`, task_type })
                     storageLog.info(`Processing storage: ${results.length} items (type: ${task_type})`)
 
                     let result: { savedIds: number[]; errorCount: number }
