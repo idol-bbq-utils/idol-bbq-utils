@@ -11,6 +11,8 @@ export enum QueueName {
 export interface CrawlerWorkerOptions {
     connection: ConnectionOptions
     concurrency?: number
+    lockDuration?: number
+    stalledInterval?: number
     limiter?: {
         max: number
         duration: number
@@ -42,6 +44,8 @@ export function createCrawlerWorker(
             connection: options.connection,
             concurrency: options.concurrency ?? 5,
             limiter: options.limiter,
+            lockDuration: options.lockDuration,
+            stalledInterval: options.stalledInterval,
         },
     )
 

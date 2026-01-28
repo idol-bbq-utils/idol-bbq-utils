@@ -65,10 +65,12 @@ async function main() {
     const worker = createCrawlerWorker((job) => processCrawlerJob(job, browserPool, storageQueue, log), {
         connection: config.redis,
         concurrency: config.concurrency,
-        limiter: {
-            max: 10,
-            duration: 12 * 60 * 1000, // 12 minutes
-        },
+        lockDuration: 12 * 60 * 1000, // 默认 12分钟锁定时间，防止超时
+        stalledInterval: 60 * 1000,
+        // limiter: {
+        //     max: parseInt(process.env.LIMITER_MAX || '10'),
+        //     duration: parseInt(process.env.LIMITER_DURATION || '1000'), // 默认1秒最多10个任务
+        // },
     })
 
     worker.on('completed', (job) => {
