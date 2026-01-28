@@ -5,7 +5,7 @@ export default defineConfig({
     out: './drizzle/pg',
     dialect: 'postgresql',
     dbCredentials: {
-        url: process.env.DATABASE_URL || 'postgresql://localhost:5432/idol_bbq',
+        url: process.env.DATABASE_URL || 'postgresql://localhost:5432/idolbbq',
     },
     verbose: true,
     strict: true,

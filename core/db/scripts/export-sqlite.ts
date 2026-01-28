@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 import { createSqliteAdapter } from '../src/adapter/sqlite.adapter'
-import { createArticleOperations, createFollowOperations, createSendByOperations } from '../src/operations'
 import { writeFileSync } from 'fs'
-import { Platform } from '@idol-bbq-utils/spider/types'
+import { ensureMigrations } from '../src'
 
 const DB_PATH = process.env.SQLITE_DB_PATH || 'file:./data.db'
 const OUTPUT_FILE = process.env.OUTPUT_FILE || './export.json'
@@ -13,7 +12,7 @@ async function exportData() {
     console.log(`[Export] Output: ${OUTPUT_FILE}`)
 
     const adapter = createSqliteAdapter(DB_PATH)
-    const articleOps = createArticleOperations(adapter)
+    await ensureMigrations()
 
     console.log('[Export] Fetching all data from database...')
 
