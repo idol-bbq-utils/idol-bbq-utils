@@ -41,6 +41,13 @@ const createCachedOperations = () => {
             }
             return sendByOps
         },
+
+        reset() {
+            adapter = null
+            articleOps = null
+            followOps = null
+            sendByOps = null
+        },
     }
 }
 

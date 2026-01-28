@@ -7,29 +7,25 @@ import { dirname } from 'path'
 
 export function createSqliteAdapter(url: string): SqliteAdapter {
     const dbPath = url.replace(/^file:/, '')
+    const isMemory = dbPath === ':memory:'
 
-    if (existsSync(dbPath)) {
-        const stats = statSync(dbPath)
 
-        if (stats.isDirectory()) {
-            console.error(`[SQLite] ERROR: Path is a directory, not a file: ${dbPath}`)
-            throw new Error(`Database path is a directory: ${dbPath}`)
-        }
-    }
-
-    const needsInitialization = !existsSync(dbPath) || statSync(dbPath).size === 0
-
-    if (needsInitialization) {
-        console.log(`[SQLite] Database file does not exist or is empty: ${dbPath}`)
-        console.log('[SQLite] Creating empty database file...')
-
-        const dir = dirname(dbPath)
-        if (!existsSync(dir)) {
-            mkdirSync(dir, { recursive: true })
+    if (!isMemory) {
+        if (existsSync(dbPath)) {
+            const stats = statSync(dbPath)
+            if (stats.isDirectory()) {
+                throw new Error(`Database path is a directory: ${dbPath}`)
+            }
         }
 
-        writeFileSync(dbPath, '')
-        console.log(`[SQLite] Empty database file created: ${dbPath}`)
+        const needsInitialization = !existsSync(dbPath) || statSync(dbPath).size === 0
+        if (needsInitialization) {
+            const dir = dirname(dbPath)
+            if (!existsSync(dir)) {
+                mkdirSync(dir, { recursive: true })
+            }
+            writeFileSync(dbPath, '')
+        }
     }
 
     const sqlite = new Database(dbPath)

@@ -52,7 +52,8 @@ services:
     build:
       context: .
       dockerfile: app/scheduler-service/Dockerfile
-    container_name: idol-bbq-scheduler
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     environment:
       - REDIS_HOST=redis
@@ -77,6 +78,8 @@ services:
     build:
       context: .
       dockerfile: app/crawler-service/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     environment:
       - TZ=Asia/Tokyo

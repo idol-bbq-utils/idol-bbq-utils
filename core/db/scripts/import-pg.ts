@@ -86,7 +86,7 @@ async function importData() {
     }
     console.log(`[Import] Imported ${exportData.follows.length} follows`)
 
-    console.log('[Import] Importing sendBy records in batches...')
+    console.log('[Import] Importing sendBy in batches...')
     const sendBy = exportData.sendBy
     for (let i = 0; i < sendBy.length; i += BATCH_SIZE) {
         const batch = sendBy.slice(i, i + BATCH_SIZE)
@@ -95,6 +95,27 @@ async function importData() {
         console.log(`[Import] SendBy: ${progress}/${sendBy.length} (${Math.round((progress / sendBy.length) * 100)}%)`)
     }
     console.log(`[Import] Imported ${exportData.sendBy.length} sendBy records`)
+
+    console.log('[Import] Synchronizing sequences...')
+    await adapter.db.execute(`SELECT setval('article_id_seq', (SELECT COALESCE(MAX(id), 0) FROM article), true)`)
+    await adapter.db.execute(`SELECT setval('follow_id_seq', (SELECT COALESCE(MAX(id), 0) FROM follow), true)`)
+
+    const seqCheck = await adapter.db.execute(`
+        SELECT 
+            'article' as table_name,
+            (SELECT COALESCE(MAX(id), 0) FROM article) as max_id,
+            (SELECT last_value FROM article_id_seq) as seq_value
+        UNION ALL
+        SELECT 
+            'follow' as table_name,
+            (SELECT COALESCE(MAX(id), 0) FROM follow) as max_id,
+            (SELECT last_value FROM follow_id_seq) as seq_value
+    `)
+
+    for (const row of seqCheck) {
+        const r = row as any
+        console.log(`[Import] Sequence sync: ${r.table_name} - max_id: ${r.max_id}, seq: ${r.seq_value}`)
+    }
 
     console.log('[Import] Import completed successfully!')
     await adapter.close()
