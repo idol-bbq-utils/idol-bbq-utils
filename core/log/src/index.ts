@@ -7,8 +7,12 @@ import 'winston-daily-rotate-file'
 const { combine, colorize, timestamp, json, printf } = format
 
 const default_format = printf(({ timestamp, level, message, ...meta }) => {
-    const service = meta && (meta['service'] ? `[${meta['service']}]` : '')
-    return `${dayjs(timestamp as any).format()} ${service} [${level}]: ${JSON.stringify(message)}`
+    // Unified format: [trace_id][service][subservice][level]: message
+    const metas = [meta['trace_id'], meta['service'], meta['subservice'], level]
+        .filter(Boolean)
+        .map((m) => `[${m}]`)
+        .join('')
+    return `${dayjs(timestamp as any).format()} ${metas}: ${typeof message === 'string' ? message : JSON.stringify(message)}`
 })
 
 const default_config = {

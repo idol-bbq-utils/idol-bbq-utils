@@ -1,0 +1,36 @@
+{
+    "name": "@idol-bbq-utils/account-pool",
+    "version": "0.1.0",
+    "description": "Account pool service with round-robin selection for idol-bbq-utils",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "directories": {
+        "lib": "lib"
+    },
+    "files": [
+        "lib",
+        "src"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
+    },
+    "bugs": {
+        "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/log": "workspace:^"
+    }
+}

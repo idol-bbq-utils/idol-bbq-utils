@@ -1,0 +1,41 @@
+{
+    "name": "@idol-bbq-utils/queue",
+    "version": "0.1.0",
+    "description": "Task queue infrastructure using BullMQ",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        },
+        "./jobs": {
+            "types": "./src/jobs.ts",
+            "default": "./src/jobs.ts"
+        }
+    },
+    "files": [
+        "src"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
+    },
+    "bugs": {
+        "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/config": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
+        "bullmq": "^5.34.3",
+        "cron": "^4.4.0",
+        "ioredis": "^5.4.2"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.3"
+    }
+}

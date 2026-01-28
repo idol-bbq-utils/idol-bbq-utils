@@ -1,0 +1,32 @@
+{
+    "name": "@idol-bbq-utils/scheduler-service",
+    "version": "0.1.0",
+    "description": "Standalone scheduler service for distributed cron-based task dispatching",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "main": "src/main.ts",
+    "scripts": {
+        "dev": "bun src/main.ts",
+        "start": "bun src/main.ts",
+        "build": "bun build src/main.ts --outdir=./build --target=bun --minify"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/config": "workspace:^",
+        "@idol-bbq-utils/db": "workspace:^",
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/queue": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
+        "@idol-bbq-utils/sender": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+        "cron": "^4.1.4",
+        "dayjs": "^1.11.13",
+        "lodash": "^4.17.21",
+        "yaml": "^2.4.5"
+    },
+    "devDependencies": {
+        "@types/lodash": "^4.17.6",
+        "@types/node": "^22.15.3"
+    }
+}

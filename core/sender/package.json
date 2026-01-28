@@ -1,0 +1,44 @@
+{
+    "name": "@idol-bbq-utils/sender",
+    "version": "0.3.0",
+    "description": "Multi-platform sender service (QQ, Telegram, Bilibili)",
+    "author": "ChocoLZS <chocoielzs@gmail.com>",
+    "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
+    "license": "MIT",
+    "main": "src/index.ts",
+    "exports": {
+        ".": {
+            "default": "./src/index.ts"
+        }
+    },
+    "directories": {
+        "lib": "lib"
+    },
+    "files": [
+        "lib"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
+    },
+    "bugs": {
+        "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
+    },
+    "dependencies": {
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+        "@idol-bbq-utils/utils": "workspace:^",
+        "@idol-bbq-utils/render": "workspace:^",
+        "axios": "^1.7.2",
+        "dayjs": "^1.11.11",
+        "form-data": "^4.0.0",
+        "lodash": "^4.17.21",
+        "telegraf": "^4.16.3"
+    },
+    "devDependencies": {
+        "@types/lodash": "^4.17.6"
+    }
+}

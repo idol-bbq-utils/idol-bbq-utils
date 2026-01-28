@@ -72,7 +72,7 @@ class XUserTimeLineSpider extends BaseSpider {
             crawl_engine: CrawlEngine
             task_type: T
             sub_task_type?: Array<string>
-            cookieString?: string
+            cookie_string?: string
         },
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XUserTimeLineSpider)?.groups
@@ -84,16 +84,11 @@ class XUserTimeLineSpider extends BaseSpider {
             throw new Error(`Invalid URL: ${url}, id not found`)
         }
 
-        const { crawl_engine, task_type, sub_task_type, cookieString } = config
+        const { crawl_engine, task_type, sub_task_type, cookie_string } = config
 
         if (crawl_engine === 'api') {
             this.log?.warn(`[Engine Api] API engine will be banned by X if you use it too much`)
             try {
-                let cookie_string = cookieString
-                if (!cookie_string && page) {
-                    const cookie = await page.browserContext().cookies()
-                    cookie_string = cookie.map((c) => `${c.name}=${c.value}`).join('; ')
-                }
                 if (!cookie_string) {
                     throw new Error('Cookie string is required for API mode')
                 }
@@ -180,7 +175,7 @@ class XListSpider extends BaseSpider {
             crawl_engine: CrawlEngine
             task_type: T
             sub_task_type?: Array<string>
-            cookieString?: string
+            cookie_string?: string
         },
     ): Promise<TaskTypeResult<T, Platform.X>> {
         const result = super._match_valid_url(url, XListSpider)?.groups
@@ -192,11 +187,7 @@ class XListSpider extends BaseSpider {
             throw new Error(`Invalid URL: ${url}, id not found`)
         }
 
-        const { task_type, cookieString } = config
-        let cookie_string = cookieString
-        if (!cookie_string && page) {
-            cookie_string = (await page.browserContext().cookies()).map((c) => `${c.name}=${c.value}`).join('; ')
-        }
+        const { task_type, cookie_string } = config
         if (!cookie_string) {
             throw new Error('Cookie string is required for X List Spider')
         }

@@ -5,6 +5,16 @@
     "author": "ChocoLZS <chocoielzs@gmail.com>",
     "homepage": "https://github.com/idol-bbq-utils/idol-bbq-utils#readme",
     "license": "MIT",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        },
+        "./time": {
+            "types": "./src/time.ts",
+            "default": "./src/time.ts"
+        }
+    },
     "main": "src/index.ts",
     "types": "src/index.ts",
     "directories": {
@@ -24,6 +34,7 @@
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
     },
     "dependencies": {
+        "dayjs": "^1.11.13",
         "retry": "^0.13.1"
     },
     "devDependencies": {
