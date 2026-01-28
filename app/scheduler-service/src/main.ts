@@ -27,7 +27,9 @@ async function main() {
         return
     }
 
-    const app_config = new AppConfig(config)
+    const app_config = new AppConfig(config, log)
+
+    await app_config.syncAccounts();
 
     const queue_config = {
         enabled: true,

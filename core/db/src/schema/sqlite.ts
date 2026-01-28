@@ -1,4 +1,5 @@
-import { sqliteTable, integer, text, index, unique } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, text, index, unique, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { Platform } from '../../../spider/src/types'
 
 export const article = sqliteTable(
     'article',
@@ -64,3 +65,44 @@ export type NewFollow = typeof follow.$inferInsert
 
 export type SendBy = typeof sendBy.$inferSelect
 export type NewSendBy = typeof sendBy.$inferInsert
+
+export const sqliteAccount = sqliteTable(
+    'account',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        name: text('name').notNull().unique(),
+        platform: integer('platform').notNull(),
+        cookie_string: text('cookie_string'),
+        status: text('status').default('active').notNull(),
+        last_used_at: integer('last_used_at', { mode: 'timestamp' })
+            .$defaultFn(() => new Date())
+            .notNull(),
+        is_encrypted: integer('is_encrypted', { mode: 'boolean' }).default(false).notNull(),
+        failure_count: integer('failure_count').default(0).notNull(),
+        last_failure_at: integer('last_failure_at', { mode: 'timestamp' }),
+        ban_until: integer('ban_until', { mode: 'timestamp' }),
+        created_at: integer('created_at', { mode: 'timestamp' })
+            .$defaultFn(() => new Date())
+            .notNull(),
+        updated_at: integer('updated_at', { mode: 'timestamp' })
+            .$defaultFn(() => new Date())
+            .notNull(),
+    },
+    (table) => {
+        return {
+            nameIdx: uniqueIndex('name_idx').on(table.name),
+            platformNameIdx: uniqueIndex('platform_name_idx').on(table.platform, table.name),
+        }
+    },
+)
+
+export type Account = typeof sqliteAccount.$inferSelect
+export type NewAccount = typeof sqliteAccount.$inferInsert
+
+export function platformToString(platform: Platform): string {
+    return Platform[platform]
+}
+
+export function stringToPlatform(platformStr: string): Platform {
+    return Platform[platformStr as keyof typeof Platform]
+}

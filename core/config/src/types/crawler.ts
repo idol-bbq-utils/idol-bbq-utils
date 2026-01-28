@@ -13,13 +13,16 @@ interface CrawlerConfig extends CommonCfgConfig {
      */
     cron?: string
     /**
-     * Cookie string in netscape format
+     * Authentication strategy for the crawler.
+     * 'none': No authentication.
+     * 'cookie': Use cookies from the account pool.
      */
-    cookie_string?: string
+    auth?: 'none' | 'cookie'
     /**
-     * Cookie file path in netscape format
+     * Optional: Specify a named account from the account pool to use for authentication.
+     * If not provided, the crawler will select an available account based on a dispatch strategy.
      */
-    cookie_file?: string
+    auth_account?: string
     /**
      * Random waiting time for per crawling
      */

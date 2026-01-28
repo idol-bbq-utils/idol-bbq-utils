@@ -17,6 +17,7 @@
       "name": "@idol-bbq-utils/crawler-service",
       "version": "0.1.0",
       "dependencies": {
+        "@idol-bbq-utils/account-pool": "workspace:^",
         "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",
@@ -54,10 +55,20 @@
         "@types/node": "^22.15.3",
       },
     },
+    "core/account-pool": {
+      "name": "@idol-bbq-utils/account-pool",
+      "version": "0.1.0",
+      "dependencies": {
+        "@idol-bbq-utils/db": "workspace:^",
+        "@idol-bbq-utils/log": "workspace:^",
+        "@idol-bbq-utils/spider": "workspace:^",
+      },
+    },
     "core/config": {
       "name": "@idol-bbq-utils/config",
       "version": "0.0.1",
       "dependencies": {
+        "@idol-bbq-utils/db": "workspace:*",
         "@idol-bbq-utils/sender": "workspace:*",
         "@idol-bbq-utils/spider": "workspace:*",
         "@idol-bbq-utils/translator": "workspace:*",
@@ -247,6 +258,8 @@
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.12", "", { "os": "win32", "cpu": "x64" }, "sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA=="],
 
     "@google/generative-ai": ["@google/generative-ai@0.14.1", "", {}, "sha512-pevEyZCb0Oc+dYNlSberW8oZBm4ofeTD5wN01TowQMhTwdAbGAnJMtQzoklh6Blq2AKsx8Ox6FWa44KioZLZiA=="],
+
+    "@idol-bbq-utils/account-pool": ["@idol-bbq-utils/account-pool@workspace:core/account-pool"],
 
     "@idol-bbq-utils/config": ["@idol-bbq-utils/config@workspace:core/config"],
 

@@ -11,6 +11,25 @@ enum Platform {
     YouTube,
 }
 
+type PlatformNameMap = {
+    [Platform.X]: 'x'
+    [Platform.Twitter]: 'x'
+    [Platform.Instagram]: 'instagram'
+    [Platform.TikTok]: 'tiktok'
+    [Platform.YouTube]: 'youtube'
+}
+
+function platformNameToPlatform(name: string): Platform | undefined {
+    const nameToPlatformMap: Record<string, Platform> = {
+        x: Platform.X,
+        twitter: Platform.Twitter,
+        instagram: Platform.Instagram,
+        tiktok: Platform.TikTok,
+        youtube: Platform.YouTube,
+    }
+    return nameToPlatformMap[name.toLowerCase()]
+}
+
 type PlatformArticleMap = {
     [Platform.X]: X.ArticleTypeEnum
     [Platform.Twitter]: X.ArticleTypeEnum
@@ -108,7 +127,7 @@ interface GenericArticle<T extends Platform> {
 
 type GenericArticleRef<T extends Platform> = GenericArticle<T> | string
 
-export { Platform }
+export { Platform, platformNameToPlatform }
 export type {
     GenericArticle,
     GenericMediaInfo,
@@ -119,4 +138,5 @@ export type {
     ArticleExtractType,
     CrawlEngine,
     GenericArticleRef,
+    PlatformNameMap
 }

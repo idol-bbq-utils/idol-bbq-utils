@@ -8,13 +8,14 @@ import type {
 import { spiderRegistry, parseNetscapeCookieToPuppeteerCookie } from '@idol-bbq-utils/spider'
 import { type Job } from '@idol-bbq-utils/queue'
 import { pRetry } from '@idol-bbq-utils/utils'
-import { BaseTranslator } from '@idol-bbq-utils/translator'
 import puppeteer, { type Browser, type Page } from 'puppeteer-core'
 import crypto from 'crypto'
 import tmp from 'tmp'
 import type { Logger } from '@idol-bbq-utils/log'
 import type PQueue from 'p-queue'
 import { processArticleStorage, processFollowsStorage } from './storage'
+import type { Platform } from '@idol-bbq-utils/spider/types'
+import { accountPoolService } from '@idol-bbq-utils/account-pool'
 
 // Task execution pool to prevent duplicate tasks
 const executingTasks = new Set<string>()
@@ -115,21 +116,13 @@ export async function processCrawlerJob(
 
     try {
         const needsBrowser = !config.engine?.startsWith('api')
-        const cookies = parseNetscapeCookieToPuppeteerCookie(config.cookie_string, config.cookie_file)
         if (needsBrowser) {
             page = await browserPool.getPage()
             await page.setUserAgent(config.user_agent)
-            if (cookies.length > 0) {
-                await page.browserContext().setCookie(...cookies)
-            }
-        }
-
-        let cookie_string: string | undefined
-        if (cookies.length > 0) {
-            cookie_string = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
         }
 
         for (const website of websites) {
+            let currentAccount: any = null
             try {
                 const plugin = spiderRegistry.findByUrl(website)
                 if (!plugin) {
@@ -138,6 +131,22 @@ export async function processCrawlerJob(
                 }
 
                 const spider = plugin.create(jobLog)
+                const { platform } = spiderRegistry.extractBasicInfo(website) as { u_id: string; platform: Platform }
+                let cookie_string = ''
+                
+                if (config.auth === 'cookie') {
+                    currentAccount = await accountPoolService.getAccount(platform, config.auth_account)
+                    if (!currentAccount) {
+                        jobLog.warn(`No available account for platform ${platform}, skipping ${website}`)
+                        continue
+                    }
+                    cookie_string = currentAccount.cookie_string || ''
+                    const cookies = parseNetscapeCookieToPuppeteerCookie(cookie_string)
+                    if (page && cookies.length > 0) {
+                        await page.browserContext().setCookie(...cookies)
+                        jobLog.info(`Set ${cookies.length} cookies for ${website} using account ${currentAccount.name}`)
+                    }
+                }
 
                 if (config.interval_time) {
                     const delay = Math.floor(
@@ -168,10 +177,34 @@ export async function processCrawlerJob(
 
                 results?.push(...cur_results)
                 jobLog.info(`Crawled ${website}: ${cur_results.length} items`)
+                if (currentAccount) {
+                    await accountPoolService.releaseAccount(currentAccount.id)
+                    await accountPoolService.reportAccountSuccess(currentAccount.id)
+                }
 
                 await job.updateProgress(((websites.indexOf(website) + 1) / websites.length) * 100)
+                
             } catch (error) {
                 jobLog.error(`Error crawling ${website}: ${error}`)
+                let is_account_error = false;
+                if (error instanceof Error) {
+                    is_account_error = is_account_error || (error.message.includes('authentication failed') ||
+                        error.message.includes('login required') ||
+                        error.message.includes('invalid cookie') ||
+                        error.message.includes('forbidden'))
+                }
+                if (error instanceof String) {
+                    is_account_error = is_account_error || (error.includes('authentication failed') ||
+                        error.includes('login required') ||
+                        error.includes('invalid cookie') ||
+                        error.includes('forbidden'))
+                }
+
+                if (currentAccount && is_account_error) {
+                    await accountPoolService.releaseAccount(currentAccount.id)
+                    await accountPoolService.reportAccountFailure(currentAccount.id, 30)
+                    jobLog.warn(`Reported failure for account ${currentAccount.name} (id: ${currentAccount.id})`)
+                }
             }
         }
 

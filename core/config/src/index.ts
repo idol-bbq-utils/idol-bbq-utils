@@ -1,20 +1,26 @@
 export { parseConfigFromFile, parseConfigFromString } from './parser'
 export * from './types'
 import merge from 'lodash.merge'
-import type {
-    AppConfigType,
-    CrawlerConfig,
-    SenderConfig,
-    Crawler,
-    Sender, 
-} from './types'
+import type { AppConfigType, CrawlerConfig, SenderConfig, Crawler, Sender, AccountConfig } from './types'
 import { sanitizeWebsites } from '@idol-bbq-utils/utils'
-import type { TaskType } from '@idol-bbq-utils/spider/types'
+import { platformNameToPlatform, type TaskType } from '@idol-bbq-utils/spider/types'
+import { Platform } from '@idol-bbq-utils/spider/types'
 import { UserAgent } from '@idol-bbq-utils/spider'
-import { type SendTargetCommonConfig, type SendTarget, type SenderTaskConfig, MediaToolEnum} from '@idol-bbq-utils/sender'
+import {
+    type SendTargetCommonConfig,
+    type SendTarget,
+    type SenderTaskConfig,
+    MediaToolEnum,
+} from '@idol-bbq-utils/sender'
+import DB from '@idol-bbq-utils/db'
+import type { Logger } from '@idol-bbq-utils/log'
+import fs from 'fs/promises'
 
-type SpecifiedCrawlerConfig = Required<Pick<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>> & Omit<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>
-type SpecifiedSenderConfig = Required<Pick<SenderConfig, 'cron' | 'render_type'>> & Omit<SenderConfig, 'cron' | 'render_type'>
+
+type SpecifiedCrawlerConfig = Required<Pick<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>> &
+    Omit<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>
+type SpecifiedSenderConfig = Required<Pick<SenderConfig, 'cron' | 'render_type'>> &
+    Omit<SenderConfig, 'cron' | 'render_type'>
 
 type TaskCrawler = {
     name: string
@@ -43,6 +49,7 @@ export class AppConfig {
             max: 15000,
         },
         user_agent: UserAgent.CHROME,
+        auth: 'none',
     }
 
     static DEFAULT_SEND_TARGET_CONFIG: SendTargetCommonConfig = {
@@ -60,18 +67,24 @@ export class AppConfig {
                 type: 'no-storage',
                 use: {
                     tool: MediaToolEnum.DEFAULT,
-                }
-            }
+                },
+            },
         },
     }
 
     private task_crawlers: Array<TaskCrawler> = []
     private task_senders: Array<TaskSender> = []
+    private raw_accounts: Array<AccountConfig> = []
     /**
      * key is id, should be unique
      */
     private send_targets: Map<string, SendTarget> = new Map()
-    constructor(private readonly raw_config: AppConfigType) {
+    private log?: Logger
+    constructor(
+        private readonly raw_config: AppConfigType,
+        log?: Logger,
+    ) {
+        this.log = log?.child({ subservice: 'AppConfig' })
         this.resolveConfig()
     }
 
@@ -83,6 +96,7 @@ export class AppConfig {
         this.task_crawlers = this.resolveTaskCrawlers()
         this.send_targets = this.resolveSendTargets()
         this.task_senders = this.resolveTaskSenders(this.send_targets)
+        this.raw_accounts = this.raw_config.accounts || []
     }
 
     private resolveCrawlerConfig(crawler: Crawler): SpecifiedCrawlerConfig {
@@ -247,6 +261,51 @@ export class AppConfig {
 
     public getRawConfig(): AppConfigType {
         return this.raw_config
+    }
+
+    public async syncAccounts() {
+        const configAccounts = this.raw_accounts
+        for (const configAccount of configAccounts) {
+            try {
+                const existingAccount = await DB.Account.getAccountByName(configAccount.name)
+                const platformStr = configAccount.platform
+                const platform = platformNameToPlatform(platformStr)
+
+                if (!platform) {
+                    this.log?.warn(`Invalid platform: ${platformStr} for account: ${configAccount.name}, skipping.`)
+                    continue
+                }
+
+                let cookie_string = configAccount.cookie_string || ''
+                if (!cookie_string && configAccount.cookie_file) {
+                    cookie_string = (await fs.readFile(configAccount.cookie_file, 'utf-8')).trim()
+                }
+
+                if (!cookie_string) {
+                    this.log?.warn(`No cookie string found for account: ${configAccount.name}, skipping.`)
+                    continue
+                }
+
+                if (existingAccount) {
+                    await DB.Account.updateAccount(existingAccount.id, {
+                        cookie_string: cookie_string,
+                        platform: platform,
+                        status: 'active',
+                    })
+                    this.log?.info(`Updated account: ${configAccount.name} (${platformStr})`)
+                } else {
+                    await DB.Account.createAccount({
+                        name: configAccount.name,
+                        platform: platform,
+                        cookie_string: cookie_string,
+                        status: 'active',
+                    })
+                    this.log?.info(`Created new account: ${configAccount.name} (${platformStr})`)
+                }
+            } catch (error: any) {
+                this.log?.error(`Failed to sync account ${configAccount.name}: ${error.message}`)
+            }
+        }
     }
 }
 

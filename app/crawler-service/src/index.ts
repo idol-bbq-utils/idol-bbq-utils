@@ -1,6 +1,7 @@
 import { createLogger, winston } from '@idol-bbq-utils/log'
 import { createCrawlerWorker } from '@idol-bbq-utils/queue'
 import { getCacheRoot } from '@idol-bbq-utils/utils'
+import { accountPoolService } from '@idol-bbq-utils/account-pool'
 import tmp from 'tmp'
 import PQueue from 'p-queue'
 import path from 'path'
@@ -39,6 +40,8 @@ interface CrawlerServiceConfig {
 }
 
 async function main() {
+    await accountPoolService.initialize()
+
     const config: CrawlerServiceConfig = {
         redis: {
             host: process.env.REDIS_HOST || 'localhost',

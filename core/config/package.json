@@ -17,6 +17,7 @@
         "@idol-bbq-utils/sender": "workspace:*",
         "@idol-bbq-utils/translator": "workspace:*",
         "@idol-bbq-utils/utils": "workspace:*",
+        "@idol-bbq-utils/db": "workspace:*",
         "yaml": "^2.3.4",
         "lodash.merge": "^4.6.2"
     },

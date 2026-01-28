@@ -2,7 +2,7 @@
     "version": "6",
     "dialect": "sqlite",
     "id": "00000000-0000-0000-0000-000000000000",
-    "prevId": "00000000-0000-0000-0000-000000000000",
+    "prevId": "",
     "tables": {
         "crawler_article": {
             "name": "crawler_article",

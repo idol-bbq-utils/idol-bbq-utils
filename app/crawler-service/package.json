@@ -12,6 +12,7 @@
         "build": "bun build src/index.ts --outdir=./build --target=bun --minify"
     },
     "dependencies": {
+        "@idol-bbq-utils/account-pool": "workspace:^",
         "@idol-bbq-utils/db": "workspace:^",
         "@idol-bbq-utils/log": "workspace:^",
         "@idol-bbq-utils/queue": "workspace:^",

@@ -1,6 +1,8 @@
 export { createArticleOperations } from './article'
 export { createFollowOperations } from './follow'
 export { createSendByOperations } from './sendBy'
+export { createAccountOperations } from './account'
 export type { ArticleWithId, ArticleOperations } from './article'
 export type { FollowOperations, DBFollows } from './follow'
 export type { SendByOperations } from './sendBy'
+export type { AccountOperations, AccountStatus } from './account'

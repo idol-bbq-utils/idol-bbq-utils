@@ -1,7 +1,8 @@
-import type { TaskType } from '@idol-bbq-utils/spider/types'
+import type { PlatformNameMap, TaskType } from '@idol-bbq-utils/spider/types'
 import type { Crawler, CrawlerConfig } from './crawler'
 import type { Sender, SenderConfig } from './sender'
 import type { SendTarget, SendTargetCommonConfig } from '@idol-bbq-utils/sender'
+import type { Platform } from '@idol-bbq-utils/spider/types'
 
 interface QueueConfig {
     redis: {
@@ -10,6 +11,16 @@ interface QueueConfig {
         password?: string
         db?: number
     }
+}
+
+interface AccountConfig {
+    /**
+     * Unique name for the account
+     */
+    name: string
+    platform: PlatformNameMap[Platform]
+    cookie_string?: string
+    cookie_file?: string
 }
 
 interface AppConfigType {
@@ -25,6 +36,10 @@ interface AppConfigType {
      * Send Targets Platforms like Telegram, QQ, etc.
      */
     send_targets?: Array<SendTarget>
+    /**
+     * Account configurations for the account pool
+     */
+    accounts?: Array<AccountConfig>
     config?: {
         cfg_crawler?: CrawlerConfig
         cfg_sender?: SenderConfig
@@ -33,6 +48,6 @@ interface AppConfigType {
     }
 }
 
-export type { AppConfigType, QueueConfig }
+export type { AppConfigType, QueueConfig, AccountConfig }
 export * from './crawler'
 export * from './sender'

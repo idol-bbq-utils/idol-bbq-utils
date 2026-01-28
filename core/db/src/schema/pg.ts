@@ -1,4 +1,16 @@
-import { pgTable, serial, integer, text, boolean, jsonb, index, unique } from 'drizzle-orm/pg-core'
+import {
+    pgTable,
+    serial,
+    integer,
+    text,
+    boolean,
+    jsonb,
+    index,
+    unique,
+    timestamp,
+    uniqueIndex,
+} from 'drizzle-orm/pg-core'
+import { Platform } from '../../../spider/src/types'
 
 export const article = pgTable(
     'article',
@@ -64,3 +76,38 @@ export type NewFollow = typeof follow.$inferInsert
 
 export type SendBy = typeof sendBy.$inferSelect
 export type NewSendBy = typeof sendBy.$inferInsert
+
+export const pgAccount = pgTable(
+    'account',
+    {
+        id: serial('id').primaryKey(),
+        name: text('name').notNull().unique(),
+        platform: integer('platform').notNull(),
+        cookie_string: text('cookie_string'),
+        status: text('status').default('active').notNull(),
+        last_used_at: timestamp('last_used_at', { withTimezone: true }).defaultNow().notNull(),
+        is_encrypted: boolean('is_encrypted').default(false).notNull(),
+        failure_count: integer('failure_count').default(0).notNull(),
+        last_failure_at: timestamp('last_failure_at', { withTimezone: true }),
+        ban_until: timestamp('ban_until', { withTimezone: true }),
+        created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+        updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => {
+        return {
+            nameIdx: uniqueIndex('name_idx').on(table.name),
+            platformNameIdx: uniqueIndex('platform_name_idx').on(table.platform, table.name),
+        }
+    },
+)
+
+export type Account = typeof pgAccount.$inferSelect
+export type NewAccount = typeof pgAccount.$inferInsert
+
+export function platformToString(platform: Platform): string {
+    return Platform[platform]
+}
+
+export function stringToPlatform(platformStr: string): Platform {
+    return Platform[platformStr as keyof typeof Platform]
+}

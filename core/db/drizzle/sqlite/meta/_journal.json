@@ -1,20 +1,27 @@
 {
-    "version": "7",
-    "dialect": "sqlite",
-    "entries": [
-        {
-            "idx": 0,
-            "version": "6",
-            "when": 1706400000000,
-            "tag": "0000_initial_tables",
-            "breakpoints": true
-        },
-        {
-            "idx": 1,
-            "version": "6",
-            "when": 1738022400000,
-            "tag": "0001_rename_to_new_tables",
-            "breakpoints": true
-        }
-    ]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1706400000000,
+      "tag": "0000_initial_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1769594329278,
+      "tag": "0001_rename_to_new_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1769603496044,
+      "tag": "0002_add_account_table",
+      "breakpoints": true
+    }
+  ]
 }

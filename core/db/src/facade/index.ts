@@ -23,9 +23,11 @@ type SchemaTable =
     | typeof sqliteSchema.article
     | typeof sqliteSchema.follow
     | typeof sqliteSchema.sendBy
+    | typeof sqliteSchema.sqliteAccount
     | typeof pgSchema.article
     | typeof pgSchema.follow
     | typeof pgSchema.sendBy
+    | typeof pgSchema.pgAccount
 
 type InferInsert<T> = T extends typeof sqliteSchema.article
     ? typeof sqliteSchema.article.$inferInsert
@@ -33,13 +35,17 @@ type InferInsert<T> = T extends typeof sqliteSchema.article
       ? typeof sqliteSchema.follow.$inferInsert
       : T extends typeof sqliteSchema.sendBy
         ? typeof sqliteSchema.sendBy.$inferInsert
-        : T extends typeof pgSchema.article
-          ? typeof pgSchema.article.$inferInsert
-          : T extends typeof pgSchema.follow
-            ? typeof pgSchema.follow.$inferInsert
-            : T extends typeof pgSchema.sendBy
-              ? typeof pgSchema.sendBy.$inferInsert
-              : never
+        : T extends typeof sqliteSchema.sqliteAccount
+          ? typeof sqliteSchema.sqliteAccount.$inferInsert
+          : T extends typeof pgSchema.article
+            ? typeof pgSchema.article.$inferInsert
+            : T extends typeof pgSchema.follow
+              ? typeof pgSchema.follow.$inferInsert
+              : T extends typeof pgSchema.sendBy
+                ? typeof pgSchema.sendBy.$inferInsert
+                : T extends typeof pgSchema.pgAccount
+                  ? typeof pgSchema.pgAccount.$inferInsert
+                  : never
 
 type InferSelect<T> = T extends typeof sqliteSchema.article
     ? typeof sqliteSchema.article.$inferSelect
@@ -47,13 +53,17 @@ type InferSelect<T> = T extends typeof sqliteSchema.article
       ? typeof sqliteSchema.follow.$inferSelect
       : T extends typeof sqliteSchema.sendBy
         ? typeof sqliteSchema.sendBy.$inferSelect
-        : T extends typeof pgSchema.article
-          ? typeof pgSchema.article.$inferSelect
-          : T extends typeof pgSchema.follow
-            ? typeof pgSchema.follow.$inferSelect
-            : T extends typeof pgSchema.sendBy
-              ? typeof pgSchema.sendBy.$inferSelect
-              : never
+        : T extends typeof sqliteSchema.sqliteAccount
+          ? typeof sqliteSchema.sqliteAccount.$inferSelect
+          : T extends typeof pgSchema.article
+            ? typeof pgSchema.article.$inferSelect
+            : T extends typeof pgSchema.follow
+              ? typeof pgSchema.follow.$inferSelect
+              : T extends typeof pgSchema.sendBy
+                ? typeof pgSchema.sendBy.$inferSelect
+                : T extends typeof pgSchema.pgAccount
+                  ? typeof pgSchema.pgAccount.$inferSelect
+                  : never
 
 type WhereCallback<TTable> = (
     table: TTable,
@@ -64,7 +74,10 @@ type WhereCallback<TTable> = (
     },
 ) => SQL<unknown> | undefined
 
-type OrderByCallback<TTable> = (table: TTable, helpers: { desc: (column: unknown) => SQL<unknown> }) => SQL<unknown>[]
+type OrderByCallback<TTable> = (
+    table: TTable,
+    helpers: { desc: (column: unknown) => SQL<unknown>; asc: (column: unknown) => SQL<unknown> },
+) => SQL<unknown>[]
 
 export interface InsertBuilder<TTable extends SchemaTable> {
     values(values: InferInsert<TTable>): ReturningBuilder<TTable>
@@ -79,6 +92,18 @@ export interface DeleteBuilder<TTable extends SchemaTable> {
 }
 
 export interface DeleteReturningBuilder<TTable extends SchemaTable> {
+    returning(): Promise<InferSelect<TTable>[]>
+}
+
+export interface UpdateBuilder<TTable extends SchemaTable> {
+    set(values: Partial<InferInsert<TTable>>): UpdateWhereBuilder<TTable>
+}
+
+export interface UpdateWhereBuilder<TTable extends SchemaTable> {
+    where(condition: SQL<unknown> | undefined): UpdateReturningBuilder<TTable>
+}
+
+export interface UpdateReturningBuilder<TTable extends SchemaTable> {
     returning(): Promise<InferSelect<TTable>[]>
 }
 
@@ -117,14 +142,29 @@ export interface SendByQuery {
     }): Promise<(typeof sqliteSchema.sendBy.$inferSelect | typeof pgSchema.sendBy.$inferSelect) | undefined>
 }
 
+export interface AccountQuery {
+    findFirst(config?: {
+        where?: WhereCallback<typeof sqliteSchema.sqliteAccount | typeof pgSchema.pgAccount>
+        orderBy?: OrderByCallback<typeof sqliteSchema.sqliteAccount | typeof pgSchema.pgAccount>
+    }): Promise<(typeof sqliteSchema.sqliteAccount.$inferSelect | typeof pgSchema.pgAccount.$inferSelect) | undefined>
+
+    findMany(config?: {
+        where?: WhereCallback<typeof sqliteSchema.sqliteAccount | typeof pgSchema.pgAccount>
+        orderBy?: OrderByCallback<typeof sqliteSchema.sqliteAccount | typeof pgSchema.pgAccount>
+        limit?: number
+    }): Promise<Array<typeof sqliteSchema.sqliteAccount.$inferSelect | typeof pgSchema.pgAccount.$inferSelect>>
+}
+
 export interface DbQueryFacade {
     article: ArticleQuery
     follow: FollowQuery
     sendBy: SendByQuery
+    account: AccountQuery
 }
 
 export interface DbFacade extends DbQueryFacade {
     insert<TTable extends SchemaTable>(table: TTable): InsertBuilder<TTable>
+    update<TTable extends SchemaTable>(table: TTable): UpdateBuilder<TTable>
     delete<TTable extends SchemaTable>(table: TTable): DeleteBuilder<TTable>
     select(fields: Record<string, unknown>): SelectBuilder
 }
@@ -141,6 +181,10 @@ function createSqliteFacade(db: BunSQLiteDatabase<typeof sqliteSchema>): DbFacad
         sendBy: {
             findFirst: async (config) => await db.query.sendBy.findFirst(config as any),
         },
+        account: {
+            findFirst: async (config) => await db.query.sqliteAccount.findFirst(config as any),
+            findMany: async (config) => await db.query.sqliteAccount.findMany(config as any),
+        },
         insert: (table) => {
             const builder = db.insert(table as any)
             return {
@@ -148,6 +192,22 @@ function createSqliteFacade(db: BunSQLiteDatabase<typeof sqliteSchema>): DbFacad
                     const valuesBuilder = builder.values(values as any)
                     return {
                         returning: async () => (await valuesBuilder.returning()) as any,
+                    }
+                },
+            }
+        },
+        update: (table) => {
+            const builder = db.update(table as any)
+            return {
+                set: (values) => {
+                    const setBuilder = builder.set(values as any)
+                    return {
+                        where: (condition) => {
+                            const whereBuilder = setBuilder.where(condition as any)
+                            return {
+                                returning: async () => (await whereBuilder.returning()) as any,
+                            }
+                        },
                     }
                 },
             }
@@ -189,6 +249,10 @@ function createPgFacade(db: PostgresJsDatabase<typeof pgSchema>): DbFacade {
         sendBy: {
             findFirst: async (config) => await db.query.sendBy.findFirst(config as any),
         },
+        account: {
+            findFirst: async (config) => await db.query.pgAccount.findFirst(config as any),
+            findMany: async (config) => await db.query.pgAccount.findMany(config as any),
+        },
         insert: (table) => {
             const builder = db.insert(table as any)
             return {
@@ -196,6 +260,22 @@ function createPgFacade(db: PostgresJsDatabase<typeof pgSchema>): DbFacade {
                     const valuesBuilder = builder.values(values as any)
                     return {
                         returning: async () => (await valuesBuilder.returning()) as any,
+                    }
+                },
+            }
+        },
+        update: (table) => {
+            const builder = db.update(table as any)
+            return {
+                set: (values) => {
+                    const setBuilder = builder.set(values as any)
+                    return {
+                        where: (condition) => {
+                            const whereBuilder = setBuilder.where(condition as any)
+                            return {
+                                returning: async () => (await whereBuilder.returning()) as any,
+                            }
+                        },
                     }
                 },
             }
