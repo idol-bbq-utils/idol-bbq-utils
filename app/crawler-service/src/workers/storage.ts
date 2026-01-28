@@ -1,6 +1,6 @@
 import DB from '@idol-bbq-utils/db'
 import type { Article } from '@idol-bbq-utils/db'
-import { BaseTranslator, TRANSLATION_ERROR_FALLBACK } from '@idol-bbq-utils/translator'
+import { BaseTranslator, TRANSLATION_ERROR_FALLBACK, type Translator } from '@idol-bbq-utils/translator'
 import { pRetry } from '@idol-bbq-utils/utils'
 import type {
     SpiderArticleResult,
@@ -117,17 +117,30 @@ async function doTranslate(
 
 async function processArticleStorage(
     articles: SpiderArticleResult[],
-    translator: BaseTranslator | undefined,
+    translator_cfg: Translator | undefined,
     jobLog: Logger,
 ): Promise<{ savedIds: number[]; errorCount: number }> {
     const savedIds: number[] = []
     let errorCount = 0
-
+    let translator: BaseTranslator | null = null
     for (const article of articles) {
         try {
             const exists = await DB.Article.checkExist(article)
-
             if (!exists) {
+                if (!translator && translator_cfg) {
+                    try {
+                        const { translatorRegistry } = await import('@idol-bbq-utils/translator')
+                        translator = await translatorRegistry.create(
+                            translator_cfg.provider,
+                            translator_cfg.api_key,
+                            jobLog,
+                            translator_cfg.config,
+                        )
+                        jobLog.info(`Translator initialized: ${translator_cfg.provider}`)
+                    } catch (error) {
+                        jobLog.error(`Failed to initialize translator: ${error}`)
+                    }
+                }
                 let translatedArticle = article
                 if (translator) {
                     translatedArticle = await doTranslate(article, translator, jobLog)

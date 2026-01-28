@@ -177,23 +177,6 @@ export async function processCrawlerJob(
 
         if (results.length > 0) {
             jobLog.info(`Dispatching ${results.length} items to internal storage queue`)
-
-            let translator: BaseTranslator | undefined = undefined
-            if (config.translator && task_type === 'article') {
-                try {
-                    const { translatorRegistry } = await import('@idol-bbq-utils/translator')
-                    translator = await translatorRegistry.create(
-                        config.translator.provider,
-                        config.translator.api_key,
-                        jobLog,
-                        config.translator.config,
-                    )
-                    jobLog.info(`Translator initialized: ${config.translator.provider}`)
-                } catch (error) {
-                    jobLog.error(`Failed to initialize translator: ${error}`)
-                }
-            }
-
             storageQueue
                 .add(async () => {
                     const storageLog = log.child({ trace_id: `${task_id}-storage`, task_type })
@@ -202,7 +185,7 @@ export async function processCrawlerJob(
                     let result: { savedIds: number[]; errorCount: number }
 
                     if (task_type === 'article') {
-                        result = await processArticleStorage(results as SpiderArticleResult[], translator, storageLog)
+                        result = await processArticleStorage(results as SpiderArticleResult[], config.translator, storageLog)
                     } else if (task_type === 'follows') {
                         result = await processFollowsStorage(results as SpiderFollowsResult[], storageLog)
                     } else {
