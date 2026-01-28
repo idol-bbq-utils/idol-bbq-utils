@@ -51,10 +51,8 @@ export class AppConfig {
 
     static DEFAULT_SENDER_CONFIG: TaskSender['config'] = {
         cfg_task: {
-            follows: {
-                comparison_window: '1d',
-            },
-        } as SenderTaskConfig<'follows'>,
+            comparison_window: '1d',
+        },
         cfg_sender: {
             cron: '*/15 * * * *',
             render_type: 'img-with-meta',

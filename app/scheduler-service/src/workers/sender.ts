@@ -175,7 +175,7 @@ async function processFollowsTask(
     jobLog: ReturnType<typeof log.child>,
 ): Promise<JobResult> {
     const { task_id, websites, config, targets, task_type, task_title } = job.data
-    const { comparison_window = '2h' } = follows_task_config
+    const { comparison_window = '1d' } = follows_task_config
 
     jobLog.info(`Processing follows forwarding for ${websites.length} websites`)
 
