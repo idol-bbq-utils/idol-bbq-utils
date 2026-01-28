@@ -26,5 +26,8 @@
         "core/*",
         "app/*",
         "docs/*"
-    ]
+    ],
+    "dependencies": {
+        "postgres": "^3.4.8"
+    }
 }

@@ -9,10 +9,6 @@
         ".": {
             "types": "./src/index.ts",
             "default": "./src/index.ts"
-        },
-        "./client": {
-            "types": "./src/client.ts",
-            "default": "./src/client.ts"
         }
     },
     "directories": {
@@ -31,8 +27,10 @@
         "url": "git+https://github.com/idol-bbq-utils/idol-bbq-utils.git"
     },
     "scripts": {
-        "generate": "drizzle-kit generate:sqlite",
-        "studio": "drizzle-kit studio"
+        "generate:sqlite": "drizzle-kit generate --config=drizzle.sqlite.config.ts",
+        "generate:pg": "drizzle-kit generate --config=drizzle.pg.config.ts",
+        "studio:sqlite": "drizzle-kit studio --config=drizzle.sqlite.config.ts",
+        "studio:pg": "drizzle-kit studio --config=drizzle.pg.config.ts"
     },
     "bugs": {
         "url": "https://github.com/idol-bbq-utils/idol-bbq-utils/issues"
@@ -41,7 +39,8 @@
         "@idol-bbq-utils/render": "workspace:^",
         "@idol-bbq-utils/spider": "workspace:^",
         "@idol-bbq-utils/utils": "workspace:^",
-        "drizzle-orm": "^0.45.1"
+        "drizzle-orm": "^0.45.1",
+        "postgres": "^3.4.4"
     },
     "devDependencies": {
         "drizzle-kit": "^0.31.8"

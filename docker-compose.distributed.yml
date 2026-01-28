@@ -1,13 +1,20 @@
 # Distributed deployment for idol-bbq-utils
 # This configuration splits the monolithic tweet-forwarder into separate services:
+# - scheduler-service: Schedules spider and forwarder tasks via cron + handles forwarding workers
 # - crawler-service: Handles web scraping with browser pool + integrated storage (翻译 + 存储)
-# - sender-service: Handles message forwarding to platforms
+#
+# scheduler-service 运行模式 (通过环境变量控制):
+#   1. 混合模式 (默认): ENABLE_SCHEDULER=true + ENABLE_SENDER_WORKER=true
+#      同时运行任务调度器和转发 worker
+#   2. 纯调度模式: ENABLE_SCHEDULER=true + ENABLE_SENDER_WORKER=false
+#      仅运行任务调度器，不执行转发（需要单独部署 forwarder worker）
+#   3. 纯 Worker 模式: ENABLE_SCHEDULER=false + ENABLE_SENDER_WORKER=true
+#      仅运行转发 worker，不调度任务（适合横向扩展 worker）
 #
 # Usage:
 #   docker-compose -f docker-compose.distributed.yml up -d
+#   docker-compose -f docker-compose.distributed.yml --profile scheduler up -d
 #
-# Scaling crawlers:
-#   docker-compose -f docker-compose.distributed.yml up -d --scale crawler=3
 
 services:
   redis:
@@ -19,43 +26,6 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
-
-  postgres:
-    image: postgres:16-alpine
-    container_name: idol-bbq-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: idol_bbq
-      POSTGRES_PASSWORD: idol_bbq_password
-      POSTGRES_DB: idol_bbq
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U idol_bbq"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  scheduler:
-    build:
-      context: .
-      dockerfile: app/scheduler-service/Dockerfile
-    container_name: idol-bbq-scheduler
-    restart: unless-stopped
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
-      - LOG_LEVEL=info
-      - TZ=Asia/Shanghai
-      - DATABASE_URL=file:/app/data.db
-    volumes:
-      - ./config.yaml:/app/config.yaml:ro
-      - ./assets:/app/assets:ro
-    depends_on:
-      - redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -78,6 +48,30 @@ services:
       redis:
         condition: service_healthy
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: app/scheduler-service/Dockerfile
+    container_name: idol-bbq-scheduler
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - LOG_LEVEL=info
+      - TZ=Asia/Tokyo
+      - DATABASE_URL=file:/app/data/data.db
+      - ENABLE_SCHEDULER=true
+      - ENABLE_SENDER_WORKER=true
+      - SENDER_WORKER_CONCURRENCY=2
+      - CACHE_DIR=/app/data/tmp
+    volumes:
+      - ./data:/app/data
+      - ./data/config.yaml:/app/config.yaml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
   # Crawler Service - Web scraping workers with browser pool + integrated storage
   crawler:
     build:
@@ -88,30 +82,18 @@ services:
       - TZ=Asia/Tokyo
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - WORKER_CONCURRENCY=2
-      - BROWSER_POOL_SIZE=2
+      - WORKER_CONCURRENCY=6
+      - BROWSER_POOL_SIZE=1
       - STORAGE_QUEUE_CONCURRENCY=3
       - NO_SANDBOX=true
-      - LOG_LEVEL=debug
-      - DATABASE_URL=file:/app/data.db
+      - LOG_LEVEL=info
+      - DATABASE_URL=file:/app/data/data.db
     volumes:
-      - ./assets/refactor.db:/app/data.db
-      - ./assets/cookies:/app/assets/cookies  # Cookie files for authenticated crawling
-      - ./assets/fonts:/app/assets/fonts      # Font files for rendering
-      - /tmp/tweet-forwarder/logs:/tmp/tweet-forwarder/logs    # Log directory
-      - /tmp/tweet-forwarder/media:/tmp/tweet-forwarder/media  # Media cache
+      - ./data:/app/data
     depends_on:
       redis:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
-
 
 
 volumes:
   redis_data:
-  postgres_data:

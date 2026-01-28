@@ -27,7 +27,7 @@ export const article = sqliteTable(
         unique('article_a_id_platform_unique').on(table.a_id, table.platform),
         index('platform_index').on(table.platform),
         index('platform_by_timestamp').on(table.platform, table.created_at),
-    ]
+    ],
 )
 
 export const follow = sqliteTable(
@@ -40,9 +40,7 @@ export const follow = sqliteTable(
         followers: integer('followers').notNull(),
         created_at: integer('created_at').notNull(),
     },
-    (table) => [
-        index('user_id_index').on(table.u_id),
-    ],
+    (table) => [index('user_id_index').on(table.u_id)],
 )
 
 export const sendBy = sqliteTable(
