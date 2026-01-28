@@ -1,5 +1,4 @@
 import { Logger } from '@idol-bbq-utils/log'
-import { spiderRegistry } from '@idol-bbq-utils/spider'
 import { CronJob } from 'cron'
 import { TaskScheduler } from '../utils/base'
 import type { AppConfig, QueueConfig, TaskSender } from '@idol-bbq-utils/config'
@@ -35,31 +34,32 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
         for (const sender of senders) {
             const cron = sender.config.cfg_sender.cron
             const { name } = sender
-            const { task_title } = sender.config?.cfg_task || {}
 
             const job = new CronJob(cron, async () => {
-                const task_id = `${Math.random().toString(36).substring(2, 9)}`
-                this.log?.info(`starting to dispatch task ${[name, task_title].filter(Boolean).join(' ')}...`, {
-                    trace_id: task_id,
-                })
-
-                await this.dispatchToQueue(task_id, sender)
+                await this.dispatchToQueue(sender)
             })
             this.log?.debug(`Task dispatcher created with detail: ${JSON.stringify(sender)}`)
             this.cronJobs.push(job)
         }
     }
 
-    private async dispatchToQueue(task_id: string, sender: TaskSender): Promise<void> {
+    private async dispatchToQueue(sender: TaskSender): Promise<void> {
+        const websites = sender.websites
+        const cron = sender.config.cfg_sender.cron
+        // 统一生成 12 位短 jobId
+        const jobId = generateJobId('sender', `${sender.name}:${websites.join(',')}`, cron)
+
         const lockKey = getLockKey('sender', sender.name || 'unnamed')
         const redis = this.queue_manager.getConnection()
 
-        const acquired = await acquireLock(redis, lockKey, task_id, 60)
+        const acquired = await acquireLock(redis, lockKey, jobId, 60)
         if (!acquired) {
-            this.log?.debug(`Lock not acquired for ${sender.name}, another scheduler is processing`, { trace_id: task_id })
+            this.log?.debug(`Lock not acquired for ${sender.name}, another scheduler is processing`, {
+                trace_id: jobId,
+            })
             return
         }
-        const websites = sender.websites
+
         try {
             const task_type = sender.task_type
             if (task_type == 'article') {
@@ -69,16 +69,14 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
                 )
 
                 if (article_ids.length === 0) {
-                    this.log?.debug(`No pending articles for ${sender.name || 'unnamed'}`, { trace_id: task_id })
+                    this.log?.debug(`No pending articles for ${sender.name || 'unnamed'}`, { trace_id: jobId })
                     return
                 }
             }
 
-            const jobId = generateJobId('sender', `${sender.name}:${websites.join(',')}`, sender.config.cfg_sender.cron)
-
             const jobData: SenderJobData = {
                 type: 'sender',
-                task_id: task_id,
+                task_id: jobId,
                 task_type: sender.task_type,
                 task_title: sender.task_title,
                 name: sender.name || '',
@@ -93,11 +91,11 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
             })
 
             this.log?.info(
-                `Dispatched ${task_type == 'article' ? 'article task' : 'follows task'} to sender queue: ${sender.name} (jobId: ${jobId.substring(0, 8)}...)`,
-                { trace_id: task_id },
+                `Dispatched ${task_type == 'article' ? 'article task' : 'follows task'} to sender queue: ${sender.name}`,
+                { trace_id: jobId },
             )
         } finally {
-            await releaseLock(redis, lockKey, task_id)
+            await releaseLock(redis, lockKey, jobId)
         }
     }
 
@@ -124,11 +122,11 @@ class SenderTaskScheduler extends TaskScheduler.TaskScheduler {
     }
 
     updateTaskStatus(_params: { taskId: string; status: TaskScheduler.TaskStatus }) {
-        // scheduler-service 不需要此方法，仅用于EventEmitter模式
+        // scheduler-service does not need this method
     }
 
     finishTask(_params: { taskId: string; result: any; immediate_notify?: boolean }) {
-        // scheduler-service 不需要此方法，仅用于EventEmitter模式
+        // scheduler-service does not need this method
     }
 }
 

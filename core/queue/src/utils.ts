@@ -1,6 +1,10 @@
 import crypto from 'crypto'
 import { CronJob } from 'cron'
 
+/**
+ * 根据 Cron 表达式推断任务的时间槽窗口（秒）
+ * 目的：确保在同一个 Cron 执行周期内，生成的 Job ID 是相同的，从而实现分布式去重
+ */
 function inferSlotWindowSeconds(cron?: string): number {
     if (!cron) return 600
 
@@ -14,8 +18,13 @@ function inferSlotWindowSeconds(cron?: string): number {
             const intervalMs = date2.getTime() - date1.getTime()
             const intervalSeconds = Math.floor(intervalMs / 1000)
 
-            const slotWindow = intervalSeconds * 2
-            return Math.max(30, Math.min(3600, slotWindow))
+            /**
+             * 窗口大小等于 Cron 执行间隔 (multiplier = 1)
+             * 确保每次 Cron 触发时，都会进入一个新的时间槽
+             */
+            const slotWindow = intervalSeconds
+
+            return Math.max(10, Math.min(3600, slotWindow))
         }
     } catch (error) {
         return 600
@@ -24,11 +33,23 @@ function inferSlotWindowSeconds(cron?: string): number {
     return 600
 }
 
+/**
+ * 生成确定性的 Job ID
+ * 算法：MD5(prefix + content + slot + window)
+ * 只要在同一个时间窗口（slot）内，且任务内容一致，生成的 ID 就完全相同
+ * BullMQ 会自动根据重复的 ID 进行去重，确保分布式环境下不重复调度
+ */
 export function generateJobId(prefix: string, content: string, cron?: string): string {
     const slotWindowSeconds = inferSlotWindowSeconds(cron)
     const slot = Math.floor(Date.now() / (slotWindowSeconds * 1000))
 
-    return crypto.createHash('md5').update(`${prefix}:${content}:${slot}:${slotWindowSeconds}`).digest('hex')
+    // 使用 MD5 生成哈希，并截断为前 12 位
+    // 12 位 16 进制 (48 bits) 在单次调度周期内具有极高的唯一性，且在日志中更易读
+    return crypto
+        .createHash('md5')
+        .update(`${prefix}:${content}:${slot}:${slotWindowSeconds}`)
+        .digest('hex')
+        .substring(0, 12)
 }
 
 export function getLockKey(prefix: string, taskName: string): string {

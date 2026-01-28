@@ -36,34 +36,37 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
             const cron = crawler.config.cron
 
             const job = new CronJob(cron, async () => {
-                const task_id = `${Math.random().toString(36).substring(2, 9)}`
-                this.log?.info(`Starting to dispatch task: ${crawler.name}`, { trace_id: task_id })
-
-                await this.dispatchToQueue(task_id, crawler)
+                await this.dispatchToQueue(crawler)
             })
             this.log?.debug(`Task dispatcher created with detail: ${JSON.stringify(crawler)}`)
             this.cronJobs.push(job)
         }
     }
 
-    private async dispatchToQueue(task_id: string, crawler: TaskCrawler): Promise<void> {
+    private async dispatchToQueue(crawler: TaskCrawler): Promise<void> {
         if (!this.queueManager) return
 
+        const cron = crawler.config.cron
+        // 统一使用 12 位短 jobId 作为业务标识和队列 ID
+        const jobId = generateJobId('crawler', `${crawler.name}:${crawler.websites.join(',')}`, cron)
         const lockKey = getLockKey('crawler', crawler.name || 'unnamed')
         const redis = this.queueManager.getConnection()
 
-        const acquired = await acquireLock(redis, lockKey, task_id, 60)
+        // 锁的标识也使用 jobId，确保同一时间窗口内只有一次执行
+        const acquired = await acquireLock(redis, lockKey, jobId, 60)
         if (!acquired) {
-            this.log?.debug(`Lock not acquired for ${crawler.name}, another scheduler is processing`, { trace_id: task_id })
+            this.log?.debug(`Lock not acquired for ${crawler.name}, another scheduler is processing`, {
+                trace_id: jobId,
+            })
             return
         }
 
         try {
-            const jobId = generateJobId('crawler', `${crawler.name}:${crawler.websites.join(',')}`, crawler.config.cron)
+            this.log?.info(`Starting to dispatch task: ${crawler.name}`, { trace_id: jobId })
 
             const jobData: CrawlerJobData = {
                 type: 'crawler',
-                task_id: task_id,
+                task_id: jobId,
                 task_type: crawler.task_type,
                 name: crawler.name || '',
                 websites: crawler.websites,
@@ -75,11 +78,11 @@ class SpiderTaskScheduler extends TaskScheduler.TaskScheduler {
                 jobId,
             })
 
-            this.log?.info(`Task dispatched to queue: ${crawler.name} (jobId: ${jobId.substring(0, 8)}...)`, {
-                trace_id: task_id,
+            this.log?.info(`Task dispatched to queue: ${crawler.name}`, {
+                trace_id: jobId,
             })
         } finally {
-            await releaseLock(redis, lockKey, task_id)
+            await releaseLock(redis, lockKey, jobId)
         }
     }
 
