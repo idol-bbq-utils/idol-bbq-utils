@@ -8,6 +8,9 @@ interface Account {
     id: number
     name: string
     platform: string | number
+    /**
+     * netscape format cookie string
+     */
     cookie_string: string | null
     status: string
     last_used_at: Date

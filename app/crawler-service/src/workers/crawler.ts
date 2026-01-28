@@ -137,8 +137,8 @@ export async function processCrawlerJob(
                 if (config.auth === 'cookie') {
                     currentAccount = await accountPoolService.getAccount(platform, config.auth_account)
                     if (currentAccount) {
-                        cookie_string = currentAccount.cookie_string || ''
-                        const cookies = parseNetscapeCookieToPuppeteerCookie(cookie_string)
+                        const cookies = parseNetscapeCookieToPuppeteerCookie(currentAccount.cookie_string)
+                        cookie_string = cookies.map((coo) => `${coo.name}=${coo.value}`).join('; ')
                         if (page && cookies.length > 0) {
                             await page.browserContext().setCookie(...cookies)
                             jobLog.info(`Set ${cookies.length} cookies for ${website} using account ${currentAccount.name}`)
