@@ -136,15 +136,15 @@ export async function processCrawlerJob(
                 
                 if (config.auth === 'cookie') {
                     currentAccount = await accountPoolService.getAccount(platform, config.auth_account)
-                    if (!currentAccount) {
-                        jobLog.warn(`No available account for platform ${platform}, skipping ${website}`)
-                        continue
-                    }
-                    cookie_string = currentAccount.cookie_string || ''
-                    const cookies = parseNetscapeCookieToPuppeteerCookie(cookie_string)
-                    if (page && cookies.length > 0) {
-                        await page.browserContext().setCookie(...cookies)
-                        jobLog.info(`Set ${cookies.length} cookies for ${website} using account ${currentAccount.name}`)
+                    if (currentAccount) {
+                        cookie_string = currentAccount.cookie_string || ''
+                        const cookies = parseNetscapeCookieToPuppeteerCookie(cookie_string)
+                        if (page && cookies.length > 0) {
+                            await page.browserContext().setCookie(...cookies)
+                            jobLog.info(`Set ${cookies.length} cookies for ${website} using account ${currentAccount.name}`)
+                        }
+                    } else {
+                        jobLog.warn(`No available account for platform ${platform} for now`)
                     }
                 }
 

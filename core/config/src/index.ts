@@ -49,7 +49,7 @@ export class AppConfig {
             max: 15000,
         },
         user_agent: UserAgent.CHROME,
-        auth: 'none',
+        auth: 'cookie',
     }
 
     static DEFAULT_SEND_TARGET_CONFIG: SendTargetCommonConfig = {
