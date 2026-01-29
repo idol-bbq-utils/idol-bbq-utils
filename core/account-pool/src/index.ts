@@ -91,14 +91,15 @@ export class AccountPoolService {
      * Get account from memory cache using Round-Robin scheduling.
      * Selects the account with the oldest last_used_at timestamp.
      */
-    async getAccount(platform: Platform, accountName?: string): Promise<Account | null> {
+    async getAccount(platform: Platform, accountName?: string, trace_id?: string): Promise<Account | null> {
+        const jobLog = trace_id ? log.child({ trace_id }) : log
         if (!this.initialized) {
-            log.warn('AccountPoolService not initialized, initializing now...')
+            jobLog.warn('AccountPoolService not initialized, initializing now...')
             await this.initialize()
         }
 
         if (this.shouldRefreshCache()) {
-            log.info('Cache expired, refreshing from database...')
+            jobLog.info('Cache expired, refreshing from database...')
             await this.refreshFromDatabase()
         }
 
@@ -106,7 +107,7 @@ export class AccountPoolService {
             const accounts = this.accountCache.get(platform) || []
 
             if (accounts.length === 0) {
-                log.warn(`No accounts in cache for platform ${Platform[platform]}`)
+                jobLog.warn(`No accounts in cache for platform ${Platform[platform]}`)
                 return null
             }
 
@@ -116,31 +117,31 @@ export class AccountPoolService {
             )
 
             if (availableAccounts.length === 0) {
-                log.warn(`No available accounts for platform ${Platform[platform]} (all banned or inactive)`)
+                jobLog.warn(`No available accounts for platform ${Platform[platform]} (all banned or inactive)`)
                 return null
             }
 
             if (accountName) {
                 const account = availableAccounts.find((acc) => acc.name === accountName)
                 if (!account) {
-                    log.warn(
+                    jobLog.warn(
                         `Requested account ${accountName} not found or not available for platform ${Platform[platform]}`,
                     )
                     return null
                 }
-                log.info(
+                jobLog.info(
                     `Selected requested account: ${account.name} (id: ${account.id}) for platform ${Platform[platform]}`,
                 )
                 return account
             }
 
             const selectedAccount = availableAccounts[0]!
-            log.info(
+            jobLog.info(
                 `Selected account (Round-Robin): ${selectedAccount.name} (id: ${selectedAccount.id}) for platform ${Platform[platform]} (last_used_at: ${selectedAccount.last_used_at.toISOString()})`,
             )
             return selectedAccount
         } catch (error: any) {
-            log.error(`Failed to get account for platform ${Platform[platform]}:`, error.message)
+            jobLog.error(`Failed to get account for platform ${Platform[platform]}:`, error.message)
             throw error
         }
     }

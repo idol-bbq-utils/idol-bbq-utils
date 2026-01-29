@@ -87,6 +87,30 @@ function generateTaskExecutionId(websites: string[], taskType: string, engine?: 
     return `${hash}::${taskType}::${engine || 'default'}`
 }
 
+function isRateLimitOrAuthError(error: unknown): boolean {
+    function msgIncludesRateLimitOrAuth(msg: string): boolean {
+        const lowerMsg = msg.toLowerCase()
+        return (
+            lowerMsg.includes('rate limit') ||
+            lowerMsg.includes('too many requests') ||
+            lowerMsg.includes('authentication failed') ||
+            lowerMsg.includes('login required') ||
+            lowerMsg.includes('invalid cookie') ||
+            lowerMsg.includes('forbidden') ||
+            lowerMsg.includes('429')
+        )
+    }
+    if (error instanceof Error) {
+        const msg = error.message.toLowerCase()
+        return msgIncludesRateLimitOrAuth(msg)
+    }
+    if (error instanceof String) {
+        const msg = error.toString().toLowerCase()
+        return msgIncludesRateLimitOrAuth(msg)
+    }
+    return false
+}
+
 export async function processCrawlerJob(
     job: Job<CrawlerJobData>,
     browserPool: BrowserPool,
@@ -186,19 +210,7 @@ export async function processCrawlerJob(
                 
             } catch (error) {
                 jobLog.error(`Error crawling ${website}: ${error}`)
-                let is_account_error = false;
-                if (error instanceof Error) {
-                    is_account_error = is_account_error || (error.message.includes('authentication failed') ||
-                        error.message.includes('login required') ||
-                        error.message.includes('invalid cookie') ||
-                        error.message.includes('forbidden'))
-                }
-                if (error instanceof String) {
-                    is_account_error = is_account_error || (error.includes('authentication failed') ||
-                        error.includes('login required') ||
-                        error.includes('invalid cookie') ||
-                        error.includes('forbidden'))
-                }
+                let is_account_error = isRateLimitOrAuthError(error)
 
                 if (currentAccount && is_account_error) {
                     await accountPoolService.releaseAccount(currentAccount.id)
