@@ -30,14 +30,6 @@ interface CrawlerConfig extends CommonCfgConfig {
         max: number
         min: number
     }
-    /**
-     * TODO
-     *
-     * Will trigger the immediate notify to subscribed forwarders after the crawling
-     *
-     * Only works for `task_type` = `article` for now
-     */
-    immediate_notify?: boolean
     user_agent?: string
     translator?: Translator
     /**
