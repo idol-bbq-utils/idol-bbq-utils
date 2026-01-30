@@ -23,6 +23,13 @@ export interface AccountOperations {
     findAvailableAccount(platform: Platform, requestedAccountName?: string): Promise<DBAccount | undefined>
     updateAccountLastUsed(id: number): Promise<void>
     updateAccountStatus(id: number, status: AccountStatus): Promise<void>
+    updateAccountFailureInfo(
+        id: number,
+        failureCount: number,
+        lastFailureAt: Date,
+        status?: AccountStatus,
+        banUntil?: Date | null,
+    ): Promise<void>
     reportAccountFailure(id: number, banDurationMinutes?: number): Promise<void>
     reportAccountSuccess(id: number): Promise<void>
     unbanExpiredAccounts(): Promise<number>
@@ -164,6 +171,35 @@ export function createAccountOperations(adapter: SqliteAdapter | PgAdapter): Acc
             .returning()
     }
 
+    async function updateAccountFailureInfo(
+        id: number,
+        failureCount: number,
+        lastFailureAt: Date,
+        status?: AccountStatus,
+        banUntil?: Date | null,
+    ): Promise<void> {
+        const now = new Date()
+        const updates: any = {
+            failure_count: failureCount,
+            last_failure_at: lastFailureAt,
+            updated_at: now,
+        }
+
+        if (status !== undefined) {
+            updates.status = status
+        }
+
+        if (banUntil !== undefined) {
+            updates.ban_until = banUntil
+        }
+
+        await db
+            .update(accountTable as any)
+            .set(updates)
+            .where(eq((accountTable as any).id, id))
+            .returning()
+    }
+
     async function reportAccountFailure(id: number, banDurationMinutes: number = 30): Promise<void> {
         const now = new Date()
         const account = await getAccountById(id)
@@ -243,6 +279,7 @@ export function createAccountOperations(adapter: SqliteAdapter | PgAdapter): Acc
         findAvailableAccount,
         updateAccountLastUsed,
         updateAccountStatus,
+        updateAccountFailureInfo,
         reportAccountFailure,
         reportAccountSuccess,
         unbanExpiredAccounts,
