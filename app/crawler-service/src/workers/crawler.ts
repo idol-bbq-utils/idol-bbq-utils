@@ -159,7 +159,7 @@ export async function processCrawlerJob(
                 let cookie_string = ''
                 
                 if (config.auth === 'cookie') {
-                    currentAccount = await accountPoolService.getAccount(platform, config.auth_account)
+                    currentAccount = await accountPoolService.getAccount(platform, config.auth_account, task_id)
                     if (currentAccount) {
                         const cookies = parseNetscapeCookieToPuppeteerCookie(currentAccount.cookie_string)
                         cookie_string = cookies.map((coo) => `${coo.name}=${coo.value}`).join('; ')
@@ -210,13 +210,14 @@ export async function processCrawlerJob(
                 
             } catch (error) {
                 jobLog.error(`Error crawling ${website}: ${error}`)
-                let is_account_error = isRateLimitOrAuthError(error)
+                // let is_account_error = isRateLimitOrAuthError(error)
 
-                if (currentAccount && is_account_error) {
-                    await accountPoolService.releaseAccount(currentAccount.id)
-                    await accountPoolService.reportAccountFailure(currentAccount.id, 30)
-                    jobLog.warn(`Reported failure for account ${currentAccount.name} (id: ${currentAccount.id})`)
-                }
+                // if (currentAccount && is_account_error) {
+                //     await accountPoolService.releaseAccount(currentAccount.id)
+                //     await accountPoolService.reportAccountFailure(currentAccount.id, 30)
+                //     jobLog.warn(`Reported failure for account ${currentAccount.name} (id: ${currentAccount.id})`)
+                // }
+                await accountPoolService.releaseAccount(currentAccount.id)
             }
         }
 
