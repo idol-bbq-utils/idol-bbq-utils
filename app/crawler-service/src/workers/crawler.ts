@@ -21,35 +21,31 @@ import { accountPoolService } from '@idol-bbq-utils/account-pool'
 const executingTasks = new Set<string>()
 
 export class BrowserPool {
-    private browsers: Browser[] = []
-    private tmpDirs: tmp.DirResult[] = []
+    private browsers: Array<{
+        browser: Browser
+        tmpDir: tmp.DirResult
+        pagesCreated: number
+        inUsePages: number
+        relaunching?: Promise<void>
+    }> = []
+    private pageOwner = new WeakMap<Page, (typeof this.browsers)[number]>()
     private currentIndex = 0
     private maxBrowsers: number
+    private maxPagesPerBrowser: number
     private log?: Logger
 
     constructor(maxBrowsers: number = 1, log?: Logger) {
         this.maxBrowsers = maxBrowsers
+        this.maxPagesPerBrowser = parseInt(process.env.BROWSER_MAX_PAGES_PER_INSTANCE || '200')
         this.log = log
     }
 
     async init(): Promise<void> {
         this.log?.info(`Initializing browser pool with ${this.maxBrowsers} browsers...`)
         for (let i = 0; i < this.maxBrowsers; i++) {
-            const tmpDir = tmp.dirSync({
-                prefix: `puppeteer-${i}-`,
-                unsafeCleanup: true,
-            })
-            this.tmpDirs.push(tmpDir)
-            this.log?.info(`Browser ${i + 1} userDataDir: ${tmpDir.name}`)
-
-            const browser = await puppeteer.launch({
-                headless: true,
-                args: [process.env.NO_SANDBOX ? '--no-sandbox' : '', '--disable-dev-shm-usage'].filter(Boolean),
-                channel: 'chrome',
-                userDataDir: tmpDir.name,
-            })
-            this.browsers.push(browser)
-            this.log?.info(`Browser ${i + 1} launched`)
+            const browserEntry = await this.launchBrowser(i)
+            this.browsers.push(browserEntry)
+            this.log?.info(`Browser ${i + 1} launched (max pages before recycle: ${this.maxPagesPerBrowser})`)
         }
     }
 
@@ -57,22 +53,150 @@ export class BrowserPool {
         if (this.browsers.length === 0) {
             throw new Error('Browser pool not initialized')
         }
-        const browser = this.browsers[this.currentIndex]!
+
+        const browserIndex = this.currentIndex
+        const browserEntry = this.browsers[browserIndex]!
         this.currentIndex = (this.currentIndex + 1) % this.browsers.length
-        return await browser.newPage()
+
+        await this.ensureBrowserReady(browserEntry)
+        const activeBrowserEntry = this.browsers[browserIndex]!
+
+        const page = await activeBrowserEntry.browser.newPage()
+        activeBrowserEntry.pagesCreated += 1
+        activeBrowserEntry.inUsePages += 1
+        this.pageOwner.set(page, activeBrowserEntry)
+        page.once('close', () => {
+            const owner = this.pageOwner.get(page)
+            if (!owner) {
+                return
+            }
+            owner.inUsePages = Math.max(0, owner.inUsePages - 1)
+            this.pageOwner.delete(page)
+            void this.maybeRecycleBrowser(owner)
+        })
+        return page
+    }
+
+    async releasePage(page: Page): Promise<void> {
+        if (!page.isClosed()) {
+            try {
+                await page.close()
+            } catch (error) {
+                this.log?.warn(`Failed to close page cleanly: ${error}`)
+            }
+        }
     }
 
     async close(): Promise<void> {
         this.log?.info('Closing browser pool...')
-        await Promise.all(this.browsers.map((b) => b.close()))
-        this.tmpDirs.forEach((tmpDir) => {
-            try {
-                tmpDir.removeCallback()
-            } catch (error) {
-                this.log?.warn(`Failed to cleanup tmpDir: ${error}`)
-            }
-        })
+        await Promise.all(this.browsers.map((entry, idx) => this.destroyBrowser(entry, idx)))
         this.log?.info('Browser pool closed')
+    }
+
+    private async launchBrowser(index: number) {
+        const tmpDir = tmp.dirSync({
+            prefix: `puppeteer-${index}-`,
+            unsafeCleanup: true,
+        })
+        this.log?.info(`Browser ${index + 1} userDataDir: ${tmpDir.name}`)
+
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [process.env.NO_SANDBOX ? '--no-sandbox' : '', '--disable-dev-shm-usage'].filter(Boolean),
+            channel: 'chrome',
+            userDataDir: tmpDir.name,
+        })
+
+        const browserEntry = {
+            browser,
+            tmpDir,
+            pagesCreated: 0,
+            inUsePages: 0,
+        }
+
+        browser.on('disconnected', () => {
+            this.log?.warn(`Browser ${index + 1} disconnected unexpectedly`)
+        })
+
+        return browserEntry
+    }
+
+    private async ensureBrowserReady(entry: (typeof this.browsers)[number]): Promise<void> {
+        if (entry.relaunching) {
+            await entry.relaunching
+            return
+        }
+
+        if (entry.browser.connected) {
+            return
+        }
+
+        entry.relaunching = (async () => {
+            const index = this.browsers.indexOf(entry)
+            if (index === -1) {
+                return
+            }
+            this.log?.warn(`Browser ${index + 1} is disconnected, relaunching...`)
+            await this.destroyBrowser(entry, index)
+            const relaunched = await this.launchBrowser(index)
+            this.browsers[index] = relaunched
+            this.log?.info(`Browser ${index + 1} relaunched`)
+        })()
+
+        try {
+            await entry.relaunching
+        } finally {
+            entry.relaunching = undefined
+        }
+    }
+
+    private async maybeRecycleBrowser(entry: (typeof this.browsers)[number]): Promise<void> {
+        if (entry.pagesCreated < this.maxPagesPerBrowser || entry.inUsePages > 0) {
+            return
+        }
+        if (entry.relaunching) {
+            return
+        }
+
+        entry.relaunching = (async () => {
+            const index = this.browsers.indexOf(entry)
+            if (index === -1) {
+                return
+            }
+            this.log?.info(`Recycling browser ${index + 1} after ${entry.pagesCreated} pages`)
+            await this.destroyBrowser(entry, index)
+            const relaunched = await this.launchBrowser(index)
+            this.browsers[index] = relaunched
+            this.log?.info(`Browser ${index + 1} recycled`)
+        })()
+
+        try {
+            await entry.relaunching
+        } finally {
+            entry.relaunching = undefined
+        }
+    }
+
+    private async destroyBrowser(entry: (typeof this.browsers)[number], index: number): Promise<void> {
+        const browserProcess = entry.browser.process()
+        try {
+            await entry.browser.close()
+        } catch (error) {
+            this.log?.warn(`Failed to close browser ${index + 1} cleanly: ${error}`)
+        } finally {
+            if (browserProcess && !browserProcess.killed) {
+                try {
+                    browserProcess.kill('SIGKILL')
+                } catch (error) {
+                    this.log?.warn(`Failed to kill browser ${index + 1} process: ${error}`)
+                }
+            }
+        }
+        try {
+            entry.tmpDir.removeCallback()
+        } catch (error) {
+            this.log?.warn(`Failed to cleanup tmpDir for browser ${index + 1}: ${error}`)
+        }
     }
 }
 
@@ -255,7 +379,7 @@ export async function processCrawlerJob(
         }
     } finally {
         if (page) {
-            await page.close()
+            await browserPool.releasePage(page)
         }
         executingTasks.delete(executionId)
         jobLog.info(`Task execution completed: ${executionId} (pool size: ${executingTasks.size})`)
