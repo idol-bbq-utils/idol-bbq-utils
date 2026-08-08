@@ -341,7 +341,9 @@ export async function processCrawlerJob(
                 //     await accountPoolService.reportAccountFailure(currentAccount.id, 30)
                 //     jobLog.warn(`Reported failure for account ${currentAccount.name} (id: ${currentAccount.id})`)
                 // }
-                await accountPoolService.releaseAccount(currentAccount.id)
+                if (currentAccount) {
+                    await accountPoolService.releaseAccount(currentAccount.id)
+                }
             }
         }
 
