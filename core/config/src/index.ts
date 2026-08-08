@@ -10,12 +10,12 @@ import {
     type SendTargetCommonConfig,
     type SendTarget,
     type SenderTaskConfig,
+    MediaStorageTypeEnum,
     MediaToolEnum,
 } from '@idol-bbq-utils/sender'
 import DB from '@idol-bbq-utils/db'
 import type { Logger } from '@idol-bbq-utils/log'
 import fs from 'fs/promises'
-
 
 type SpecifiedCrawlerConfig = Required<Pick<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>> &
     Omit<CrawlerConfig, 'cron' | 'interval_time' | 'user_agent'>
@@ -64,7 +64,7 @@ export class AppConfig {
             cron: '*/15 * * * *',
             render_type: 'img-with-meta',
             media: {
-                type: 'no-storage',
+                type: MediaStorageTypeEnum.NONE,
                 use: {
                     tool: MediaToolEnum.DEFAULT,
                 },

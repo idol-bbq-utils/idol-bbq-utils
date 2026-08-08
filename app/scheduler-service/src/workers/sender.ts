@@ -6,7 +6,7 @@ import type { Job } from 'bullmq'
 import DB from '@idol-bbq-utils/db'
 import type { Article, ArticleWithId, DBFollows } from '@idol-bbq-utils/db'
 import { articleToText, followsToText, formatMetaline, ImgConverter } from '@idol-bbq-utils/render'
-import { getSender } from '@idol-bbq-utils/sender'
+import { createMediaStorage, getSender, SendTargetPlatformEnum } from '@idol-bbq-utils/sender'
 import {
     plainDownloadMediaFile,
     galleryDownloadMediaFile,
@@ -301,7 +301,7 @@ export async function processSenderJob(job: Job<SenderJobData>, queueManager: Qu
             await forwarder.init()
 
             for (const article of allArticles) {
-                let mediaFiles: Array<{ path: string; media_type: MediaType }> = []
+                let mediaFiles: Array<{ path: string; media_type: MediaType; url?: string }> = []
 
                 try {
                     const exists = await DB.SendBy.checkExist(article.id, target.id, 'article')
@@ -350,6 +350,20 @@ export async function processSenderJob(job: Job<SenderJobData>, queueManager: Qu
                         } catch (imgError) {
                             jobLog.error(`Error converting article to image: ${imgError}`)
                         }
+                    }
+
+                    const mediaStorage =
+                        target.platform === SendTargetPlatformEnum.QQ
+                            ? createMediaStorage(config.cfg_sender.media)
+                            : undefined
+                    if (mediaStorage) {
+                        mediaFiles = await Promise.all(
+                            mediaFiles.map(async (mediaFile) => ({
+                                ...mediaFile,
+                                url: (await mediaStorage.upload(mediaFile.path)).url,
+                            })),
+                        )
+                        jobLog.debug(`Uploaded ${mediaFiles.length} media files to remote storage`)
                     }
 
                     const fullText = articleToText(article)
@@ -460,7 +474,7 @@ export function startSenderWorker(queueManager: QueueManager, concurrency: numbe
     })
 
     worker.on('completed', (job) => {
-        log.info(`Job ${job.id} completed`, { trace_id: job.id})
+        log.info(`Job ${job.id} completed`, { trace_id: job.id })
     })
 
     worker.on('failed', (job, err) => {

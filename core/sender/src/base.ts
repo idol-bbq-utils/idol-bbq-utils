@@ -22,6 +22,7 @@ export interface SendProps {
     media?: Array<{
         media_type: MediaType
         path: string
+        url?: string
     }>
     timestamp?: number
     // TODO: remove this
