@@ -91,14 +91,15 @@ export class AccountPoolService {
      * Get account from memory cache using Round-Robin scheduling.
      * Selects the account with the oldest last_used_at timestamp.
      */
-    async getAccount(platform: Platform, accountName?: string): Promise<Account | null> {
+    async getAccount(platform: Platform, accountName?: string, trace_id?: string): Promise<Account | null> {
+        const jobLog = trace_id ? log.child({ trace_id }) : log
         if (!this.initialized) {
-            log.warn('AccountPoolService not initialized, initializing now...')
+            jobLog.warn('AccountPoolService not initialized, initializing now...')
             await this.initialize()
         }
 
         if (this.shouldRefreshCache()) {
-            log.info('Cache expired, refreshing from database...')
+            jobLog.info('Cache expired, refreshing from database...')
             await this.refreshFromDatabase()
         }
 
@@ -106,7 +107,7 @@ export class AccountPoolService {
             const accounts = this.accountCache.get(platform) || []
 
             if (accounts.length === 0) {
-                log.warn(`No accounts in cache for platform ${Platform[platform]}`)
+                jobLog.warn(`No accounts in cache for platform ${Platform[platform]}`)
                 return null
             }
 
@@ -116,31 +117,31 @@ export class AccountPoolService {
             )
 
             if (availableAccounts.length === 0) {
-                log.warn(`No available accounts for platform ${Platform[platform]} (all banned or inactive)`)
+                jobLog.warn(`No available accounts for platform ${Platform[platform]} (all banned or inactive)`)
                 return null
             }
 
             if (accountName) {
                 const account = availableAccounts.find((acc) => acc.name === accountName)
                 if (!account) {
-                    log.warn(
+                    jobLog.warn(
                         `Requested account ${accountName} not found or not available for platform ${Platform[platform]}`,
                     )
                     return null
                 }
-                log.info(
+                jobLog.info(
                     `Selected requested account: ${account.name} (id: ${account.id}) for platform ${Platform[platform]}`,
                 )
                 return account
             }
 
             const selectedAccount = availableAccounts[0]!
-            log.info(
+            jobLog.info(
                 `Selected account (Round-Robin): ${selectedAccount.name} (id: ${selectedAccount.id}) for platform ${Platform[platform]} (last_used_at: ${selectedAccount.last_used_at.toISOString()})`,
             )
             return selectedAccount
         } catch (error: any) {
-            log.error(`Failed to get account for platform ${Platform[platform]}:`, error.message)
+            jobLog.error(`Failed to get account for platform ${Platform[platform]}:`, error.message)
             throw error
         }
     }
@@ -198,7 +199,7 @@ export class AccountPoolService {
         try {
             await DB.Account.updateAccountStatus(id, 'active')
 
-            for (const [platform, accounts] of this.accountCache.entries()) {
+            for (const accounts of this.accountCache.values()) {
                 const account = accounts.find((acc) => acc.id === id)
                 if (account) {
                     account.status = 'active'
@@ -213,14 +214,32 @@ export class AccountPoolService {
         }
     }
 
-    async markAccountAsInactive(id: number): Promise<void> {
+    async markAccountAsInactive(
+        id: number,
+        failureCount?: number,
+        lastFailureAt?: Date,
+        banUntil?: Date | null,
+    ): Promise<void> {
         try {
-            await DB.Account.updateAccountStatus(id, 'inactive')
+            if (failureCount !== undefined && lastFailureAt !== undefined) {
+                await DB.Account.updateAccountFailureInfo(id, failureCount, lastFailureAt, 'inactive', banUntil)
+            } else {
+                await DB.Account.updateAccountStatus(id, 'inactive')
+            }
 
-            for (const [platform, accounts] of this.accountCache.entries()) {
+            for (const accounts of this.accountCache.values()) {
                 const account = accounts.find((acc) => acc.id === id)
                 if (account) {
                     account.status = 'inactive'
+                    if (failureCount !== undefined) {
+                        account.failure_count = failureCount
+                    }
+                    if (lastFailureAt !== undefined) {
+                        account.last_failure_at = lastFailureAt
+                    }
+                    if (banUntil !== undefined) {
+                        account.ban_until = banUntil
+                    }
                     log.warn(`Account (id: ${id}) marked as inactive in cache`)
                     break
                 }
@@ -235,7 +254,7 @@ export class AccountPoolService {
         try {
             await DB.Account.updateAccountStatus(id, 'banned')
 
-            for (const [platform, accounts] of this.accountCache.entries()) {
+            for (const accounts of this.accountCache.values()) {
                 const account = accounts.find((acc) => acc.id === id)
                 if (account) {
                     account.status = 'banned'
@@ -271,23 +290,62 @@ export class AccountPoolService {
 
     async reportAccountFailure(id: number, banDurationMinutes: number = 30): Promise<void> {
         try {
-            await DB.Account.reportAccountFailure(id, banDurationMinutes)
+            const now = new Date()
+            const maxFailures = 3
 
-            for (const [platform, accounts] of this.accountCache.entries()) {
-                const account = accounts.find((acc) => acc.id === id)
-                if (account) {
-                    account.failure_count = (account.failure_count || 0) + 1
-
-                    if (account.failure_count >= 3) {
-                        account.status = 'inactive'
-                        account.ban_until = new Date(Date.now() + banDurationMinutes * 60 * 1000)
-                        log.warn(
-                            `Account (id: ${id}) banned until ${account.ban_until.toISOString()} after ${account.failure_count} failures`,
-                        )
-                    } else {
-                        log.warn(`Account (id: ${id}) failure count: ${account.failure_count}/3`)
-                    }
+            // Get current account info from cache first
+            let account: Account | null = null
+            for (const accounts of this.accountCache.values()) {
+                const found = accounts.find((acc) => acc.id === id)
+                if (found) {
+                    account = found
                     break
+                }
+            }
+
+            // If not in cache, get from database
+            if (!account) {
+                const dbAccount = await DB.Account.getAccountById(id)
+                if (!dbAccount) {
+                    log.error(`Account (id: ${id}) not found`)
+                    return
+                }
+                account = dbAccount as Account
+            }
+
+            const newFailureCount = (account.failure_count || 0) + 1
+
+            // Handle failure logic in account-pool
+            if (newFailureCount >= maxFailures) {
+                const banUntil = new Date(now.getTime() + banDurationMinutes * 60 * 1000)
+                await DB.Account.updateAccountFailureInfo(id, newFailureCount, now, 'inactive', banUntil)
+
+                // Update cache
+                for (const accounts of this.accountCache.values()) {
+                    const acc = accounts.find((a) => a.id === id)
+                    if (acc) {
+                        acc.failure_count = newFailureCount
+                        acc.last_failure_at = now
+                        acc.status = 'inactive'
+                        acc.ban_until = banUntil
+                        log.warn(
+                            `Account (id: ${id}) banned until ${banUntil.toISOString()} after ${newFailureCount} failures`,
+                        )
+                        break
+                    }
+                }
+            } else {
+                await DB.Account.updateAccountFailureInfo(id, newFailureCount, now)
+
+                // Update cache
+                for (const accounts of this.accountCache.values()) {
+                    const acc = accounts.find((a) => a.id === id)
+                    if (acc) {
+                        acc.failure_count = newFailureCount
+                        acc.last_failure_at = now
+                        log.warn(`Account (id: ${id}) failure count: ${newFailureCount}/${maxFailures}`)
+                        break
+                    }
                 }
             }
         } catch (error: any) {
@@ -300,7 +358,7 @@ export class AccountPoolService {
         try {
             await DB.Account.reportAccountSuccess(id)
 
-            for (const [platform, accounts] of this.accountCache.entries()) {
+            for (const accounts of this.accountCache.values()) {
                 const account = accounts.find((acc) => acc.id === id)
                 if (account) {
                     account.failure_count = 0

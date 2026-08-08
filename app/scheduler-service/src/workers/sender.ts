@@ -460,11 +460,11 @@ export function startSenderWorker(queueManager: QueueManager, concurrency: numbe
     })
 
     worker.on('completed', (job) => {
-        log.info(`Job ${job.id} completed`)
+        log.info(`Job ${job.id} completed`, { trace_id: job.id})
     })
 
     worker.on('failed', (job, err) => {
-        log.error(`Job ${job?.id} failed: ${err.message}`)
+        log.error(`Job ${job?.id} failed: ${err.message}`, { trace_id: job?.id })
     })
 
     worker.on('error', (err) => {
