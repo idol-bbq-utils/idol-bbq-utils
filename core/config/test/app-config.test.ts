@@ -1,7 +1,7 @@
 import { test, expect, describe } from 'bun:test'
 import { AppConfig } from '../src/index'
 import type { AppConfigType } from '../src/types'
-import { SendTargetPlatformEnum } from '@idol-bbq-utils/sender'
+import { MediaStorageTypeEnum, MediaToolEnum, SendTargetPlatformEnum } from '@idol-bbq-utils/sender'
 import { Platform } from '@idol-bbq-utils/spider/types'
 import { UserAgent } from '@idol-bbq-utils/spider'
 import { TranslatorProvider } from '@idol-bbq-utils/translator'
@@ -439,6 +439,48 @@ describe('AppConfig - Configuration Merging', () => {
     })
 
     describe('Sender Configuration Merging', () => {
+        test('should preserve Dufs media storage configuration', () => {
+            const config: AppConfigType = {
+                config: {
+                    cfg_sender: {
+                        media: {
+                            type: MediaStorageTypeEnum.DUFS,
+                            upload_url: 'https://storage.example.com/private',
+                            public_url: 'https://media.example.com/public',
+                            username: 'sender',
+                            password: 'secret',
+                            use: { tool: MediaToolEnum.DEFAULT },
+                        },
+                    },
+                },
+                send_targets: [
+                    {
+                        platform: SendTargetPlatformEnum.QQ,
+                        id: 'qq-1',
+                        config: {
+                            url: 'https://onebot.example.com',
+                            group_id: '123456',
+                            token: 'onebot-token',
+                        },
+                    },
+                ],
+                senders: [{ websites: ['https://x.com/user1'], targets: ['qq-1'] }],
+            }
+
+            const appConfig = new AppConfig(config)
+            appConfig.resolveConfig()
+
+            expect(appConfig.getTaskSenders()[0]?.config.cfg_sender.media).toEqual(
+                expect.objectContaining({
+                    type: MediaStorageTypeEnum.DUFS,
+                    upload_url: 'https://storage.example.com/private',
+                    public_url: 'https://media.example.com/public',
+                    username: 'sender',
+                    password: 'secret',
+                }),
+            )
+        })
+
         test('should merge global and task-level sender config', () => {
             const config: AppConfigType = {
                 config: {
