@@ -387,7 +387,7 @@ class XApiClient {
                 const queryId = this.getQueryId(js_code, api)
                 if (queryId) {
                     this.api_with_queryid[api] = queryId
-                } else {
+                } else if (api !== XApis.ListLatestTweetsTimeline) {
                     throw new Error(`Failed to extract ${api} query id from js code`)
                 }
             }

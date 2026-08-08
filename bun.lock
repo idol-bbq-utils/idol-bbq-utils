@@ -163,7 +163,7 @@
         "jsonpath-plus": "^10.2.0",
         "puppeteer-core": "^24.6.0",
         "uuid": "^11.1.0",
-        "x-client-transaction-id": "^0.1.7",
+        "x-client-transaction-id": "^0.3.1",
       },
       "devDependencies": {
         "@types/web": "^0.0.231",
@@ -773,7 +773,7 @@
 
     "ws": ["ws@8.18.1", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-RKW2aJZMXeMxVpnZ6bck+RswznaxmzdULiBr6KY7XkTnW8uvt0iT9H5DkHUChXrc+uurzwa0rVI16n/Xzjdz1w=="],
 
-    "x-client-transaction-id": ["x-client-transaction-id@0.1.7", "", { "dependencies": { "linkedom": "^0.18.9" } }, "sha512-fsXF2D3O4OVwtXtSTurjh34fc1HTe9EikFkPlT5i3eJGXe8lcXqZuNawGQ/6t+wsUuuFXuu9PkgM/bztALMlDw=="],
+    "x-client-transaction-id": ["x-client-transaction-id@0.3.1", "", { "dependencies": { "linkedom": "^0.18.9" } }, "sha512-fD9YtDswTL3VyG/z7FbZUfMu5CUsvGmKk33fM3b9eOXe0Wnmj8W55UKLPA5Z/cuq6WrWTxXQhLcV3GGCD6mKaQ=="],
 
     "y18n": ["y18n@5.0.8", "", {}, "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="],
 
